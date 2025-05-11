@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import csshieldImg from "../assets/csshield.png";
+import cs2squadImg from "../assets/cs2squad.png";
 
 const projects = [
   {
@@ -8,7 +10,7 @@ const projects = [
       "A full-stack web app to find and manage CS2 teammates based on Premier rank, region, and preferences. Built with a real PostgreSQL + Docker backend and Steam login integration.",
     tags: ["React", "Node.js", "PostgreSQL", "Docker", "Steam API"],
     github: "https://github.com/priitivi/cs2squad",
-    image: "/src/assets/cs2squad.png",
+    image: cs2squadImg, 
     details: `🧠 Key Features:
 - Steam OpenID login integration
 - Team management with invites
@@ -27,7 +29,7 @@ const projects = [
       "A lightweight Electron app that blocks CS2 gambling websites by modifying system-level DNS and hosts files. Built to protect myself and others from addiction patterns.",
     tags: ["Electron", "JavaScript", "Cybersecurity", "Windows"],
     github: "https://github.com/priitivi/csshield",
-    image: "/src/assets/csshield.png",
+    image: csshieldImg, 
     details: `🧠 Key Features:
 - Dynamically blocks known gambling domains
 - Electron desktop GUI for Windows
