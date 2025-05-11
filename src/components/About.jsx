@@ -40,7 +40,7 @@ function About() {
           <h3 className="text-2xl font-semibold text-gray-800 mb-4">🎓 Education</h3>
           <ul className="space-y-4 text-gray-700">
             <li>
-              <span className="font-medium">University of Warwick</span> – BSc Computer Science (2:2)  
+              <span className="font-medium">University of Warwick</span> – BSc Computer Science   
               <br />
               <span className="text-sm italic">
                 Dissertation: Predicting Bitcoin Price using LSTM & VADER Sentiment Analysis
