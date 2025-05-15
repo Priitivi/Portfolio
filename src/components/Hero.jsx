@@ -118,8 +118,8 @@ function Hero() {
         setTimeout(() => {
           if (type === "download") {
             const link = document.createElement("a");
-            link.href = `/Priit.pdf`;
-            link.download = "Priit.pdf";
+            link.href = `/Priit_CV.pdf`;
+            link.download = "Priit_CV.pdf";
             document.body.appendChild(link);
             link.click();
             link.remove();
