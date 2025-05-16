@@ -36,7 +36,7 @@ function Hero() {
         clearInterval(interval);
         setHasTypedWhoami(true);
       }
-    }, 70);
+    }, 50);
     return () => clearInterval(interval);
   }, []);
 
@@ -55,7 +55,7 @@ function Hero() {
         clearInterval(interval);
         setHasTypedWhoamiResponse(true);
       }
-    }, 70);
+    }, 50);
     return () => clearInterval(interval);
   }, [hasTypedWhoami]);
 
@@ -74,7 +74,7 @@ function Hero() {
         clearInterval(interval);
         setHasTypedCatCommand(true);
       }
-    }, 70);
+    }, 50);
     return () => clearInterval(interval);
   }, [hasTypedWhoamiResponse]);
 
@@ -94,7 +94,7 @@ function Hero() {
         setHasTypedMission(true);
         setTimeout(() => setShowButtons(true), 400);
       }
-    }, 70);
+    }, 50);
     return () => clearInterval(interval);
   }, [hasTypedCatCommand]);
 
@@ -130,7 +130,7 @@ function Hero() {
           }
         }, 500);
       }
-    }, 70);
+    }, 50);
   };
 
   return (
