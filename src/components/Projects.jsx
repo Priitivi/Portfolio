@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import csshieldImg from "../assets/csshield.png";
 import cs2squadImg from "../assets/cs2squad.png";
+import portfolioImg from "../assets/portfolio.png"; // 👈 Add your screenshot here
 
 const projects = [
   {
@@ -10,7 +11,7 @@ const projects = [
       "A full-stack web app to find and manage CS2 teammates based on Premier rank, region, and preferences. Built with a real PostgreSQL + Docker backend and Steam login integration.",
     tags: ["React", "Node.js", "PostgreSQL", "Docker", "Steam API"],
     github: "https://github.com/priitivi/cs2squad",
-    image: cs2squadImg, 
+    image: cs2squadImg,
     details: `🧠 Key Features:
 - Steam OpenID login integration
 - Team management with invites
@@ -29,7 +30,7 @@ const projects = [
       "A lightweight Electron app that blocks CS2 gambling websites by modifying system-level DNS and hosts files. Built to protect myself and others from addiction patterns.",
     tags: ["Electron", "JavaScript", "Cybersecurity", "Windows"],
     github: "https://github.com/priitivi/csshield",
-    image: csshieldImg, 
+    image: csshieldImg,
     details: `🧠 Key Features:
 - Dynamically blocks known gambling domains
 - Electron desktop GUI for Windows
@@ -40,6 +41,25 @@ const projects = [
 - Using Node.js for low-level file operations
 - Building cross-platform desktop apps with Electron
 - UX considerations for personal recovery tools`,
+  },
+  {
+    title: "Portfolio Website",
+    description:
+      "My personal developer portfolio designed to showcase my skills, projects, and background in an engaging, interactive format.",
+    tags: ["React", "Vite", "TailwindCSS", "Framer Motion", "Netlify"],
+    github: "https://github.com/priitivi/Portfolio",
+    image: portfolioImg,
+    details: `🧠 Key Features:
+- Terminal-style hero with interactive command buttons
+- Animated About section and timeline with Framer Motion
+- Modal-based project showcase with hover effects
+- SEO-optimized with sitemap, robots.txt, and custom favicon
+- Deployed live at priitivi.com via Netlify
+
+💡 What I Learned:
+- Balancing creativity and clarity in personal branding
+- Advanced layout control and component animation
+- Designing for storytelling and recruiter impact`,
   },
 ];
 
