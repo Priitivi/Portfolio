@@ -3,10 +3,25 @@ import { motion } from "framer-motion";
 const timeline = [
   { year: "2002", label: "Born in London", icon: "🧒" },
   { year: "2007–2015", label: "Durston House (Primary School)", icon: "🏫" },
-  { year: "2015–2020", label: "John Lyon School – GCSEs & A-Levels", icon: "📚" },
-  { year: "2021–2024", label: "University of Warwick – BSc Computer Science", icon: "🎓" },
-  { year: "2024+", label: "Building creative web apps & products", icon: "💻" },
+  {
+    year: "2015–2020",
+    label: "John Lyon School – GCSEs & A-Levels",
+    icon: "📚",
+    details: "GCSEs: 9A*, 2A\nA-Levels: A*A*A*AA",
+  },
+  {
+    year: "2021–2024",
+    label: "University of Warwick – BSc Computer Science",
+    icon: "🎓",
+    details: "Dissertation: Predicting Bitcoin Price using LSTM & VADER Sentiment Analysis",
+  },
+  {
+    year: "2024+",
+    label: "Building creative web apps & products",
+    icon: "💻",
+  },
 ];
+
 
 function LifeTimeline() {
   return (
@@ -45,10 +60,14 @@ function LifeTimeline() {
                 }`}
               >
                 <div className="text-sm text-gray-500">{item.year}</div>
-                <div className="text-lg font-semibold text-gray-800">
-                  {item.label}
-                </div>
+                <div className="text-lg font-semibold text-gray-800">{item.label}</div>
+                {item.details && (
+                  <div className="mt-2 text-sm text-gray-600 whitespace-pre-line">
+                    {item.details}
+                  </div>
+                )}
               </div>
+
             </motion.div>
           );
         })}

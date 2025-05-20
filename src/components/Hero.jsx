@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 
 function Hero() {
   const whoamiCommand = "whoami";
-  const whoamiResponse = "I'm Priitivi — software developer & creative engineer";
+  const whoamiResponse = "I'm Priitivi — junior software developer from London";
 
   const catCommand = "cat mission.txt";
   const catResponse =
