@@ -7,7 +7,7 @@ const timeline = [
     year: "2015–2020",
     label: "John Lyon School – GCSEs & A-Levels",
     icon: "📚",
-    details: "GCSEs: 9A*, 2A\nA-Levels: A*A*A*AA",
+    details: "GCSEs: 7A*, 3A\nA-Levels: A*A*A*AA",
   },
   {
     year: "2021–2024",
