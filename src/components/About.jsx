@@ -7,7 +7,7 @@ import pythonLogo from "../assets/python.svg";
 import tailwindLogo from "../assets/tailwind.svg";
 import dockerLogo from "../assets/docker.svg";
 import LifeTimeline from "./LifeTimeline";
-import { motion } from "framer-motion";
+import { motion as Motion } from "framer-motion";
 import javaLogo from "../assets/java.svg";
 
 const skills = [
@@ -52,7 +52,7 @@ function About() {
 
 
         {/* Intro */}
-        <motion.div
+        <Motion.div
           className="text-center relative"
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -79,7 +79,7 @@ function About() {
           <div className="absolute inset-0 -z-10 flex justify-center">
             <div className="w-48 h-48 bg-blue-100 rounded-full blur-3xl opacity-40 mt-10"></div>
           </div>
-        </motion.div>
+        </Motion.div>
 
 
         

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion as Motion } from "framer-motion";
 
 function Hero() {
   const whoamiCommand = "whoami";
@@ -14,8 +14,8 @@ function Hero() {
   const [typedCommand2, setTypedCommand2] = useState("");
   const [typedMission, setTypedMission] = useState("");
   const [typedCommand3, setTypedCommand3] = useState("");
+  const [commandLength, setCommandLength] = useState(0);
 
-  const [scrollTarget, setScrollTarget] = useState("");
   const [showButtons, setShowButtons] = useState(false);
 
   const [hasTypedWhoami, setHasTypedWhoami] = useState(false);
@@ -104,7 +104,7 @@ function Hero() {
       type === "download" ? `download ${label}.pdf` : `open ${label}.txt`;
 
     setTypedCommand3("");
-    setScrollTarget(target);
+    setCommandLength(finalCommand.length);
 
     let i = 0;
     let output = "";
@@ -178,7 +178,7 @@ function Hero() {
           <div className="mb-4">
             <span className="text-green-500">$</span>{" "}
             <span>{typedCommand3}</span>
-            {typedCommand3.length < `open ${scrollTarget}.txt`.length && (
+            {typedCommand3.length < commandLength && (
               <span className="animate-pulse">|</span>
             )}
           </div>
@@ -187,7 +187,7 @@ function Hero() {
 
       {/* Command buttons */}
       {showButtons && (
-        <motion.div
+        <Motion.div
           className="flex flex-wrap justify-center gap-4"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -199,7 +199,7 @@ function Hero() {
             { label: "contact", target: "contact", type: "scroll" },
             { label: "cv", target: "cv", type: "download" },
           ].map((btn, index) => (
-            <motion.button
+            <Motion.button
               key={btn.label}
               onClick={() =>
                 handleCommand(btn.target, btn.label, btn.type)
@@ -212,9 +212,9 @@ function Hero() {
               {btn.type === "download"
                 ? "download cv.pdf"
                 : `open ${btn.label}.txt`}
-            </motion.button>
+            </Motion.button>
           ))}
-        </motion.div>
+        </Motion.div>
       )}
     </section>
   );
