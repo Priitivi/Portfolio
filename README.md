@@ -55,6 +55,16 @@ npm run dev
 npm run build
 ```
 
+### 5. (Optional) Start the contact API
+```bash
+cd server
+npm install
+npm start
+```
+The server requires the following environment variables:
+`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_TO` (and optionally `SMTP_FROM` and `PORT`).
+
+
 ---
 
 ### 🌐 Deployment
