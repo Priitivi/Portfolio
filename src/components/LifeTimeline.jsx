@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion as Motion } from "framer-motion";
 
 const timeline = [
   { year: "2002", label: "Born in London", icon: "🧒" },
@@ -38,7 +38,7 @@ function LifeTimeline() {
           const isLeft = i % 2 === 0;
 
           return (
-            <motion.div
+            <Motion.div
               key={i}
               initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -68,7 +68,7 @@ function LifeTimeline() {
                 )}
               </div>
 
-            </motion.div>
+            </Motion.div>
           );
         })}
       </div>

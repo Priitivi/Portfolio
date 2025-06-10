@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion as Motion, AnimatePresence } from "framer-motion";
 import csshieldImg from "../assets/csshield.png";
 import cs2squadImg from "../assets/cs2squad.png";
 import portfolioImg from "../assets/portfolio.png"; // 👈 Add your screenshot here
@@ -111,13 +111,13 @@ function Projects() {
         {/* Modal */}
         <AnimatePresence>
           {selected && (
-            <motion.div
+            <Motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 px-4"
             >
-              <motion.div
+              <Motion.div
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.95, opacity: 0 }}
@@ -154,8 +154,8 @@ function Projects() {
                     </a>
                   </div>
                 </div>
-              </motion.div>
-            </motion.div>
+              </Motion.div>
+            </Motion.div>
           )}
         </AnimatePresence>
       </div>
