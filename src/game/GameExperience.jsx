@@ -42,8 +42,8 @@ function CharacterCreator({ appearance, setAppearance, onContinue, onStandardVie
         </Canvas>
         <div className="preview-caption">
           <span>FIGHTER 01</span>
-          <strong>Original anime-inspired build</strong>
-          <p>No licensed models or character likenesses used.</p>
+          <strong>Custom fighter build</strong>
+          <p>Style your fighter before the opening bell.</p>
         </div>
       </section>
       <section className="creator-panel">

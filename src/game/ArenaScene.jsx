@@ -4,6 +4,14 @@ import * as THREE from "three";
 import { weaponStats } from "../data/fightData";
 
 const ARENA_RADIUS = 8.5;
+const capeShape = new THREE.Shape();
+
+capeShape.moveTo(-0.62, 0.86);
+capeShape.lineTo(0.62, 0.86);
+capeShape.lineTo(0.48, -0.82);
+capeShape.lineTo(0, -1.14);
+capeShape.lineTo(-0.48, -0.82);
+capeShape.closePath();
 
 function Hair({ style, color = "#2a1812" }) {
   if (style === "twists") {
@@ -120,6 +128,18 @@ export function FighterModel({ appearance, enemy = false, attackRef, dodgeRef, m
 
   return (
     <group ref={body} scale={enemy ? 1.08 : 1}>
+      {enemy && (
+        <group position={[0, 1.35, -0.33]}>
+          <mesh castShadow>
+            <shapeGeometry args={[capeShape]} />
+            <meshStandardMaterial color="#101116" side={THREE.DoubleSide} roughness={0.8} metalness={0.12} />
+          </mesh>
+          <mesh position={[0, 0.68, -0.012]}>
+            <planeGeometry args={[0.82, 1.15]} />
+            <meshStandardMaterial color="#1d2028" side={THREE.DoubleSide} roughness={0.9} transparent opacity={0.55} />
+          </mesh>
+        </group>
+      )}
       <mesh position={[0, 2.58, 0]} scale={[0.93, 1.04, 0.92]} castShadow><sphereGeometry args={[0.56, 16, 12]} /><meshStandardMaterial color={skin} roughness={0.82} /></mesh>
       <Hair style={hair} color={enemy ? "#e8e8ea" : "#2b1812"} />
       {[-0.2, 0.2].map((x) => (
