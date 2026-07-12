@@ -1,84 +1,58 @@
-import { useForm } from 'react-hook-form';
-import { useState } from 'react';
+import { useForm } from "react-hook-form";
+import { useState } from "react";
 
 function Contact() {
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm();
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm();
   const [status, setStatus] = useState(null);
 
   const onSubmit = async (data) => {
+    setStatus(null);
     try {
-      const res = await fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (res.ok) {
-        setStatus('success');
-        reset();
-      } else {
-        setStatus('error');
-      }
+      const response = await fetch("/api/contact", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+      if (!response.ok) throw new Error("Contact request failed");
+      setStatus("success");
+      reset();
     } catch {
-      setStatus('error');
+      setStatus("error");
     }
   };
 
   return (
-    <section id="contact" className="bg-gray-50 py-20 px-6">
-      <div className="max-w-md mx-auto">
-        <h2 className="text-4xl font-bold text-gray-800 mb-6 text-center">
-          Get in Touch
-        </h2>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <input
-            className="w-full border p-2 rounded"
-            placeholder="Name"
-            {...register('name', { required: true })}
-          />
-          {errors.name && (
-            <p className="text-red-600 text-sm">Name is required</p>
-          )}
-          <input
-            className="w-full border p-2 rounded"
-            placeholder="Email"
-            {...register('email', {
-              required: true,
-              pattern: /^\S+@\S+$/i,
-            })}
-          />
-          {errors.email && (
-            <p className="text-red-600 text-sm">Valid email required</p>
-          )}
-          <textarea
-            className="w-full border p-2 rounded h-32"
-            placeholder="Message"
-            {...register('message', { required: true })}
-          />
-          {errors.message && (
-            <p className="text-red-600 text-sm">Message is required</p>
-          )}
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            {isSubmitting ? 'Sending...' : 'Send Message'}
-          </button>
-        </form>
-        {status === 'success' && (
-          <p className="text-green-600 mt-4 text-center">Message sent!</p>
-        )}
-        {status === 'error' && (
-          <p className="text-red-600 mt-4 text-center">
-            Something went wrong.
-          </p>
-        )}
+    <section id="contact" className="pf-contact">
+      <div className="pf-contact-copy">
+        <span className="pf-card-label">03 / START A CONVERSATION</span>
+        <h2>Have a problem<br />worth <em>building</em> for?</h2>
+        <p>I&apos;m interested in software development opportunities, creative product work, and teams that care about both the system and the experience.</p>
+        <div className="pf-contact-links">
+          <a href="mailto:priitivi@gmail.com"><span>EMAIL</span><strong>priitivi@gmail.com</strong><i aria-hidden="true">↗</i></a>
+          <a href="https://github.com/priitivi" target="_blank" rel="noreferrer"><span>GITHUB</span><strong>@priitivi</strong><i aria-hidden="true">↗</i></a>
+          <a href="/Priit_CV.pdf" download><span>DOCUMENT</span><strong>Download CV</strong><i aria-hidden="true">↓</i></a>
+        </div>
       </div>
+
+      <form className="pf-contact-form" onSubmit={handleSubmit(onSubmit)} noValidate>
+        <div className="pf-form-top"><span>NEW_MESSAGE.TXT</span><small>SECURE CHANNEL / 001</small></div>
+        <div className="pf-field">
+          <label htmlFor="contact-name">Your name</label>
+          <input id="contact-name" autoComplete="name" placeholder="How should I address you?" {...register("name", { required: "Please enter your name." })} />
+          {errors.name && <p role="alert">{errors.name.message}</p>}
+        </div>
+        <div className="pf-field">
+          <label htmlFor="contact-email">Email address</label>
+          <input id="contact-email" type="email" autoComplete="email" placeholder="you@company.com" {...register("email", { required: "Please enter your email.", pattern: { value: /^\S+@\S+$/i, message: "Please enter a valid email." } })} />
+          {errors.email && <p role="alert">{errors.email.message}</p>}
+        </div>
+        <div className="pf-field">
+          <label htmlFor="contact-message">What are we building?</label>
+          <textarea id="contact-message" placeholder="Tell me about the idea, role, or problem…" {...register("message", { required: "Please include a message." })} />
+          {errors.message && <p role="alert">{errors.message.message}</p>}
+        </div>
+        <button type="submit" className="pf-submit" disabled={isSubmitting}>{isSubmitting ? "Transmitting…" : "Send the message"}<span aria-hidden="true">↗</span></button>
+        {status === "success" && <p className="pf-form-status is-success" role="status">Message received. I&apos;ll be in touch.</p>}
+        {status === "error" && <p className="pf-form-status is-error" role="status">The message could not be sent. Email me directly instead.</p>}
+      </form>
+
+      <footer className="pf-footer"><strong>PRIITIVI © {new Date().getFullYear()}</strong><span>Designed and built in London.</span><a href="#hero">Back to top ↑</a></footer>
     </section>
   );
 }

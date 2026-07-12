@@ -1,14 +1,18 @@
-function Navbar() {
+function Navbar({ onExplore }) {
   return (
-    <nav className="fixed top-0 left-0 w-full bg-white shadow-md z-50">
-      <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-        <div className="text-xl font-bold text-gray-800">Priitivi</div>
-        <div className="space-x-6 text-sm font-medium text-gray-700">
-          <a href="#about" className="hover:text-blue-500 transition">About</a>
-          <a href="#projects" className="hover:text-blue-500 transition">Projects</a>
-          <a href="#contact" className="hover:text-blue-500 transition">Contact</a>
-        </div>
+    <nav className="pf-nav" aria-label="Primary navigation">
+      <a className="pf-logo" href="#hero" aria-label="Priitivi, back to top">
+        <span>PR</span>
+        <strong>PRIITIVI</strong>
+      </a>
+      <div className="pf-nav-links">
+        <a href="#about"><span>01</span> About</a>
+        <a href="#projects"><span>02</span> Work</a>
+        <a href="#contact"><span>03</span> Contact</a>
       </div>
+      <button type="button" className="pf-nav-game" onClick={onExplore}>
+        <span aria-hidden="true">▶</span> Play fighter
+      </button>
     </nav>
   );
 }
