@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
-import ExperimentPlaceholder from "./ExperimentPlaceholder";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import LabGate from "./LabGate";
 import LabHome from "./LabHome";
 import { clearLabSession, readLabSession, unlockLab } from "./auth/labSession";
 import "./lab.css";
+
+const AudioReactor = lazy(() => import("./audio-reactor/AudioReactor"));
 
 export default function LabApp() {
   const [authState, setAuthState] = useState("checking");
@@ -74,7 +75,11 @@ export default function LabApp() {
   }
 
   if (pathname === "/lab/audio-reactor") {
-    return <ExperimentPlaceholder navigate={navigate} onLogout={logout} />;
+    return (
+      <Suspense fallback={<main className="lab-boot" role="status"><div className="lab-scanlines" aria-hidden="true" /><span>EXPERIMENT 001</span><strong>ENERGISING REACTOR…</strong><i /></main>}>
+        <AudioReactor navigate={navigate} onLogout={logout} />
+      </Suspense>
+    );
   }
 
   return <LabHome navigate={navigate} onLogout={logout} />;
