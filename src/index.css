@@ -25,19 +25,30 @@ button,a,input,textarea { font:inherit; }
 .pf-nav-game { justify-self:end; border:1px solid var(--yellow); background:transparent; color:var(--yellow); padding:.62rem .8rem; font:850 .68rem ui-monospace,monospace; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; }
 .pf-nav-game:hover { background:var(--yellow); color:#080808; }
 
-/* Experimental lab breach */
-.pf-lab-rift { position:fixed; z-index:45; top:50%; right:-10.7rem; display:flex; width:16rem; height:20rem; align-items:center; color:white; text-decoration:none; transform:translateY(-43%); transition:right .35s cubic-bezier(.2,.8,.2,1),filter .35s ease; filter:drop-shadow(0 0 1rem rgba(155,92,255,.28)); }
-.pf-lab-rift:hover,.pf-lab-rift:focus-visible { right:-.7rem; filter:drop-shadow(0 0 1.4rem rgba(200,255,54,.5)); }
-.pf-lab-rift svg { flex:0 0 7rem; height:100%; overflow:visible; }
-.pf-rift-void { fill:#020204; stroke:#2f233b; stroke-width:2; }
-.pf-rift-core { fill:url(#rift-core); opacity:.78; animation:pf-rift-breathe 2.2s ease-in-out infinite alternate; }
-.pf-rift-cracks { fill:none; stroke:#c8ff36; stroke-width:2; stroke-linecap:round; opacity:.82; stroke-dasharray:8 7; animation:pf-rift-sparks 1.4s linear infinite; }
-.pf-rift-copy { display:flex; min-width:8.5rem; flex-direction:column; gap:.24rem; border:1px solid rgba(200,255,54,.55); border-left:0; background:rgba(6,6,10,.93); padding:.8rem .8rem .85rem .35rem; box-shadow:0 0 2rem rgba(155,92,255,.2); }
-.pf-rift-copy small { color:#c8ff36; font:800 .5rem ui-monospace,monospace; letter-spacing:.16em; }
-.pf-rift-copy strong { font-size:.88rem; line-height:1.05; text-transform:uppercase; }
-.pf-rift-copy em { color:#b9a1ff; font:700 .58rem ui-monospace,monospace; }
-@keyframes pf-rift-breathe { to { opacity:1; transform:scaleX(1.12); transform-origin:center; } }
-@keyframes pf-rift-sparks { to { stroke-dashoffset:-30; } }
+/* Crashed UFO entrance to Priit's Lab */
+.pf-lab-ufo { position:fixed; z-index:45; top:52%; right:-11rem; display:flex; width:25rem; height:15rem; align-items:center; color:white; text-decoration:none; transform:translateY(-50%) rotate(-4deg); transition:right .42s cubic-bezier(.16,.8,.2,1),filter .35s ease; filter:drop-shadow(-1rem 1.1rem 1rem rgba(0,0,0,.55)); }
+.pf-lab-ufo:hover,.pf-lab-ufo:focus-visible { right:0; filter:drop-shadow(0 0 1.4rem rgba(200,255,54,.34)); }
+.pf-lab-ufo svg { order:1; flex:0 0 17rem; overflow:visible; animation:pf-ufo-rattle 3.8s ease-in-out infinite; }
+.pf-ufo-copy { order:2; display:flex; min-width:9.6rem; flex-direction:column; gap:.28rem; border:1px solid rgba(200,255,54,.55); border-left:0; background:rgba(6,7,10,.94); padding:.8rem .8rem .85rem .2rem; box-shadow:0 0 2rem rgba(125,92,255,.16); opacity:.1; transform:translateX(-1.4rem); transition:opacity .25s ease,transform .35s ease; }
+.pf-lab-ufo:hover .pf-ufo-copy,.pf-lab-ufo:focus-visible .pf-ufo-copy { opacity:1; transform:translateX(0); }
+.pf-ufo-copy small { color:#c8ff36; font:800 .49rem ui-monospace,monospace; letter-spacing:.13em; }
+.pf-ufo-copy strong { font-size:.82rem; line-height:1.1; text-transform:uppercase; }
+.pf-ufo-copy em { color:#b9a1ff; font:700 .57rem ui-monospace,monospace; }
+.pf-ufo-ship { transform-origin:145px 110px; }
+.pf-ufo-shadow { fill:#000; opacity:.42; }
+.pf-ufo-hull { fill:url(#ufo-hull); stroke:#d9dde8; stroke-width:2; }
+.pf-ufo-rim { fill:#1a1b25; stroke:#575b70; stroke-width:2; }
+.pf-ufo-dome { fill:url(#ufo-dome); stroke:#c8ff36; stroke-width:2; opacity:.92; }
+.pf-ufo-glass-line { fill:none; stroke:rgba(255,255,255,.58); stroke-width:2; }
+.pf-ufo-lights { fill:#c8ff36; }
+.pf-ufo-scar { fill:none; stroke:#ff6d9b; stroke-width:3; }
+.pf-ufo-debris { fill:#c8ff36; stroke:#c8ff36; stroke-width:2; stroke-linecap:round; opacity:.72; stroke-dasharray:8 6; animation:pf-ufo-sparks 1.5s linear infinite; }
+.pf-ufo-smoke { position:absolute; z-index:-1; top:1rem; right:1rem; display:flex; align-items:flex-end; gap:.2rem; }
+.pf-ufo-smoke i { display:block; width:2.4rem; height:2.4rem; border-radius:50%; background:rgba(142,113,170,.18); filter:blur(7px); animation:pf-ufo-smoke 2.7s ease-out infinite; }
+.pf-ufo-smoke i:nth-child(2) { animation-delay:.7s; }.pf-ufo-smoke i:nth-child(3) { animation-delay:1.4s; }
+@keyframes pf-ufo-rattle { 48% { transform:translate(0,0) rotate(0); } 50% { transform:translate(-2px,1px) rotate(-1deg); } 52% { transform:translate(2px,-1px) rotate(1deg); } 54% { transform:none; } }
+@keyframes pf-ufo-sparks { to { stroke-dashoffset:-28; } }
+@keyframes pf-ufo-smoke { from { opacity:.65; transform:translate(0,0) scale(.65); } to { opacity:0; transform:translate(2rem,-4rem) scale(1.5); } }
 
 /* Hero */
 .pf-hero { position:relative; display:grid; grid-template-columns:minmax(0,1.08fr) minmax(25rem,.92fr); align-items:center; gap:clamp(2rem,6vw,7rem); min-height:100vh; padding:9rem clamp(1.2rem,6vw,7rem) 8rem; isolation:isolate; }
@@ -223,9 +234,9 @@ button,a,input,textarea { font:inherit; }
   .pf-nav { grid-template-columns:auto 1fr; height:4.2rem; }
   .pf-nav-links { display:none; }
   .pf-nav-game { font-size:.6rem; }
-  .pf-lab-rift { top:auto; right:-9.6rem; bottom:3.5rem; width:14.5rem; height:12rem; transform:none; }
-  .pf-lab-rift:hover,.pf-lab-rift:focus-visible { right:-.6rem; }
-  .pf-lab-rift svg { flex-basis:5.6rem; }
+  .pf-lab-ufo { top:auto; right:-13rem; bottom:3.2rem; width:21rem; height:10rem; transform:rotate(-4deg); }
+  .pf-lab-ufo:hover,.pf-lab-ufo:focus-visible { right:-2rem; }
+  .pf-lab-ufo svg { flex-basis:13rem; }
   .pf-hero { grid-template-columns:minmax(0,1fr); gap:3rem; min-height:auto; padding:7.5rem 1rem 7rem; }
   .pf-hero h1 { font-size:clamp(3.4rem,16vw,5.3rem); }
   .pf-hero-actions { align-items:stretch; flex-direction:column; }
@@ -267,6 +278,6 @@ button,a,input,textarea { font:inherit; }
 @media (prefers-reduced-motion:reduce) {
   html { scroll-behavior:auto; }
   .pf-hero-orbit,.pf-marquee div,.pf-console-output i { animation:none; }
-  .pf-rift-core,.pf-rift-cracks { animation:none; }
+  .pf-lab-ufo svg,.pf-ufo-debris,.pf-ufo-smoke i { animation:none; }
   .pf-project-image img,.pf-skill,.pf-contact-links a,.pf-button { transition:none; }
 }
