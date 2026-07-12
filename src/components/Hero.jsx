@@ -1,221 +1,45 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion as Motion } from "framer-motion";
+import { heroModes } from "../data/portfolioData";
 
-function Hero() {
-  const whoamiCommand = "whoami";
-  const whoamiResponse = "I'm Priitivi — junior software developer from London";
-
-  const catCommand = "cat mission.txt";
-  const catResponse =
-    "I build clean, creative web experiences with purpose and polish.";
-
-  const [typedCommand1, setTypedCommand1] = useState("");
-  const [typedWhoami, setTypedWhoami] = useState("");
-  const [typedCommand2, setTypedCommand2] = useState("");
-  const [typedMission, setTypedMission] = useState("");
-  const [typedCommand3, setTypedCommand3] = useState("");
-  const [commandLength, setCommandLength] = useState(0);
-
-  const [showButtons, setShowButtons] = useState(false);
-
-  const [hasTypedWhoami, setHasTypedWhoami] = useState(false);
-  const [hasTypedWhoamiResponse, setHasTypedWhoamiResponse] = useState(false);
-  const [hasTypedCatCommand, setHasTypedCatCommand] = useState(false);
-  const [hasTypedMission, setHasTypedMission] = useState(false);
-
-  // Step 1: type 'whoami'
-  useEffect(() => {
-    let i = 0;
-    let output = "";
-    const interval = setInterval(() => {
-      if (i < whoamiCommand.length) {
-        output += whoamiCommand.charAt(i);
-        setTypedCommand1(output);
-        i++;
-      } else {
-        clearInterval(interval);
-        setHasTypedWhoami(true);
-      }
-    }, 50);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Step 2: type whoami response
-  useEffect(() => {
-    if (!hasTypedWhoami) return;
-
-    let i = 0;
-    let output = "";
-    const interval = setInterval(() => {
-      if (i < whoamiResponse.length) {
-        output += whoamiResponse.charAt(i);
-        setTypedWhoami(output);
-        i++;
-      } else {
-        clearInterval(interval);
-        setHasTypedWhoamiResponse(true);
-      }
-    }, 50);
-    return () => clearInterval(interval);
-  }, [hasTypedWhoami]);
-
-  // Step 3: type 'cat mission.txt'
-  useEffect(() => {
-    if (!hasTypedWhoamiResponse) return;
-
-    let i = 0;
-    let output = "";
-    const interval = setInterval(() => {
-      if (i < catCommand.length) {
-        output += catCommand.charAt(i);
-        setTypedCommand2(output);
-        i++;
-      } else {
-        clearInterval(interval);
-        setHasTypedCatCommand(true);
-      }
-    }, 50);
-    return () => clearInterval(interval);
-  }, [hasTypedWhoamiResponse]);
-
-  // Step 4: type mission text
-  useEffect(() => {
-    if (!hasTypedCatCommand) return;
-
-    let i = 0;
-    let output = "";
-    const interval = setInterval(() => {
-      if (i < catResponse.length) {
-        output += catResponse.charAt(i);
-        setTypedMission(output);
-        i++;
-      } else {
-        clearInterval(interval);
-        setHasTypedMission(true);
-        setTimeout(() => setShowButtons(true), 400);
-      }
-    }, 50);
-    return () => clearInterval(interval);
-  }, [hasTypedCatCommand]);
-
-  // Step 5: user command (scroll or download)
-  const handleCommand = (target, label, type = "scroll") => {
-    const finalCommand =
-      type === "download" ? `download ${label}.pdf` : `open ${label}.txt`;
-
-    setTypedCommand3("");
-    setCommandLength(finalCommand.length);
-
-    let i = 0;
-    let output = "";
-    const interval = setInterval(() => {
-      if (i < finalCommand.length) {
-        output += finalCommand.charAt(i);
-        setTypedCommand3(output);
-        i++;
-      } else {
-        clearInterval(interval);
-        setTimeout(() => {
-          if (type === "download") {
-            const link = document.createElement("a");
-            link.href = `/Priit_CV.pdf`;
-            link.download = "Priit_CV.pdf";
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-          } else {
-            document
-              .getElementById(target)
-              ?.scrollIntoView({ behavior: "smooth" });
-          }
-        }, 500);
-      }
-    }, 50);
-  };
+function Hero({ onExplore }) {
+  const [activeMode, setActiveMode] = useState(heroModes[0]);
 
   return (
-    <section
-      id="hero"
-      className="min-h-screen bg-black text-green-400 flex flex-col items-center justify-center px-4"
-    >
-      <div className="max-w-3xl w-full bg-[#0d0d0d] p-6 rounded-md shadow-md font-mono text-lg leading-relaxed border border-green-700 mb-8">
-        {/* whoami command */}
-        <div className="mb-2">
-          <span className="text-green-500">$</span>{" "}
-          <span>{typedCommand1}</span>
-          {!hasTypedWhoami && <span className="animate-pulse">|</span>}
-        </div>
-
-        {/* whoami response */}
-        {hasTypedWhoami && (
-          <div className="mb-4">
-            <span className="text-green-500">$</span>{" "}
-            <span>{typedWhoami}</span>
-            {!hasTypedWhoamiResponse && <span className="animate-pulse">|</span>}
-          </div>
-        )}
-
-        {/* cat mission.txt command */}
-        {hasTypedWhoamiResponse && (
-          <div className="mb-2">
-            <span className="text-green-500">$</span>{" "}
-            <span>{typedCommand2}</span>
-            {!hasTypedCatCommand && <span className="animate-pulse">|</span>}
-          </div>
-        )}
-
-        {/* mission.txt response */}
-        {hasTypedCatCommand && (
-          <div className="mb-4">
-            <span className="text-green-500">$</span>{" "}
-            <span>{typedMission}</span>
-            {!hasTypedMission && <span className="animate-pulse">|</span>}
-          </div>
-        )}
-
-        {/* user-triggered command */}
-        {showButtons && typedCommand3 && (
-          <div className="mb-4">
-            <span className="text-green-500">$</span>{" "}
-            <span>{typedCommand3}</span>
-            {typedCommand3.length < commandLength && (
-              <span className="animate-pulse">|</span>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Command buttons */}
-      {showButtons && (
-        <Motion.div
-          className="flex flex-wrap justify-center gap-4"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.6 }}
-        >
-          {[
-            { label: "about", target: "about", type: "scroll" },
-            { label: "projects", target: "projects", type: "scroll" },
-            { label: "contact", target: "contact", type: "scroll" },
-            { label: "cv", target: "cv", type: "download" },
-          ].map((btn, index) => (
-            <Motion.button
-              key={btn.label}
-              onClick={() =>
-                handleCommand(btn.target, btn.label, btn.type)
-              }
-              className="bg-green-600 text-black px-4 py-2 rounded hover:bg-green-700 font-mono"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 + index * 0.2, duration: 0.4 }}
-            >
-              {btn.type === "download"
-                ? "download cv.pdf"
-                : `open ${btn.label}.txt`}
-            </Motion.button>
-          ))}
+    <section id="hero" className="pf-hero">
+      <div className="pf-grid" aria-hidden="true" />
+      <div className="pf-hero-orbit pf-hero-orbit-one" aria-hidden="true" />
+      <div className="pf-hero-orbit pf-hero-orbit-two" aria-hidden="true" />
+      <div className="pf-hero-copy">
+        <Motion.p className="pf-eyebrow" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}><span /> London-based creative developer</Motion.p>
+        <Motion.h1 initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+          Software should<br /><em>earn</em> a second look.
+        </Motion.h1>
+        <Motion.p className="pf-hero-lede" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+          I&apos;m Priitivi—a Computer Science graduate building full-stack products, purposeful interfaces, and the occasional portfolio boss fight.
+        </Motion.p>
+        <Motion.div className="pf-hero-actions" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
+          <a className="pf-button pf-button-primary" href="#projects">Explore the work <span aria-hidden="true">↓</span></a>
+          <button className="pf-button pf-button-ghost" type="button" onClick={onExplore}>Play the 3D fighter <span aria-hidden="true">↗</span></button>
+          <a className="pf-text-link" href="/Priit_CV.pdf" download>Download CV</a>
         </Motion.div>
-      )}
+        <div className="pf-hero-stats" aria-label="Quick facts">
+          <div><strong>03</strong><span>Featured builds</span></div>
+          <div><strong>09</strong><span>Core technologies</span></div>
+          <div><strong>∞</strong><span>Ideas in motion</span></div>
+        </div>
+      </div>
+      <Motion.aside className="pf-console" initial={{ opacity: 0, scale: 0.96, rotate: 1 }} animate={{ opacity: 1, scale: 1, rotate: -1 }} transition={{ delay: 0.18, duration: 0.55 }} aria-label="Interactive developer profile">
+        <div className="pf-console-top"><span>PRIITIVI_OS</span><div aria-hidden="true"><i /><i /><i /></div><small>ONLINE</small></div>
+        <div className="pf-console-profile"><div className="pf-avatar-mark" aria-hidden="true">P</div><div><span>PROFILE LOADED</span><strong>Priitivi Ravi</strong><small>Creative developer · London</small></div></div>
+        <div className="pf-console-tabs" role="tablist" aria-label="Development modes">
+          {heroModes.map((mode) => <button key={mode.id} type="button" role="tab" aria-selected={activeMode.id === mode.id} onClick={() => setActiveMode(mode)}>{mode.label}</button>)}
+        </div>
+        <div className="pf-console-output" aria-live="polite"><span>$ {activeMode.command}</span><p>{activeMode.output}</p><div aria-hidden="true"><i /><i /><i /><i /><i /></div></div>
+        <div className="pf-console-footer"><span>React</span><span>Node</span><span>Postgres</span><span>Three.js</span></div>
+      </Motion.aside>
+      <div className="pf-scroll-note" aria-hidden="true"><span>SCROLL TO EXPLORE</span><i /></div>
+      <div className="pf-marquee" aria-hidden="true"><div>DESIGN WITH INTENT · BUILD WITH PURPOSE · SHIP WITH PERSONALITY · DESIGN WITH INTENT · BUILD WITH PURPOSE · SHIP WITH PERSONALITY ·</div></div>
     </section>
   );
 }
