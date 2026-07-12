@@ -28,8 +28,8 @@ export default function LabHome({ navigate, onLogout }) {
         </div>
         <aside className="lab-diagnostics" aria-label="Laboratory diagnostics">
           <div><span>FACILITY</span><strong>ONLINE</strong></div>
-          <div><span>BUILD INTEGRITY</span><strong className="lab-status-warning">63%</strong></div>
-          <div><span>ACTIVE CHAMBERS</span><strong>01</strong></div>
+          <div><span>BUILD INTEGRITY</span><strong className="lab-status-warning">71%</strong></div>
+          <div><span>ACTIVE CHAMBERS</span><strong>02</strong></div>
           <div><span>SAFETY LIMITER</span><strong>ARMED</strong></div>
           <div className="lab-scope" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
         </aside>
@@ -59,7 +59,7 @@ export default function LabHome({ navigate, onLogout }) {
           ))}
 
           <article className="lab-experiment-card lab-experiment-empty">
-            <div><span>CHAMBER 002</span><strong>COMING SOON</strong></div>
+            <div><span>CHAMBER 003</span><strong>COMING SOON</strong></div>
             <h3>Space reserved.</h3>
             <p>Another unstable idea will be wired into this bay when it survives first contact with reality.</p>
           </article>

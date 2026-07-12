@@ -8,4 +8,13 @@ export const experiments = [
     route: "/lab/audio-reactor",
     signals: ["Web Audio API", "FFT Analysis", "React Three Fiber", "Local files only"],
   },
+  {
+    id: "paint-surfer",
+    experimentNumber: "002",
+    title: "The Chroma Drifter",
+    status: "Playable",
+    description: "A blank 3D canvas, a stick artist with an oversized pencil, and a liquid colour trail that becomes a surfable path.",
+    route: "/lab/paint-surfer",
+    signals: ["Procedural character", "Paint simulation", "Keyboard + touch", "Local soundtrack"],
+  },
 ];

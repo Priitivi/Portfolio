@@ -72,7 +72,7 @@
 .lab-section-heading span { color:var(--lab-red); font:900 .6rem ui-monospace,monospace; letter-spacing:.17em; }
 .lab-section-heading h2 { margin:.4rem 0 0; font-size:clamp(2.8rem,5vw,5.5rem); line-height:.9; letter-spacing:-.06em; }
 .lab-section-heading>p { max-width:29rem; margin:0; color:#9297a1; line-height:1.65; }
-.lab-experiment-grid { display:grid; grid-template-columns:1.45fr .55fr; gap:1rem; }
+.lab-experiment-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
 .lab-experiment-card { position:relative; min-height:31rem; border:1px solid #454955; background:linear-gradient(145deg,rgba(18,20,27,.96),rgba(7,8,12,.96)); padding:clamp(1.3rem,3vw,2.5rem); overflow:hidden; }
 .lab-experiment-card::before { content:""; position:absolute; inset:.55rem; border:1px dashed rgba(236,232,220,.09); pointer-events:none; }
 .lab-card-top { position:relative; display:flex; justify-content:space-between; gap:1rem; font:850 .62rem ui-monospace,monospace; letter-spacing:.13em; }
@@ -87,7 +87,7 @@
 .lab-card-signal { position:absolute; top:5rem; right:2rem; display:flex; align-items:end; gap:.2rem; width:11rem; height:4rem; opacity:.78; }
 .lab-card-signal i { flex:1; background:var(--lab-purple); box-shadow:0 0 .6rem rgba(139,92,246,.5); }
 .lab-card-signal i:nth-child(1),.lab-card-signal i:nth-child(8) { height:18%; }.lab-card-signal i:nth-child(2),.lab-card-signal i:nth-child(6) { height:46%; }.lab-card-signal i:nth-child(3) { height:92%; }.lab-card-signal i:nth-child(4) { height:34%; }.lab-card-signal i:nth-child(5) { height:75%; }.lab-card-signal i:nth-child(7) { height:58%; }
-.lab-experiment-empty { min-height:31rem; display:flex; flex-direction:column; justify-content:flex-end; background:repeating-linear-gradient(135deg,#0b0c10 0 1.2rem,#0e1015 1.2rem 2.4rem); }
+.lab-experiment-empty { grid-column:1/-1; min-height:18rem; display:flex; flex-direction:column; justify-content:flex-end; background:repeating-linear-gradient(135deg,#0b0c10 0 1.2rem,#0e1015 1.2rem 2.4rem); }
 .lab-experiment-empty>div { position:absolute; top:1.5rem; right:1.5rem; left:1.5rem; display:flex; justify-content:space-between; color:#686d78; font:800 .58rem ui-monospace,monospace; }
 .lab-experiment-empty h3 { margin:0 0 1rem; font-size:2.8rem; color:#777b84; }
 .lab-footer { position:relative; z-index:2; display:flex; justify-content:space-between; gap:1rem; border-top:1px solid #2f323a; padding:1.2rem clamp(1rem,6vw,7rem); color:#717681; font:750 .59rem ui-monospace,monospace; }
