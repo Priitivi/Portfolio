@@ -33,7 +33,7 @@ function StandardPortfolio({ onExplore, webglError }) {
           onClick={onExplore}
           className="rounded-md border border-yellow-300 bg-black px-5 py-3 font-mono text-sm font-bold uppercase tracking-[0.16em] text-yellow-300 shadow-xl transition hover:bg-yellow-300 hover:text-black focus:outline-none focus:ring-4 focus:ring-yellow-300/50"
         >
-          Explore 3D beta
+          Play portfolio fighter
         </button>
       </div>
     </div>
@@ -59,7 +59,7 @@ function App() {
       <Suspense
         fallback={
           <div className="flex min-h-screen items-center justify-center bg-black font-mono text-yellow-300">
-            Loading town engine…
+            Loading fight engine…
           </div>
         }
       >
