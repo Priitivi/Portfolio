@@ -188,6 +188,8 @@ button,a,input,textarea { font:inherit; }
 .pf-form-status.is-success { background:#15351f; color:#8eedaa; }.pf-form-status.is-error { background:#3c1818; color:#ffaaaa; }
 .pf-footer { grid-column:1/-1; display:flex; align-items:center; justify-content:space-between; gap:1rem; border-top:1px solid rgba(0,0,0,.35); margin-top:5rem; padding:1.2rem 0; font-size:.7rem; }
 .pf-footer a { color:#090909; font-weight:850; }
+.pf-footer .pf-lab-link { border:1px solid rgba(0,0,0,.45); padding:.45rem .6rem; font:850 .6rem ui-monospace,monospace; letter-spacing:.09em; text-decoration:none; text-transform:uppercase; }
+.pf-footer .pf-lab-link:hover { background:#090909; color:var(--yellow); }
 
 @media (max-width:1000px) {
   .pf-hero { grid-template-columns:1fr; padding-top:8rem; }

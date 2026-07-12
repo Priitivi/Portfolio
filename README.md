@@ -107,3 +107,26 @@ Feel free to fork, but please credit if reusing major design elements.
 🌍 Website: https://priitivi.com
 
 🧑‍💻 GitHub: https://github.com/priitivi
+
+---
+
+## Experimental Lab
+
+The restricted experimental area lives at `/lab`. It is route-level lazy loaded, so the lab code is not part of the normal portfolio bundle.
+
+The access gate is validated by a Netlify Function. Generate a salted password hash locally:
+
+```bash
+npm run lab:hash-password
+```
+
+Then add both values under the Netlify site's environment variables:
+
+- `LAB_PASSWORD_HASH`: the generated `scrypt$...` value
+- `LAB_SESSION_SECRET`: a random secret containing at least 32 characters
+
+Do not place either value in `netlify.toml` or commit them to Git. Netlify must redeploy after the variables are configured.
+
+For local end-to-end Function testing, run the site through Netlify's development runtime with the same variables available locally. Plain `npm run dev` can preview the gate and routes but intentionally cannot unlock them.
+
+The gate protects the session and keeps the password outside the browser bundle. Because this is a static Vite application, the lab's compiled JavaScript is not confidential and must not contain private information.

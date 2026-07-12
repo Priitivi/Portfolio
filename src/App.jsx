@@ -7,6 +7,7 @@ import Contact from "./components/Contact";
 import { supportsWebGL } from "./utils/webgl";
 
 const GameExperience = lazy(() => import("./game/GameExperience"));
+const LabApp = lazy(() => import("./lab/LabApp"));
 
 function StandardPortfolio({ onExplore, webglError }) {
   return (
@@ -36,6 +37,15 @@ function StandardPortfolio({ onExplore, webglError }) {
 function App() {
   const [mode, setMode] = useState("standard");
   const [webglError, setWebglError] = useState(false);
+  const isLabRoute = window.location.pathname === "/lab" || window.location.pathname.startsWith("/lab/");
+
+  if (isLabRoute) {
+    return (
+      <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-black font-mono text-yellow-300">Booting restricted systems…</div>}>
+        <LabApp />
+      </Suspense>
+    );
+  }
 
   const enterGame = () => {
     if (!supportsWebGL()) {

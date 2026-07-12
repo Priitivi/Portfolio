@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test",
+    "lab:hash-password": "node scripts/hash-lab-password.mjs"
   },
   "dependencies": {
     "@react-three/fiber": "^9.6.1",

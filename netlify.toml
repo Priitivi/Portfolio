@@ -1,0 +1,20 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/lab/api/session"
+  to = "/.netlify/functions/lab-session"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/lab"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/lab/*"
+  to = "/index.html"
+  status = 200
