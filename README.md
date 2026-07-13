@@ -26,7 +26,7 @@ Live site: [priitivi.com](https://priitivi.com)
 The Lab is a protected route at `/lab`. Its experiments are loaded only after the Lab bundle is requested.
 
 1. **Psychedelic Audio Reactor** — upload a local track and transform its waveform, frequency bands, stereo balance, and detected beats into four real-time visual systems.
-2. **The Chroma Drifter** — control a stick artist carrying an oversized pencil through a blank 3D world. Running paints the floor; clicking or pressing `J` creates a metallic colour wave that becomes a temporary surfboard.
+2. **The Chroma Drifter** — guide a clearly oriented stick artist through a three-chapter paint story. Awaken an unfinished mural, restore a giant artist statue, and colour-open a portal while surfing metallic paint waves to a ten-track local soundtrack.
 
 ## Tech stack
 
@@ -91,8 +91,10 @@ Portfolio/
 │  │  ├─ paint-surfer/
 │  │  │  ├─ PaintSurfer.jsx       # Game shell, HUD, music, and controls
 │  │  │  ├─ PaintWorld.jsx        # Movement, painting, camera, and shaders
+│  │  │  ├─ PaintStory.jsx        # Mural, statue, portal, and story beacons
 │  │  │  ├─ StickPainter.jsx      # Procedural character and pencil
-│  │  │  └─ paintMath.js          # Testable world/grid helpers
+│  │  │  ├─ paintMath.js          # Testable movement and world helpers
+│  │  │  └─ storyConfig.js        # Chapter definitions and progression
 │  │  ├─ LabApp.jsx               # Protected Lab route boundary
 │  │  └─ LabHome.jsx              # Experiment dashboard
 │  ├─ App.jsx                     # Top-level experience switch
@@ -128,7 +130,7 @@ React does not rerender at audio frequency. The analyser writes into refs, and R
 
 ### 3. Chroma Drifter game loop
 
-`PaintWorld` owns mutable vectors for position, velocity, facing, jumping, and surf state. Keyboard and touch inputs live in a `Set`, so the render loop can read simultaneous controls without triggering React state updates.
+`PaintWorld` owns mutable vectors for position, velocity, facing, jumping, and surf state. Keyboard and touch inputs live in a `Set`, so the render loop can read simultaneous controls without triggering React state updates. Movement is projected onto a stable camera-relative basis: `W` always means visually forward, even after the character turns. A scarf, visible face, and luminous ground arrow make its facing readable from either side.
 
 Painting uses three layers:
 
@@ -136,7 +138,9 @@ Painting uses three layers:
 2. A fixed-size dynamic buffer geometry builds a two-sided trail from recent player positions.
 3. A custom shader adds shifting colour and a silver gleam to that trail.
 
-Only user-facing values—world saturation, surf chain, dialogs, and music state—use React state. The 60 FPS simulation stays in refs and Three.js objects.
+Story progression is spatial. Only paint-surf cells inside the current beacon count toward its chapter; completing a chapter activates the next landmark. The billboard, statue, portal, and sky read mutable progress refs and colour themselves smoothly without rerendering at frame rate.
+
+Only user-facing values—story restoration, the current objective, surf chain, dialogs, and music state—use React state. The 60 FPS simulation stays in refs and Three.js objects. The soundtrack UI exposes all ten supplied tracks while the browser loads only the selected source.
 
 ### 4. Performance strategy
 
@@ -220,7 +224,7 @@ The tests cover:
 - Password hashing, timing-safe verification, session expiry, and tamper rejection.
 - Login, signed-cookie restoration, invalid clearance, and logout Function behavior.
 - Supported audio formats, frequency measurements, stereo balance, beat cooldowns, and transport formatting.
-- Paint-cell quantisation, progress calculation, world bounds, and soundtrack asset presence.
+- Paint-cell quantisation, screen-relative movement axes, story progression, world bounds, and all soundtrack asset files.
 
 Interactive changes should also be checked in a browser at desktop and mobile widths because WebGL capability, pointer input, autoplay policy, and GPU performance differ by device.
 

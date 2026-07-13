@@ -2,6 +2,7 @@ import { Canvas } from "@react-three/fiber";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PaintWorld from "./PaintWorld";
 import { paintSoundtracks } from "./soundtracks";
+import { createStoryStatus } from "./storyConfig";
 import usePaintControls from "./usePaintControls";
 import "./paint-surfer.css";
 
@@ -44,7 +45,9 @@ export default function PaintSurfer({ navigate, onLogout }) {
   const [musicOn, setMusicOn] = useState(true);
   const [trackIndex, setTrackIndex] = useState(0);
   const [musicError, setMusicError] = useState("");
+  const [story, setStory] = useState(() => createStoryStatus());
   const audioRef = useRef(null);
+  const gameRef = useRef(null);
   const paintReleaseTimer = useRef(null);
   const reducedMotion = useMemo(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches, []);
   const quality = useMemo(() => {
@@ -89,6 +92,7 @@ export default function PaintSurfer({ navigate, onLogout }) {
   const start = () => {
     setStarted(true);
     setPaused(false);
+    window.requestAnimationFrame(() => gameRef.current?.focus());
     void playMusic();
   };
 
@@ -108,27 +112,21 @@ export default function PaintSurfer({ navigate, onLogout }) {
     }
   };
 
-  const selectNextTrack = async () => {
-    const nextIndex = (trackIndex + 1) % paintSoundtracks.length;
-    const nextTrack = paintSoundtracks[nextIndex];
-    setTrackIndex(nextIndex);
-    if (!audioRef.current) return;
-    audioRef.current.src = nextTrack.src;
-    audioRef.current.load();
-    if (musicOn) {
-      try {
-        audioRef.current.volume = 0.36;
-        await audioRef.current.play();
-        setMusicError("");
-      } catch {
-        setMusicError("The next track is loaded. Select Play to hear it.");
-      }
-    }
+  const selectTrack = (nextIndex) => {
+    setTrackIndex((nextIndex + paintSoundtracks.length) % paintSoundtracks.length);
+    setMusicError("");
+  };
+
+  const selectTrackFromMenu = (event) => {
+    selectTrack(Number(event.target.value));
+    event.currentTarget.blur();
+    gameRef.current?.focus();
   };
 
   const handleCanvasPointer = (active) => (event) => {
     if (event.target?.tagName !== "CANVAS") return;
     if (active && started && !paused && !completed) {
+      gameRef.current?.focus();
       controlsRef.current.add("Paint");
       window.clearTimeout(paintReleaseTimer.current);
       paintReleaseTimer.current = window.setTimeout(() => controlsRef.current.delete("Paint"), 180);
@@ -139,6 +137,8 @@ export default function PaintSurfer({ navigate, onLogout }) {
 
   return (
     <main
+      ref={gameRef}
+      tabIndex={-1}
       className={`paint-surfer quality-${quality} ${paused ? "is-paused" : ""}`}
       onPointerDown={handleCanvasPointer(true)}
       onPointerUp={handleCanvasPointer(false)}
@@ -158,6 +158,7 @@ export default function PaintSurfer({ navigate, onLogout }) {
           reducedMotion={reducedMotion}
           quality={quality}
           onProgress={setProgress}
+          onStoryUpdate={setStory}
           onSurf={() => setSurfCount((current) => current + 1)}
           onComplete={() => setCompleted(true)}
           onReady={handleReady}
@@ -178,18 +179,34 @@ export default function PaintSurfer({ navigate, onLogout }) {
       {started && (
         <>
           <aside className="paint-progress" aria-label="World colour progress">
-            <span>WORLD SATURATION</span>
+            <span>STORY RESTORATION</span>
             <strong>{progress.toString().padStart(2, "0")}%</strong>
             <div><i style={{ width: `${progress}%` }} /></div>
-            <small>{progress < 35 ? "The canvas is still asleep." : progress < 75 ? "Colour is learning to spread." : "Reality is almost awake."}</small>
+            <small>{progress < 35 ? "The first page is waking up." : progress < 75 ? "The maker remembers your colours." : "The way home is taking shape."}</small>
           </aside>
           <div className="paint-surf-meter" aria-live="polite"><span>SURF CHAIN</span><strong>×{surfCount.toString().padStart(2, "0")}</strong></div>
+          {!story.complete && story.current && (
+            <aside className="paint-mission" aria-live="polite">
+              <span>STORY CHAPTER {story.current.number} / {story.chapters.length.toString().padStart(2, "0")}</span>
+              <h2>{story.current.title}</h2>
+              <p>{story.current.prompt}</p>
+              <div><i style={{ width: `${story.current.progress}%` }} /></div>
+              <small>{story.current.hint} Paint-surf inside its glowing ring.</small>
+            </aside>
+          )}
         </>
       )}
 
       <aside className="paint-soundtrack" aria-label="Game soundtrack">
-        <span>NOW PLAYING</span><strong>{track.title}</strong>
-        <div><button type="button" onClick={toggleMusic}>{musicOn ? "Mute" : "Play"}</button><button type="button" onClick={selectNextTrack}>Next track</button></div>
+        <span>LOCAL SOUNDTRACK {String(trackIndex + 1).padStart(2, "0")} / {paintSoundtracks.length}</span>
+        <label>
+          <span className="sr-only">Select soundtrack</span>
+          <select value={trackIndex} onChange={selectTrackFromMenu}>
+            {paintSoundtracks.map((soundtrack, index) => <option key={soundtrack.id} value={index}>{soundtrack.title}</option>)}
+          </select>
+        </label>
+        <strong>{track.title}</strong>
+        <div><button type="button" onClick={() => selectTrack(trackIndex - 1)}>Previous</button><button type="button" onClick={toggleMusic}>{musicOn ? "Mute" : "Play"}</button><button type="button" onClick={() => selectTrack(trackIndex + 1)}>Next</button></div>
         {musicError && <small role="status">{musicError}</small>}
       </aside>
 
@@ -198,10 +215,10 @@ export default function PaintSurfer({ navigate, onLogout }) {
           <div className="paint-intro-number" aria-hidden="true">002</div>
           <p>PRIIT LAB // BLANK-WORLD RECOVERY PROGRAM</p>
           <h1 id="paint-intro-title">The world went blank.<br /><em>Draw it back.</em></h1>
-          <p>A nameless stick artist woke inside an unfinished idea with one oversized pencil. Run through the canvas, jump its empty structures, and attack to pour out a silky path you can surf.</p>
+          <p>A nameless stick artist woke inside an unfinished story with one oversized pencil. Follow three colour beacons, awaken a mural, restore the maker statue, and draw open the way home.</p>
           <dl><div><dt>Move</dt><dd>WASD / arrows</dd></div><div><dt>Jump</dt><dd>Space</dd></div><div><dt>Sprint</dt><dd>Shift</dd></div><div><dt>Paint surf</dt><dd>Click / J</dd></div></dl>
           <button type="button" onClick={start} disabled={!ready}>{ready ? "Pick up the pencil" : "Stretching the canvas…"}<span aria-hidden="true">→</span></button>
-          <small>Starting the chamber also starts the selected local soundtrack. You can mute it at any time.</small>
+          <small>W always moves toward the top of the screen. Starting the chamber also starts your selected local soundtrack.</small>
         </section>
       )}
 
@@ -209,7 +226,7 @@ export default function PaintSurfer({ navigate, onLogout }) {
         <div className="paint-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="paint-help-title">
           <section className="paint-help">
             <p>FIELD MANUAL / CHAMBER 002</p><h2 id="paint-help-title">Make movement your brush.</h2>
-            <ul><li><strong>WASD / arrows</strong><span>Run across the blank canvas.</span></li><li><strong>Shift</strong><span>Sprint and leave longer strokes.</span></li><li><strong>Space</strong><span>Jump over structures.</span></li><li><strong>Click / J</strong><span>Kick the pencil down and surf the colour spill.</span></li><li><strong>P / M</strong><span>Pause the world or mute music.</span></li></ul>
+            <ul><li><strong>WASD / arrows</strong><span>Move consistently relative to the screen.</span></li><li><strong>Shift</strong><span>Sprint and leave longer strokes.</span></li><li><strong>Space</strong><span>Jump over structures.</span></li><li><strong>Click / J</strong><span>Paint-surf inside the active beacon to advance the story.</span></li><li><strong>Pink scarf</strong><span>Trails behind the artist; the bright ground arrow points forward.</span></li><li><strong>P / M</strong><span>Pause the world or mute music.</span></li></ul>
             <button type="button" onClick={() => setShowHelp(false)} autoFocus>Back to the canvas</button>
           </section>
         </div>
@@ -218,7 +235,7 @@ export default function PaintSurfer({ navigate, onLogout }) {
       {completed && !completionDismissed && (
         <div className="paint-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="paint-complete-title">
           <section className="paint-complete">
-            <span>100%</span><p>CANVAS RECOVERY COMPLETE</p><h2 id="paint-complete-title">You didn&apos;t fill the world.<br />You taught it how to feel.</h2>
+            <span>100%</span><p>THE LAST PAGE IS ALIVE</p><h2 id="paint-complete-title">You didn&apos;t colour a world.<br />You finished its story.</h2>
             <div><button type="button" onClick={() => { setCompleted(false); setCompletionDismissed(true); }}>Keep painting</button><button type="button" onClick={() => navigate("/lab")}>Return to Lab</button></div>
           </section>
         </div>
