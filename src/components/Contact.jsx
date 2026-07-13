@@ -52,7 +52,7 @@ function Contact() {
         {status === "error" && <p className="pf-form-status is-error" role="status">The message could not be sent. Email me directly instead.</p>}
       </form>
 
-      <footer className="pf-footer"><strong>PRIITIVI © {new Date().getFullYear()}</strong><span>Designed and built in London.</span><a href="#hero">Back to top ↑</a></footer>
+      <footer className="pf-footer"><strong>PRIITIVI © {new Date().getFullYear()}</strong><span>Designed and built in London.</span><a className="pf-lab-link" href="/lab">Restricted area ⚠</a><a href="#hero">Back to top ↑</a></footer>
     </section>
   );
 }
