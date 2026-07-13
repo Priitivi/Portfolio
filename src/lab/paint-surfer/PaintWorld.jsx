@@ -1,10 +1,13 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
+import PaintStory from "./PaintStory";
 import StickPainter from "./StickPainter";
-import { calculatePaintProgress, clampToCanvas, PAINT_GOAL, paintCellKey } from "./paintMath";
+import { clampToCanvas, getMovementAxes, paintCellKey } from "./paintMath";
+import { createStoryStatus, isInsideStoryChapter, paintStoryChapters } from "./storyConfig";
 
 const MAX_TRAIL_POINTS = 86;
+const CAMERA_OFFSET = new THREE.Vector3(10, 7.2, 12);
 
 const trailVertexShader = `
   uniform float uTime;
@@ -78,7 +81,7 @@ function CanvasStructures({ progressRef, count }) {
   );
 }
 
-export default function PaintWorld({ controlsRef, paused, reducedMotion, quality, onProgress, onSurf, onComplete, onReady }) {
+export default function PaintWorld({ controlsRef, paused, reducedMotion, quality, onProgress, onStoryUpdate, onSurf, onComplete, onReady }) {
   const { camera, scene } = useThree();
   const paintMesh = useRef();
   const particleMesh = useRef();
@@ -87,13 +90,17 @@ export default function PaintWorld({ controlsRef, paused, reducedMotion, quality
   const paintClock = useRef(0);
   const lastPaintPosition = useRef(new THREE.Vector3(0, 0, 0));
   const paintedCells = useRef(new Set());
+  const chapterPaintedCells = useRef(paintStoryChapters.map(() => new Set()));
   const trailPoints = useRef([]);
   const progressRef = useRef(0);
+  const storyRef = useRef({ activeIndex: 0, chapterProgress: paintStoryChapters.map(() => 0) });
   const completed = useRef(false);
   const jumpLatch = useRef(false);
   const dummy = useMemo(() => new THREE.Object3D(), []);
   const colour = useMemo(() => new THREE.Color(), []);
   const moveDirection = useMemo(() => new THREE.Vector3(), []);
+  const cameraForward = useMemo(() => new THREE.Vector3(-CAMERA_OFFSET.x, 0, -CAMERA_OFFSET.z).normalize(), []);
+  const cameraRight = useMemo(() => new THREE.Vector3().crossVectors(cameraForward, new THREE.Vector3(0, 1, 0)).normalize(), [cameraForward]);
   const desiredCamera = useMemo(() => new THREE.Vector3(), []);
   const cameraTarget = useMemo(() => new THREE.Vector3(), []);
   const blankSky = useMemo(() => new THREE.Color("#eeece5"), []);
@@ -106,8 +113,8 @@ export default function PaintWorld({ controlsRef, paused, reducedMotion, quality
   const playerState = useRef({
     position: new THREE.Vector3(0, 0, 0),
     velocity: new THREE.Vector3(),
-    facing: new THREE.Vector3(0, 0, -1),
-    yaw: Math.PI,
+    facing: new THREE.Vector3(-CAMERA_OFFSET.x, 0, -CAMERA_OFFSET.z).normalize(),
+    yaw: Math.atan2(-CAMERA_OFFSET.x, -CAMERA_OFFSET.z),
     velocityY: 0,
     grounded: true,
     moving: false,
@@ -150,8 +157,9 @@ export default function PaintWorld({ controlsRef, paused, reducedMotion, quality
       particleMesh.current.setMatrixAt(index, dummy.matrix);
     }
     particleMesh.current.instanceMatrix.needsUpdate = true;
+    onStoryUpdate(createStoryStatus());
     onReady();
-  }, [dummy, maxPaint, onReady, particleCount]);
+  }, [dummy, maxPaint, onReady, onStoryUpdate, particleCount]);
 
   const rebuildTrail = () => {
     const points = trailPoints.current;
@@ -204,14 +212,22 @@ export default function PaintWorld({ controlsRef, paused, reducedMotion, quality
     rebuildTrail();
 
     const key = paintCellKey(position.x, position.z);
-    if (!paintedCells.current.has(key)) {
-      paintedCells.current.add(key);
-      const progress = calculatePaintProgress(paintedCells.current.size, PAINT_GOAL);
-      if (progress !== progressRef.current) {
-        progressRef.current = progress;
-        onProgress(progress);
+    paintedCells.current.add(key);
+
+    const activeIndex = storyRef.current.activeIndex;
+    const activeChapter = paintStoryChapters[activeIndex];
+    const activeCells = chapterPaintedCells.current[activeIndex];
+    if (surfing && activeChapter && isInsideStoryChapter(position, activeChapter) && !activeCells.has(key)) {
+      activeCells.add(key);
+      const status = createStoryStatus(chapterPaintedCells.current.map((cells) => cells.size));
+      storyRef.current.activeIndex = status.activeIndex;
+      storyRef.current.chapterProgress = status.chapters.map((chapter) => chapter.progress / 100);
+      if (status.progress !== progressRef.current) {
+        progressRef.current = status.progress;
+        onProgress(status.progress);
       }
-      if (progress >= 100 && !completed.current) {
+      onStoryUpdate(status);
+      if (status.complete && !completed.current) {
         completed.current = true;
         onComplete();
       }
@@ -227,9 +243,8 @@ export default function PaintWorld({ controlsRef, paused, reducedMotion, quality
     if (paused) return;
 
     const controls = controlsRef.current;
-    const horizontal = Number(controls.has("KeyD") || controls.has("ArrowRight")) - Number(controls.has("KeyA") || controls.has("ArrowLeft"));
-    const vertical = Number(controls.has("KeyS") || controls.has("ArrowDown")) - Number(controls.has("KeyW") || controls.has("ArrowUp"));
-    const hasInput = horizontal !== 0 || vertical !== 0;
+    const { right, forward } = getMovementAxes(controls);
+    const hasInput = right !== 0 || forward !== 0;
     state.sprinting = controls.has("ShiftLeft") || controls.has("ShiftRight");
     state.surfCooldown = Math.max(0, state.surfCooldown - delta);
 
@@ -242,7 +257,7 @@ export default function PaintWorld({ controlsRef, paused, reducedMotion, quality
     state.surfTimer = Math.max(0, state.surfTimer - delta);
     state.surfing = state.surfTimer > 0;
 
-    moveDirection.set(horizontal, 0, vertical);
+    moveDirection.copy(cameraForward).multiplyScalar(forward).addScaledVector(cameraRight, right);
     if (hasInput) {
       moveDirection.normalize();
       state.facing.lerp(moveDirection, 1 - Math.pow(0.001, delta)).normalize();
@@ -303,10 +318,9 @@ export default function PaintWorld({ controlsRef, paused, reducedMotion, quality
     particleMesh.current.instanceMatrix.needsUpdate = true;
     if (particleMesh.current.instanceColor) particleMesh.current.instanceColor.needsUpdate = true;
 
-    desiredCamera.copy(state.position).addScaledVector(state.facing, -8.8);
-    desiredCamera.y += 5.6;
+    desiredCamera.copy(state.position).add(CAMERA_OFFSET);
     camera.position.lerp(desiredCamera, 1 - Math.pow(0.003, delta));
-    cameraTarget.copy(state.position).addScaledVector(state.facing, 2.5);
+    cameraTarget.copy(state.position).addScaledVector(state.facing, 1.4);
     cameraTarget.y += 1.35;
     camera.lookAt(cameraTarget);
   });
@@ -324,6 +338,7 @@ export default function PaintWorld({ controlsRef, paused, reducedMotion, quality
       </mesh>
       <gridHelper args={[60, 60, "#b9b5bd", "#d9d5d4"]} position={[0, 0.012, 0]} />
       <CanvasStructures progressRef={progressRef} count={quality === "low" ? 22 : 36} />
+      <PaintStory storyRef={storyRef} reducedMotion={reducedMotion} />
 
       <instancedMesh ref={paintMesh} args={[null, null, maxPaint]} frustumCulled={false} receiveShadow>
         <circleGeometry args={[1, quality === "low" ? 14 : 22]} />
@@ -338,13 +353,6 @@ export default function PaintWorld({ controlsRef, paused, reducedMotion, quality
         <octahedronGeometry args={[1, 0]} />
         <meshBasicMaterial vertexColors transparent opacity={0.88} blending={THREE.AdditiveBlending} depthWrite={false} />
       </instancedMesh>
-
-      <group position={[0, 0, -20]}>
-        <mesh position={[0, 5.8, 0]}><boxGeometry args={[13, 0.32, 0.5]} /><meshStandardMaterial color="#e7e4dc" /></mesh>
-        <mesh position={[-6.35, 2.8, 0]}><boxGeometry args={[0.32, 6, 0.5]} /><meshStandardMaterial color="#e7e4dc" /></mesh>
-        <mesh position={[6.35, 2.8, 0]}><boxGeometry args={[0.32, 6, 0.5]} /><meshStandardMaterial color="#e7e4dc" /></mesh>
-        <mesh position={[0, 2.8, -0.15]}><planeGeometry args={[12.4, 5.5]} /><meshStandardMaterial color="#fcfbf6" roughness={1} /></mesh>
-      </group>
 
       <StickPainter playerState={playerState} reducedMotion={reducedMotion} />
     </>

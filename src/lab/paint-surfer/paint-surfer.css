@@ -3,6 +3,7 @@
 .paint-paper-grain { position:absolute; z-index:2; inset:0; pointer-events:none; opacity:.12; background-image:repeating-radial-gradient(circle at 30% 20%,rgba(20,18,30,.35) 0 1px,transparent 1px 5px); mix-blend-mode:multiply; }
 .paint-surfer button { border:0; cursor:pointer; }
 .paint-surfer button:focus-visible { outline:3px solid var(--acid); outline-offset:3px; }
+.paint-surfer .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; clip-path:inset(50%); }
 
 .paint-topbar { position:absolute; z-index:8; top:0; right:0; left:0; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; min-height:62px; border-bottom:1px solid rgba(17,16,24,.22); background:rgba(244,241,233,.93); padding:0 18px; font-size:9px; letter-spacing:.1em; text-transform:uppercase; }
 .paint-topbar>button,.paint-topbar nav button { background:transparent; color:var(--ink); padding:8px; font:inherit; text-transform:uppercase; }
@@ -36,9 +37,20 @@
 .paint-surf-meter { position:absolute; z-index:6; top:88px; right:18px; border:1px solid rgba(255,255,255,.22); background:rgba(16,12,28,.88); color:white; padding:11px 14px; text-align:right; }
 .paint-surf-meter strong { display:block; color:#ff73b1; font:950 1.7rem Inter,Arial,sans-serif; }
 
-.paint-soundtrack { position:absolute; z-index:6; right:18px; bottom:18px; width:230px; border:1px solid rgba(255,255,255,.24); background:rgba(16,12,28,.9); color:white; padding:12px; }
+.paint-mission { position:absolute; z-index:6; bottom:18px; left:18px; width:min(330px,calc(100vw - 36px)); border:1px solid rgba(17,16,24,.22); background:rgba(244,241,233,.94); padding:14px 16px; box-shadow:10px 10px 0 rgba(200,255,54,.2); }
+.paint-mission>span { color:#6d3fdb; font-size:8px; font-weight:900; letter-spacing:.14em; }
+.paint-mission h2 { margin:6px 0 7px; font:900 1.45rem/.94 Inter,Arial,sans-serif; letter-spacing:-.045em; text-transform:uppercase; }
+.paint-mission p { margin:0; color:#5c5664; font:500 11px/1.45 Inter,Arial,sans-serif; }
+.paint-mission>div { height:5px; margin:10px 0 7px; background:#d4cfd4; }
+.paint-mission i { display:block; height:100%; background:linear-gradient(90deg,#ff5f9f,#4de8ff,#a779ff); transition:width .22s ease; }
+.paint-mission small { display:block; color:#706879; font-size:7px; line-height:1.45; }
+
+.paint-soundtrack { position:absolute; z-index:6; right:18px; bottom:18px; width:270px; border:1px solid rgba(255,255,255,.24); background:rgba(16,12,28,.9); color:white; padding:12px; }
 .paint-soundtrack strong { display:block; overflow:hidden; margin:4px 0 9px; font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
-.paint-soundtrack div { display:grid; grid-template-columns:1fr 1fr; gap:5px; }
+.paint-soundtrack label { display:block; margin-top:5px; }
+.paint-soundtrack select { width:100%; border:1px solid rgba(255,255,255,.24); border-radius:0; outline:0; background:#211a32; color:white; padding:8px; font:700 8px/1.2 "Space Mono","Courier New",monospace; text-overflow:ellipsis; }
+.paint-soundtrack select:focus-visible { outline:2px solid var(--acid); outline-offset:2px; }
+.paint-soundtrack div { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; }
 .paint-soundtrack button { border:1px solid rgba(255,255,255,.2); background:transparent; color:white; padding:7px; font-size:8px; text-transform:uppercase; }.paint-soundtrack button:hover { background:var(--acid); color:var(--ink); }
 .paint-soundtrack small { display:block; margin-top:7px; color:#ffb4d4; font-size:7px; }
 
@@ -58,14 +70,17 @@
   .paint-intro { top:49%; left:16px; width:calc(100vw - 32px); }.paint-intro::before { inset:-24px -16px; background:rgba(244,241,233,.94); }
   .paint-intro h1 { font-size:clamp(3rem,15vw,5.2rem); }.paint-intro dl { grid-template-columns:repeat(2,1fr); }.paint-intro>p:nth-of-type(2) { font-size:.88rem; }
   .paint-progress { top:75px; left:10px; width:180px; }.paint-progress>strong { font-size:2rem; }.paint-surf-meter { top:75px; right:10px; }
-  .paint-soundtrack { right:10px; bottom:96px; width:190px; }
+  .paint-mission { bottom:96px; left:10px; width:calc(50vw - 16px); padding:11px; }.paint-mission h2 { font-size:1.05rem; }.paint-mission p { font-size:9px; }
+  .paint-soundtrack { right:10px; bottom:96px; width:calc(50vw - 16px); padding:10px; }.paint-soundtrack strong { font-size:8px; }.paint-soundtrack div { gap:3px; }.paint-soundtrack button { padding:6px 3px; font-size:7px; }
   .paint-mobile-controls { position:absolute; z-index:12; right:10px; bottom:12px; left:10px; display:flex; align-items:flex-end; justify-content:space-between; pointer-events:none; }
   .paint-mobile-controls button { pointer-events:auto; touch-action:none; border:1px solid rgba(255,255,255,.28); background:rgba(15,10,29,.88); color:white; font-size:11px; font-weight:900; }
   .paint-mobile-move { display:grid; grid-template-columns:repeat(3,42px); grid-template-rows:repeat(2,42px); gap:3px; }.paint-mobile-move button:first-child { grid-column:2; }.paint-mobile-move button:nth-child(2) { grid-column:1; grid-row:2; }.paint-mobile-move button:nth-child(3) { grid-column:2; grid-row:2; }.paint-mobile-move button:nth-child(4) { grid-column:3; grid-row:2; }
   .paint-mobile-actions { display:flex; align-items:flex-end; gap:6px; }.paint-mobile-actions button { border-radius:50%; }.paint-mobile-jump { width:54px; height:54px; }.paint-mobile-surf { width:70px; height:70px; border-color:var(--acid)!important; color:var(--acid)!important; }
 }
 @media (max-width:480px) {
-  .paint-intro dl { display:none; }.paint-intro h1 { margin-bottom:14px; }.paint-progress small { display:none; }.paint-progress { width:145px; }.paint-surf-meter { padding:9px; }.paint-soundtrack { width:165px; }
+  .paint-intro dl { display:none; }.paint-intro h1 { margin-bottom:14px; }.paint-progress small { display:none; }.paint-progress { width:145px; }.paint-surf-meter { padding:9px; }
+  .paint-mission { width:calc(100vw - 195px); }.paint-mission p,.paint-mission small { display:none; }.paint-mission h2 { margin-bottom:9px; font-size:.9rem; }
+  .paint-soundtrack { width:165px; }.paint-soundtrack strong { display:none; }.paint-soundtrack select { padding:6px 4px; font-size:7px; }
   .paint-help li { grid-template-columns:1fr; gap:3px; }.paint-complete div { align-items:stretch; flex-direction:column; }
 }
 @media (prefers-reduced-motion:reduce) {

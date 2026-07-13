@@ -12,3 +12,11 @@ export function calculatePaintProgress(paintedCells, goal = PAINT_GOAL) {
 export function clampToCanvas(value, limit = 23) {
   return Math.max(-limit, Math.min(limit, value));
 }
+
+export function getMovementAxes(activeCodes) {
+  const has = (code) => activeCodes?.has?.(code) ?? false;
+  return {
+    right: Number(has("KeyD") || has("ArrowRight")) - Number(has("KeyA") || has("ArrowLeft")),
+    forward: Number(has("KeyW") || has("ArrowUp")) - Number(has("KeyS") || has("ArrowDown")),
+  };
+}
