@@ -1,54 +1,67 @@
 import assert from "node:assert/strict";
 import { stat } from "node:fs/promises";
 import test from "node:test";
-import { calculatePaintProgress, clampToCanvas, getMovementAxes, paintCellKey } from "../src/lab/paint-surfer/paintMath.js";
+import {
+  createPaperStoryStatus,
+  getPaperMovement,
+  isPointNearLandmark,
+  paintCellKey,
+  PAPER_GROUND_Y,
+  paperLandmarks,
+  screenToWorld,
+  segmentYAtX,
+} from "../src/lab/paint-surfer/paperWorld.js";
 import { paintSoundtracks } from "../src/lab/paint-surfer/soundtracks.js";
-import { createStoryStatus, isInsideStoryChapter, paintStoryChapters } from "../src/lab/paint-surfer/storyConfig.js";
 
-test("maps nearby strokes into stable paint cells", () => {
-  assert.equal(paintCellKey(1.1, -2.2), paintCellKey(1.25, -2.3));
-  assert.notEqual(paintCellKey(1.1, -2.2), paintCellKey(4.2, -2.2));
+test("maps WASD and arrow controls into consistent 2D actions", () => {
+  assert.deepEqual(getPaperMovement(new Set(["KeyD", "KeyW", "ShiftLeft", "KeyJ"])), {
+    horizontal: 1,
+    jump: true,
+    duck: false,
+    sprint: true,
+    dash: true,
+  });
+  assert.equal(getPaperMovement(new Set(["KeyA", "KeyD"])).horizontal, 0);
+  assert.equal(getPaperMovement(new Set(["ArrowDown"])).duck, true);
 });
 
-test("clamps progress and world positions", () => {
-  assert.equal(calculatePaintProgress(0, 140), 0);
-  assert.equal(calculatePaintProgress(70, 140), 50);
-  assert.equal(calculatePaintProgress(300, 140), 100);
-  assert.equal(calculatePaintProgress(10, 0), 0);
-  assert.equal(clampToCanvas(28), 23);
-  assert.equal(clampToCanvas(-28), -23);
+test("keeps paint cells stable and converts screen drawing into world space", () => {
+  assert.equal(paintCellKey(76, 152), paintCellKey(79, 149));
+  assert.notEqual(paintCellKey(76, 152), paintCellKey(160, 152));
+  assert.deepEqual(screenToWorld({ x: 200, y: 300 }, 500, 2, 400), { x: 600, y: PAPER_GROUND_Y - 50 });
 });
 
-test("bundled chamber soundtracks exist and are non-empty", async () => {
-  assert.equal(paintSoundtracks.length, 10);
-  for (const track of paintSoundtracks) {
-    const details = await stat(new URL(`../public${track.src}`, import.meta.url));
-    assert.ok(details.size > 100_000, `${track.title} should contain audio data`);
-  }
+test("samples walkable paint segments while rejecting vertical strokes", () => {
+  assert.equal(segmentYAtX({ x: 0, y: 500 }, { x: 100, y: 550 }, 50), 525);
+  assert.equal(segmentYAtX({ x: 0, y: 500 }, { x: 10, y: 550 }, 5), null);
+  assert.equal(segmentYAtX({ x: 0, y: 500 }, { x: 100, y: 550 }, 140), null);
 });
 
-test("normalizes WASD and arrow keys into stable screen-relative axes", () => {
-  assert.deepEqual(getMovementAxes(new Set(["KeyW", "KeyD"])), { right: 1, forward: 1 });
-  assert.deepEqual(getMovementAxes(new Set(["ArrowDown", "ArrowLeft"])), { right: -1, forward: -1 });
-  assert.deepEqual(getMovementAxes(new Set(["KeyW", "KeyS", "KeyA", "KeyD"])), { right: 0, forward: 0 });
-});
-
-test("advances the guided paint story one chapter at a time", () => {
-  const initial = createStoryStatus();
-  assert.equal(initial.activeIndex, 0);
+test("supports restoring paper landmarks in any order", () => {
+  const initial = createPaperStoryStatus();
   assert.equal(initial.progress, 0);
+  assert.equal(initial.complete, false);
 
-  const firstComplete = createStoryStatus([paintStoryChapters[0].goal, 0, 0]);
-  assert.equal(firstComplete.activeIndex, 1);
-  assert.equal(firstComplete.chapters[0].complete, true);
+  const lastFirst = createPaperStoryStatus([0, 0, 0, paperLandmarks[3].goal]);
+  assert.equal(lastFirst.landmarks[3].complete, true);
+  assert.equal(lastFirst.landmarks[0].complete, false);
 
-  const complete = createStoryStatus(paintStoryChapters.map((chapter) => chapter.goal));
+  const complete = createPaperStoryStatus(paperLandmarks.map((landmark) => landmark.goal));
   assert.equal(complete.progress, 100);
   assert.equal(complete.complete, true);
 });
 
-test("only counts paint inside the active story beacon", () => {
-  const chapter = paintStoryChapters[0];
-  assert.equal(isInsideStoryChapter(chapter.position, chapter), true);
-  assert.equal(isInsideStoryChapter({ x: chapter.position.x + chapter.radius + 0.1, z: chapter.position.z }, chapter), false);
+test("only counts pigment inside a landmark's paper region", () => {
+  const landmark = paperLandmarks[0];
+  assert.equal(isPointNearLandmark({ x: landmark.x, y: PAPER_GROUND_Y - 220 }, landmark), true);
+  assert.equal(isPointNearLandmark({ x: landmark.x + landmark.radius + 1, y: PAPER_GROUND_Y - 220 }, landmark), false);
+  assert.equal(isPointNearLandmark({ x: landmark.x, y: PAPER_GROUND_Y - 600 }, landmark), false);
+});
+
+test("all bundled paper-world soundtracks exist and contain audio", async () => {
+  assert.equal(paintSoundtracks.length, 14);
+  for (const track of paintSoundtracks) {
+    const details = await stat(new URL(`../public${track.src}`, import.meta.url));
+    assert.ok(details.size > 100_000, `${track.title} should contain audio data`);
+  }
 });

@@ -26,7 +26,7 @@ Live site: [priitivi.com](https://priitivi.com)
 The Lab is a protected route at `/lab`. Its experiments are loaded only after the Lab bundle is requested.
 
 1. **Psychedelic Audio Reactor** — upload a local track and transform its waveform, frequency bands, stereo balance, and detected beats into four real-time visual systems.
-2. **The Chroma Drifter** — guide a clearly oriented stick artist through a three-chapter paint story. Awaken an unfinished mural, restore a giant artist statue, and colour-open a portal while surfing metallic paint waves to a ten-track local soundtrack.
+2. **The Paper Drifter** — explore a 5,400-pixel 2D paper world where mouse or touch strokes become physical platforms. Draw routes, paint-dash across gaps, and restore four landmarks in any order while choosing from fourteen local tracks.
 
 ## Tech stack
 
@@ -35,6 +35,7 @@ The Lab is a protected route at `/lab`. Its experiments are loaded only after th
 | UI | React 19 | Components and application state |
 | Build | Vite 6 | Development server, code splitting, and production builds |
 | 3D | Three.js + React Three Fiber | Procedural characters, environments, shaders, particles, and game loops |
+| 2D | Canvas 2D API | Paper-world rendering, drawing, particles, and platform physics |
 | Motion | Framer Motion | Landing-page transitions |
 | Styling | Tailwind CSS + custom CSS | Utility styles and bespoke visual systems |
 | Audio | Web Audio API | FFT analysis, waveform energy, beat detection, and local playback |
@@ -56,9 +57,9 @@ flowchart TD
     Dashboard --> Painter[Lazy PaintSurfer]
     Reactor --> WebAudio[AudioEngine + analysis]
     Reactor --> ReactorScene[Four R3F scenes]
-    Painter --> PaintLoop[PaintWorld game loop]
-    PaintLoop --> Stick[Procedural StickPainter]
-    PaintLoop --> Trail[Dynamic ribbon shader]
+    Painter --> PaperCanvas[PaperWorldCanvas loop]
+    PaperCanvas --> Drawing[World-space paint terrain]
+    PaperCanvas --> Story[Four open-order landmarks]
 ```
 
 The application intentionally uses a small route boundary instead of a full routing dependency. `App.jsx` delegates `/lab` paths to `LabApp`, and `LabApp` tracks its nested pathname with the History API. Each expensive interactive experience is imported with `React.lazy`, keeping it out of the initial portfolio bundle.
@@ -72,7 +73,7 @@ Portfolio/
 │     ├─ lab-session.mjs          # Login, session validation, and logout
 │     └─ _shared/lab-security.mjs # Scrypt hashing and signed-session helpers
 ├─ public/
-│  └─ audio/                      # Chroma Drifter soundtrack assets
+│  └─ audio/                      # Paper Drifter soundtrack assets
 ├─ scripts/
 │  └─ hash-lab-password.mjs       # Hidden-input password hash helper
 ├─ src/
@@ -90,11 +91,9 @@ Portfolio/
 │  │  │  └─ scene/                # Neural, liquid, astral, and collapse modes
 │  │  ├─ paint-surfer/
 │  │  │  ├─ PaintSurfer.jsx       # Game shell, HUD, music, and controls
-│  │  │  ├─ PaintWorld.jsx        # Movement, painting, camera, and shaders
-│  │  │  ├─ PaintStory.jsx        # Mural, statue, portal, and story beacons
-│  │  │  ├─ StickPainter.jsx      # Procedural character and pencil
-│  │  │  ├─ paintMath.js          # Testable movement and world helpers
-│  │  │  └─ storyConfig.js        # Chapter definitions and progression
+│  │  │  ├─ PaperWorldCanvas.jsx  # 2D renderer, physics, paint, and camera
+│  │  │  ├─ paperWorld.js         # Pure world, collision, and story helpers
+│  │  │  └─ usePaintControls.js   # Persistent keyboard input state
 │  │  ├─ LabApp.jsx               # Protected Lab route boundary
 │  │  └─ LabHome.jsx              # Experiment dashboard
 │  ├─ App.jsx                     # Top-level experience switch
@@ -128,27 +127,26 @@ The gate is access control for the route, not a secrecy boundary for compiled fr
 
 React does not rerender at audio frequency. The analyser writes into refs, and React Three Fiber scenes read those refs inside `useFrame`. This keeps high-frequency work out of the component render cycle.
 
-### 3. Chroma Drifter game loop
+### 3. Paper Drifter game loop
 
-`PaintWorld` owns mutable vectors for position, velocity, facing, jumping, and surf state. Keyboard and touch inputs live in a `Set`, so the render loop can read simultaneous controls without triggering React state updates. Movement is projected onto a stable camera-relative basis: `W` always means visually forward, even after the character turns. A scarf, visible face, and luminous ground arrow make its facing readable from either side.
+`PaperWorldCanvas` is a Canvas 2D game loop with a fixed logical world and a smooth horizontal camera. Player position, velocity, coyote-time jumping, dash state, particles, paint strokes, and camera position live in refs. Keyboard and touch inputs live in a `Set`, so simultaneous controls never need frame-rate React rerenders.
 
-Painting uses three layers:
+Drawing is also level design:
 
-1. An instanced field of coloured circles stamps the canvas with very few draw calls.
-2. A fixed-size dynamic buffer geometry builds a two-sided trail from recent player positions.
-3. A custom shader adds shifting colour and a silver gleam to that trail.
+1. Pointer coordinates are transformed from screen space into persistent world space.
+2. Each stroke is stored as a capped polyline and rendered with ink, pigment, and highlight passes.
+3. Descending player feet sample nearby line segments, turning suitable strokes into walkable platforms and ramps.
+4. Paint cells near a landmark restore its colour without forcing a fixed completion order.
 
-Story progression is spatial. Only paint-surf cells inside the current beacon count toward its chapter; completing a chapter activates the next landmark. The billboard, statue, portal, and sky read mutable progress refs and colour themselves smoothly without rerendering at frame rate.
-
-Only user-facing values—story restoration, the current objective, surf chain, dialogs, and music state—use React state. The 60 FPS simulation stays in refs and Three.js objects. The soundtrack UI exposes all ten supplied tracks while the browser loads only the selected source.
+Only user-facing values—total restoration, landmark status, dash count, dialogs, and music state—use React state. The animation loop remains mutable and allocation-conscious. The soundtrack UI exposes all fourteen supplied tracks while the browser loads only the selected source.
 
 ### 4. Performance strategy
 
 - Large experiences are route-level lazy chunks.
 - Device heuristics lower particles, shadows, geometry, and pixel ratio on modest hardware.
 - The Audio Reactor can reduce DPR dynamically when frame times remain slow.
-- Instancing handles repeated paint marks, particles, and world structures.
-- Mutable typed arrays avoid rebuilding trail geometry through React.
+- Paper-world rendering caps device pixel ratio, stroke count, points per stroke, and particles.
+- Physics examines only recent paint strokes instead of every historical mark.
 - Hidden tabs suspend the audio context and animation work where possible.
 - Reduced-motion preferences lower camera and interface movement.
 
@@ -224,9 +222,9 @@ The tests cover:
 - Password hashing, timing-safe verification, session expiry, and tamper rejection.
 - Login, signed-cookie restoration, invalid clearance, and logout Function behavior.
 - Supported audio formats, frequency measurements, stereo balance, beat cooldowns, and transport formatting.
-- Paint-cell quantisation, screen-relative movement axes, story progression, world bounds, and all soundtrack asset files.
+- 2D movement actions, screen-to-world drawing transforms, paint-platform sampling, open-order story progression, and all soundtrack assets.
 
-Interactive changes should also be checked in a browser at desktop and mobile widths because WebGL capability, pointer input, autoplay policy, and GPU performance differ by device.
+Interactive changes should also be checked in a browser at desktop and mobile widths because WebGL capability, Canvas pointer input, autoplay policy, and graphics performance differ by device.
 
 ## Deployment
 

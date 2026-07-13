@@ -1,6 +1,7 @@
 export const paintSoundtracks = [
   { id: "never-switch", title: "Never Switch", src: "/audio/never-switch.mp3" },
   { id: "back-on-it", title: "Juice WRLD — Back On It", src: "/audio/juice-wrld-back-on-it.mp3" },
+  { id: "tightrope", title: "XXXTentacion feat. Scott James — Tightrope", src: "/audio/xxxtentacion-tightrope.mp3" },
   { id: "infinity-888", title: "XXXTentacion & Joey Bada$$ — Infinity (888) [Slowed + Reverb]", src: "/audio/infinity-888-slowed.mp3" },
   { id: "squidrific", title: "SahBabii — Squidrific [Slowed + Reverb]", src: "/audio/squidrific-slowed.mp3" },
   { id: "no-role-modelz", title: "J. Cole — No Role Modelz", src: "/audio/no-role-modelz.mp3" },
@@ -8,5 +9,8 @@ export const paintSoundtracks = [
   { id: "money-trees", title: "Kendrick Lamar — Money Trees", src: "/audio/money-trees.mp3" },
   { id: "star-shopping", title: "Lil Peep — Star Shopping", src: "/audio/star-shopping.mp3" },
   { id: "moonlight", title: "Juice WRLD — Moonlight", src: "/audio/juice-wrld-moonlight.mp3" },
-  { id: "moving-castle", title: "Moving Castle Theme", src: "/audio/moving-castle-theme.mp3" },
+  { id: "sdp-interlude", title: "Travis Scott — SDP Interlude [Extended]", src: "/audio/sdp-interlude-extended.mp3" },
+  { id: "alternate-90210", title: "90210 — From an Alternate Universe", src: "/audio/90210-alternate-universe.mp3" },
+  { id: "kid-cudi", title: "Kid Cudi", src: "/audio/kid-cudi.mp3" },
+  { id: "moving-castle", title: "Howl's Moving Castle Theme", src: "/audio/moving-castle-theme.mp3" },
 ];

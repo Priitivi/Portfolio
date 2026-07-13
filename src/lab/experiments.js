@@ -11,10 +11,10 @@ export const experiments = [
   {
     id: "paint-surfer",
     experimentNumber: "002",
-    title: "The Chroma Drifter",
+    title: "The Paper Drifter",
     status: "Playable",
-    description: "A blank 3D canvas, a stick artist with an oversized pencil, and a liquid colour trail that becomes a surfable path.",
+    description: "An open 2D paper world where every line you draw becomes a platform, a shortcut, or part of the scenery you restore.",
     route: "/lab/paint-surfer",
-    signals: ["Procedural character", "Paint simulation", "Keyboard + touch", "Local soundtrack"],
+    signals: ["Canvas 2D", "Drawn terrain", "Keyboard + touch", "14-track soundtrack"],
   },
 ];
