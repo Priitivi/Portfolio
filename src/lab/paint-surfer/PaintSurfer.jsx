@@ -1,8 +1,7 @@
-import { Canvas } from "@react-three/fiber";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import PaintWorld from "./PaintWorld";
+import PaperWorldCanvas from "./PaperWorldCanvas";
+import { createPaperStoryStatus } from "./paperWorld";
 import { paintSoundtracks } from "./soundtracks";
-import { createStoryStatus } from "./storyConfig";
 import usePaintControls from "./usePaintControls";
 import "./paint-surfer.css";
 
@@ -15,19 +14,22 @@ function MobilePaintControls({ controlsRef, disabled }) {
     event.preventDefault();
     controlsRef.current.delete(code);
   };
-  const control = (code) => ({ onPointerDown: press(code), onPointerUp: release(code), onPointerCancel: release(code), onPointerLeave: release(code) });
+  const control = (code) => ({
+    onPointerDown: press(code),
+    onPointerUp: release(code),
+    onPointerCancel: release(code),
+    onPointerLeave: release(code),
+  });
 
   return (
-    <div className="paint-mobile-controls" aria-label="Mobile game controls">
-      <div className="paint-mobile-move">
-        <button type="button" disabled={disabled} aria-label="Move forward" {...control("KeyW")}>↑</button>
+    <div className="paper-mobile-controls" aria-label="Mobile game controls">
+      <div>
         <button type="button" disabled={disabled} aria-label="Move left" {...control("KeyA")}>←</button>
-        <button type="button" disabled={disabled} aria-label="Move backward" {...control("KeyS")}>↓</button>
         <button type="button" disabled={disabled} aria-label="Move right" {...control("KeyD")}>→</button>
       </div>
-      <div className="paint-mobile-actions">
-        <button type="button" disabled={disabled} className="paint-mobile-jump" {...control("Space")}>Jump</button>
-        <button type="button" disabled={disabled} className="paint-mobile-surf" {...control("Paint")}>Paint surf</button>
+      <div>
+        <button type="button" disabled={disabled} className="paper-mobile-jump" {...control("Space")}>Jump</button>
+        <button type="button" disabled={disabled} className="paper-mobile-dash" {...control("PaintDash")}>Dash</button>
       </div>
     </div>
   );
@@ -38,31 +40,27 @@ export default function PaintSurfer({ navigate, onLogout }) {
   const [ready, setReady] = useState(false);
   const [paused, setPaused] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [surfCount, setSurfCount] = useState(0);
+  const [story, setStory] = useState(() => createPaperStoryStatus());
+  const [dashCount, setDashCount] = useState(0);
   const [completed, setCompleted] = useState(false);
   const [completionDismissed, setCompletionDismissed] = useState(false);
   const [musicOn, setMusicOn] = useState(true);
   const [trackIndex, setTrackIndex] = useState(0);
   const [musicError, setMusicError] = useState("");
-  const [story, setStory] = useState(() => createStoryStatus());
   const audioRef = useRef(null);
   const gameRef = useRef(null);
-  const paintReleaseTimer = useRef(null);
   const reducedMotion = useMemo(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches, []);
-  const quality = useMemo(() => {
-    const mobile = window.matchMedia("(max-width: 800px)").matches;
-    const modestCpu = (navigator.hardwareConcurrency || 4) <= 4;
-    return mobile || modestCpu ? "low" : "high";
-  }, []);
   const controlsRef = usePaintControls(started && !paused && !completed);
   const track = paintSoundtracks[trackIndex];
   const handleReady = useCallback(() => setReady(true), []);
+  const handleDash = useCallback(() => setDashCount((current) => current + 1), []);
+  const handleStoryUpdate = useCallback((status) => setStory(status), []);
+  const handleComplete = useCallback(() => setCompleted(true), []);
 
   const playMusic = useCallback(async () => {
     if (!audioRef.current || !musicOn) return;
     try {
-      audioRef.current.volume = 0.36;
+      audioRef.current.volume = 0.34;
       await audioRef.current.play();
       setMusicError("");
     } catch (caught) {
@@ -77,8 +75,7 @@ export default function PaintSurfer({ navigate, onLogout }) {
 
   useEffect(() => {
     const shortcuts = (event) => {
-      const tag = event.target?.tagName;
-      if (["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(tag)) return;
+      if (event.target?.matches?.("input, select, textarea, [contenteditable='true']")) return;
       if (event.code === "KeyP" && started) setPaused((current) => !current);
       if (event.code === "KeyM") setMusicOn((current) => !current);
       if (event.code === "Escape" && started) setShowHelp((current) => !current);
@@ -86,8 +83,6 @@ export default function PaintSurfer({ navigate, onLogout }) {
     window.addEventListener("keydown", shortcuts);
     return () => window.removeEventListener("keydown", shortcuts);
   }, [started]);
-
-  useEffect(() => () => window.clearTimeout(paintReleaseTimer.current), []);
 
   const start = () => {
     setStarted(true);
@@ -104,7 +99,7 @@ export default function PaintSurfer({ navigate, onLogout }) {
     }
     setMusicOn(true);
     try {
-      audioRef.current.volume = 0.36;
+      audioRef.current.volume = 0.34;
       await audioRef.current.play();
       setMusicError("");
     } catch {
@@ -123,54 +118,32 @@ export default function PaintSurfer({ navigate, onLogout }) {
     gameRef.current?.focus();
   };
 
-  const handleCanvasPointer = (active) => (event) => {
-    if (event.target?.tagName !== "CANVAS") return;
-    if (active && started && !paused && !completed) {
-      gameRef.current?.focus();
-      controlsRef.current.add("Paint");
-      window.clearTimeout(paintReleaseTimer.current);
-      paintReleaseTimer.current = window.setTimeout(() => controlsRef.current.delete("Paint"), 180);
-    } else if (event.type !== "pointerup") {
-      controlsRef.current.delete("Paint");
-    }
-  };
-
   return (
     <main
       ref={gameRef}
       tabIndex={-1}
-      className={`paint-surfer quality-${quality} ${paused ? "is-paused" : ""}`}
-      onPointerDown={handleCanvasPointer(true)}
-      onPointerUp={handleCanvasPointer(false)}
-      onPointerCancel={handleCanvasPointer(false)}
-      onPointerLeave={handleCanvasPointer(false)}
+      className={`paint-surfer paper-mode ${paused ? "is-paused" : ""}`}
+      onPointerDown={(event) => {
+        if (event.target?.tagName === "CANVAS") gameRef.current?.focus();
+      }}
     >
-      <audio ref={audioRef} src={track.src} loop preload="metadata" />
-      <Canvas
-        shadows={quality !== "low"}
-        dpr={quality === "low" ? [0.8, 1] : [0.9, 1.25]}
-        camera={{ position: [0, 6.5, 14], fov: 48, near: 0.1, far: 90 }}
-        gl={{ antialias: quality !== "low", alpha: false, powerPreference: "high-performance" }}
-      >
-        <PaintWorld
-          controlsRef={controlsRef}
-          paused={!started || paused || completed}
-          reducedMotion={reducedMotion}
-          quality={quality}
-          onProgress={setProgress}
-          onStoryUpdate={setStory}
-          onSurf={() => setSurfCount((current) => current + 1)}
-          onComplete={() => setCompleted(true)}
-          onReady={handleReady}
-        />
-      </Canvas>
-      <div className="paint-paper-grain" aria-hidden="true" />
+      <audio ref={audioRef} src={track.src} loop preload={started ? "metadata" : "none"} />
+      <PaperWorldCanvas
+        controlsRef={controlsRef}
+        paused={!started || paused || completed}
+        reducedMotion={reducedMotion}
+        onReady={handleReady}
+        onDash={handleDash}
+        onStoryUpdate={handleStoryUpdate}
+        onComplete={handleComplete}
+      />
+      <div className="paper-grain" aria-hidden="true" />
 
-      <header className="paint-topbar">
+      <header className="paper-topbar">
         <button type="button" onClick={() => navigate("/lab")}>← Lab dashboard</button>
-        <div><span>EXPERIMENT 002</span><strong>THE CHROMA DRIFTER</strong></div>
-        <nav aria-label="Paint surfer controls">
-          <button type="button" onClick={() => setShowHelp(true)}>Controls</button>
+        <div><span>EXPERIMENT 002</span><strong>THE PAPER DRIFTER</strong></div>
+        <nav aria-label="Paper Drifter controls">
+          <button type="button" onClick={() => setShowHelp(true)}>How to draw</button>
           <button type="button" onClick={() => setPaused((current) => !current)} disabled={!started}>{paused ? "Resume" : "Pause"}</button>
           <button type="button" onClick={onLogout}>Revoke clearance</button>
         </nav>
@@ -178,26 +151,32 @@ export default function PaintSurfer({ navigate, onLogout }) {
 
       {started && (
         <>
-          <aside className="paint-progress" aria-label="World colour progress">
-            <span>STORY RESTORATION</span>
-            <strong>{progress.toString().padStart(2, "0")}%</strong>
-            <div><i style={{ width: `${progress}%` }} /></div>
-            <small>{progress < 35 ? "The first page is waking up." : progress < 75 ? "The maker remembers your colours." : "The way home is taking shape."}</small>
+          <aside className="paper-restoration" aria-label="World restoration progress">
+            <span>WORLD RESTORED</span>
+            <strong>{story.progress.toString().padStart(2, "0")}%</strong>
+            <div><i style={{ width: `${story.progress}%` }} /></div>
+            <small>Draw on the scenery. Your paint becomes real terrain.</small>
           </aside>
-          <div className="paint-surf-meter" aria-live="polite"><span>SURF CHAIN</span><strong>×{surfCount.toString().padStart(2, "0")}</strong></div>
-          {!story.complete && story.current && (
-            <aside className="paint-mission" aria-live="polite">
-              <span>STORY CHAPTER {story.current.number} / {story.chapters.length.toString().padStart(2, "0")}</span>
-              <h2>{story.current.title}</h2>
-              <p>{story.current.prompt}</p>
-              <div><i style={{ width: `${story.current.progress}%` }} /></div>
-              <small>{story.current.hint} Paint-surf inside its glowing ring.</small>
-            </aside>
-          )}
+
+          <aside className="paper-map" aria-label="Open world landmark progress">
+            <span>OPEN CANVAS // LANDMARKS</span>
+            <ol>
+              {story.landmarks.map((landmark) => (
+                <li key={landmark.id} className={landmark.complete ? "is-complete" : ""}>
+                  <i style={{ "--landmark-colour": landmark.accent }} />
+                  <div><strong>{landmark.shortTitle}</strong><small>{landmark.description}</small></div>
+                  <b>{landmark.complete ? "DONE" : `${landmark.progress}%`}</b>
+                </li>
+              ))}
+            </ol>
+          </aside>
+
+          <div className="paper-dash-meter" aria-live="polite"><span>PAINT DASHES</span><strong>×{dashCount.toString().padStart(2, "0")}</strong></div>
+          <div className="paper-draw-prompt">CLICK + DRAG TO DRAW A PLATFORM <i /> J TO PAINT-DASH</div>
         </>
       )}
 
-      <aside className="paint-soundtrack" aria-label="Game soundtrack">
+      <aside className={`paper-soundtrack ${started ? "" : "is-intro"}`} aria-label="Game soundtrack">
         <span>LOCAL SOUNDTRACK {String(trackIndex + 1).padStart(2, "0")} / {paintSoundtracks.length}</span>
         <label>
           <span className="sr-only">Select soundtrack</span>
@@ -205,43 +184,62 @@ export default function PaintSurfer({ navigate, onLogout }) {
             {paintSoundtracks.map((soundtrack, index) => <option key={soundtrack.id} value={index}>{soundtrack.title}</option>)}
           </select>
         </label>
-        <strong>{track.title}</strong>
         <div><button type="button" onClick={() => selectTrack(trackIndex - 1)}>Previous</button><button type="button" onClick={toggleMusic}>{musicOn ? "Mute" : "Play"}</button><button type="button" onClick={() => selectTrack(trackIndex + 1)}>Next</button></div>
         {musicError && <small role="status">{musicError}</small>}
       </aside>
 
       {!started && (
-        <section className="paint-intro" aria-labelledby="paint-intro-title">
-          <div className="paint-intro-number" aria-hidden="true">002</div>
-          <p>PRIIT LAB // BLANK-WORLD RECOVERY PROGRAM</p>
-          <h1 id="paint-intro-title">The world went blank.<br /><em>Draw it back.</em></h1>
-          <p>A nameless stick artist woke inside an unfinished story with one oversized pencil. Follow three colour beacons, awaken a mural, restore the maker statue, and draw open the way home.</p>
-          <dl><div><dt>Move</dt><dd>WASD / arrows</dd></div><div><dt>Jump</dt><dd>Space</dd></div><div><dt>Sprint</dt><dd>Shift</dd></div><div><dt>Paint surf</dt><dd>Click / J</dd></div></dl>
-          <button type="button" onClick={start} disabled={!ready}>{ready ? "Pick up the pencil" : "Stretching the canvas…"}<span aria-hidden="true">→</span></button>
-          <small>W always moves toward the top of the screen. Starting the chamber also starts your selected local soundtrack.</small>
+        <section className="paper-intro" aria-labelledby="paper-intro-title">
+          <div className="paper-intro-copy">
+            <p>PRIIT LAB // INTERACTIVE PAPER UNIVERSE</p>
+            <h1 id="paper-intro-title">The world went blank.<br /><em>Draw it back.</em></h1>
+            <p>Run through five thousand pixels of unfinished paper. Draw bridges where the level forgot them, sketch ramps into the sky, and colour four strange landmarks in whichever order feels right.</p>
+            <button type="button" onClick={start} disabled={!ready}>{ready ? "Tear open the page" : "Sharpening the pencil…"}<span aria-hidden="true">→</span></button>
+            <small>Your mouse or finger is the brush. Anything you draw becomes a surface the character can land on.</small>
+          </div>
+          <div className="paper-intro-manual" aria-label="Game controls">
+            <span>FIELD NOTES / 002</span>
+            <dl>
+              <div><dt>Move</dt><dd>A / D or arrows</dd></div>
+              <div><dt>Jump</dt><dd>W / Space</dd></div>
+              <div><dt>Run</dt><dd>Hold Shift</dd></div>
+              <div><dt>Draw</dt><dd>Click + drag</dd></div>
+              <div><dt>Paint dash</dt><dd>Press J</dd></div>
+            </dl>
+            <p>There is no correct route. If the world blocks you, draw a better world.</p>
+          </div>
         </section>
       )}
 
       {showHelp && (
-        <div className="paint-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="paint-help-title">
-          <section className="paint-help">
-            <p>FIELD MANUAL / CHAMBER 002</p><h2 id="paint-help-title">Make movement your brush.</h2>
-            <ul><li><strong>WASD / arrows</strong><span>Move consistently relative to the screen.</span></li><li><strong>Shift</strong><span>Sprint and leave longer strokes.</span></li><li><strong>Space</strong><span>Jump over structures.</span></li><li><strong>Click / J</strong><span>Paint-surf inside the active beacon to advance the story.</span></li><li><strong>Pink scarf</strong><span>Trails behind the artist; the bright ground arrow points forward.</span></li><li><strong>P / M</strong><span>Pause the world or mute music.</span></li></ul>
-            <button type="button" onClick={() => setShowHelp(false)} autoFocus>Back to the canvas</button>
+        <div className="paper-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="paper-help-title">
+          <section className="paper-help">
+            <p>HOW TO BREAK A BLANK PAGE</p>
+            <h2 id="paper-help-title">The level is also your sketchbook.</h2>
+            <ul>
+              <li><strong>A / D</strong><span>Move left and right. The camera follows across the open page.</span></li>
+              <li><strong>W / Space</strong><span>Jump. Coyote time keeps the controls forgiving at platform edges.</span></li>
+              <li><strong>Click + drag</strong><span>Draw solid paths anywhere on the visible page, then jump onto them.</span></li>
+              <li><strong>J</strong><span>Launch forward on a burst of paint and colour whatever you pass.</span></li>
+              <li><strong>Four landmarks</strong><span>Colour them in any order. Their labels show local progress.</span></li>
+            </ul>
+            <button type="button" onClick={() => { setShowHelp(false); gameRef.current?.focus(); }} autoFocus>Back to the page</button>
           </section>
         </div>
       )}
 
       {completed && !completionDismissed && (
-        <div className="paint-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="paint-complete-title">
-          <section className="paint-complete">
-            <span>100%</span><p>THE LAST PAGE IS ALIVE</p><h2 id="paint-complete-title">You didn&apos;t colour a world.<br />You finished its story.</h2>
-            <div><button type="button" onClick={() => { setCompleted(false); setCompletionDismissed(true); }}>Keep painting</button><button type="button" onClick={() => navigate("/lab")}>Return to Lab</button></div>
+        <div className="paper-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="paper-complete-title">
+          <section className="paper-complete">
+            <span>100%</span>
+            <p>THE PAGE REFUSED TO STAY EMPTY</p>
+            <h2 id="paper-complete-title">You didn&apos;t beat the level.<br />You drew a new one.</h2>
+            <div><button type="button" onClick={() => { setCompleted(false); setCompletionDismissed(true); }}>Keep drawing</button><button type="button" onClick={() => navigate("/lab")}>Return to Lab</button></div>
           </section>
         </div>
       )}
 
-      {paused && <div className="paint-paused" role="status">CANVAS FROZEN // PRESS P TO RESUME</div>}
+      {paused && <div className="paper-paused" role="status">PAGE FOLDED // PRESS P TO RESUME</div>}
       <MobilePaintControls controlsRef={controlsRef} disabled={!started || paused || completed} />
     </main>
   );
