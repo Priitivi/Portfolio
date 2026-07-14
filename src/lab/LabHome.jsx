@@ -29,7 +29,7 @@ export default function LabHome({ navigate, onLogout }) {
         <aside className="lab-diagnostics" aria-label="Laboratory diagnostics">
           <div><span>FACILITY</span><strong>ONLINE</strong></div>
           <div><span>BUILD INTEGRITY</span><strong className="lab-status-warning">71%</strong></div>
-          <div><span>ACTIVE CHAMBERS</span><strong>02</strong></div>
+          <div><span>ACTIVE CHAMBERS</span><strong>{String(experiments.length).padStart(2, "0")}</strong></div>
           <div><span>SAFETY LIMITER</span><strong>ARMED</strong></div>
           <div className="lab-scope" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
         </aside>
@@ -47,8 +47,12 @@ export default function LabHome({ navigate, onLogout }) {
 
         <div className="lab-experiment-grid">
           {experiments.map((experiment) => (
-            <article className="lab-experiment-card" key={experiment.id}>
-              <div className="lab-card-signal" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /></div>
+            <article className={`lab-experiment-card ${experiment.preview ? "has-preview" : ""}`} key={experiment.id}>
+              {experiment.preview === "fluid" ? (
+                <div className="lab-card-preview lab-card-preview-fluid" aria-hidden="true"><i /><i /><i /><i /><span>LIVE FIELD / POINTER READY</span></div>
+              ) : (
+                <div className="lab-card-signal" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /></div>
+              )}
               <div className="lab-card-top"><span>EXPERIMENT {experiment.experimentNumber}</span><strong>{experiment.status}</strong></div>
               <div className="lab-card-number" aria-hidden="true">{experiment.experimentNumber}</div>
               <h3>{experiment.title}</h3>
@@ -59,7 +63,7 @@ export default function LabHome({ navigate, onLogout }) {
           ))}
 
           <article className="lab-experiment-card lab-experiment-empty">
-            <div><span>CHAMBER 003</span><strong>COMING SOON</strong></div>
+            <div><span>CHAMBER 004</span><strong>COMING SOON</strong></div>
             <h3>Space reserved.</h3>
             <p>Another unstable idea will be wired into this bay when it survives first contact with reality.</p>
           </article>

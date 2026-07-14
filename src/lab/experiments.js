@@ -17,4 +17,14 @@ export const experiments = [
     route: "/lab/paint-surfer",
     signals: ["Canvas 2D", "Drawn terrain", "Keyboard + touch", "14-track soundtrack"],
   },
+  {
+    id: "fluid-lab",
+    experimentNumber: "003",
+    title: "Fluid Lab",
+    status: "Live GPU",
+    description: "A tactile full-screen fluid field where pointer velocity becomes momentum and luminous dye curls through a pressure-solved flow.",
+    route: "/lab/fluid",
+    preview: "fluid",
+    signals: ["WebGL2", "GPU shaders", "Ping-pong buffers", "Mouse + touch"],
+  },
 ];
