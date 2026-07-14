@@ -6,6 +6,7 @@ import "./lab.css";
 
 const AudioReactor = lazy(() => import("./audio-reactor/AudioReactor"));
 const PaintSurfer = lazy(() => import("./paint-surfer/PaintSurfer"));
+const FluidLab = lazy(() => import("./fluid-lab/FluidLab"));
 
 export default function LabApp() {
   const [authState, setAuthState] = useState("checking");
@@ -87,6 +88,14 @@ export default function LabApp() {
     return (
       <Suspense fallback={<main className="lab-boot" role="status"><div className="lab-scanlines" aria-hidden="true" /><span>EXPERIMENT 002</span><strong>STRETCHING BLANK CANVAS…</strong><i /></main>}>
         <PaintSurfer navigate={navigate} onLogout={logout} />
+      </Suspense>
+    );
+  }
+
+  if (pathname === "/lab/fluid") {
+    return (
+      <Suspense fallback={<main className="lab-boot" role="status"><div className="lab-scanlines" aria-hidden="true" /><span>EXPERIMENT 003</span><strong>PRESSURISING FLUID FIELD…</strong><i /></main>}>
+        <FluidLab navigate={navigate} onLogout={logout} />
       </Suspense>
     );
   }

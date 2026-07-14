@@ -27,6 +27,7 @@ The Lab is a protected route at `/lab`. Its experiments are loaded only after th
 
 1. **Psychedelic Audio Reactor** — upload a local track and transform its waveform, frequency bands, stereo balance, and detected beats into four real-time visual systems.
 2. **The Paper Drifter** — explore a 5,400-pixel 2D paper world where mouse or touch strokes become physical platforms. Draw routes, paint-dash across gaps, and restore four landmarks in any order while choosing from fourteen local tracks.
+3. **Fluid Lab** — disturb a full-screen, pressure-solved GPU fluid field with mouse, pen, or touch. Pointer velocity injects momentum while six palettes, live solver controls, adaptive resolution, fullscreen, and keyboard shortcuts make the simulation feel like an instrument.
 
 ## Tech stack
 
@@ -36,6 +37,7 @@ The Lab is a protected route at `/lab`. Its experiments are loaded only after th
 | Build | Vite 6 | Development server, code splitting, and production builds |
 | 3D | Three.js + React Three Fiber | Procedural characters, environments, shaders, particles, and game loops |
 | 2D | Canvas 2D API | Paper-world rendering, drawing, particles, and platform physics |
+| GPU simulation | WebGL2 + GLSL ES 3.0 | Multi-pass fluid advection, pressure projection, vorticity, dye, and display shading |
 | Motion | Framer Motion | Landing-page transitions |
 | Styling | Tailwind CSS + custom CSS | Utility styles and bespoke visual systems |
 | Audio | Web Audio API | FFT analysis, waveform energy, beat detection, and local playback |
@@ -55,11 +57,15 @@ flowchart TD
     Lab --> Dashboard[LabHome]
     Dashboard --> Reactor[Lazy AudioReactor]
     Dashboard --> Painter[Lazy PaintSurfer]
+    Dashboard --> Fluid[Lazy FluidLab]
     Reactor --> WebAudio[AudioEngine + analysis]
     Reactor --> ReactorScene[Four R3F scenes]
     Painter --> PaperCanvas[PaperWorldCanvas loop]
     PaperCanvas --> Drawing[World-space paint terrain]
     PaperCanvas --> Story[Four open-order landmarks]
+    Fluid --> Solver[FluidSimulation controller]
+    Solver --> Fields[Velocity + dye + pressure framebuffers]
+    Fields --> Passes[Advection + curl + divergence + Jacobi + projection]
 ```
 
 The application intentionally uses a small route boundary instead of a full routing dependency. `App.jsx` delegates `/lab` paths to `LabApp`, and `LabApp` tracks its nested pathname with the History API. Each expensive interactive experience is imported with `React.lazy`, keeping it out of the initial portfolio bundle.
@@ -94,6 +100,13 @@ Portfolio/
 │  │  │  ├─ PaperWorldCanvas.jsx  # 2D renderer, physics, paint, and camera
 │  │  │  ├─ paperWorld.js         # Pure world, collision, and story helpers
 │  │  │  └─ usePaintControls.js   # Persistent keyboard input state
+│  │  ├─ fluid-lab/
+│  │  │  ├─ FluidLab.jsx           # Chamber shell, input, shortcuts, fullscreen, and fallback UI
+│  │  │  ├─ FluidControls.jsx      # Palettes, solver sliders, quality, and actions
+│  │  │  ├─ FluidSimulation.js     # Raw WebGL2 pipeline, framebuffers, passes, and lifecycle
+│  │  │  ├─ fluidConfig.js         # Palettes, presets, defaults, and pure helpers
+│  │  │  ├─ shaders.js             # GLSL programs for every solver and display pass
+│  │  │  └─ fluid-lab.css
 │  │  ├─ LabApp.jsx               # Protected Lab route boundary
 │  │  └─ LabHome.jsx              # Experiment dashboard
 │  ├─ App.jsx                     # Top-level experience switch
@@ -140,7 +153,23 @@ Drawing is also level design:
 
 Only user-facing values—total restoration, landmark status, dash count, dialogs, and music state—use React state. The animation loop remains mutable and allocation-conscious. The soundtrack UI exposes all fourteen supplied tracks while the browser loads only the selected source.
 
-### 4. Performance strategy
+### 4. Fluid Lab solver
+
+`FluidSimulation` owns a raw WebGL2 pipeline so the numerical work stays on the GPU and React only handles human-scale UI state. Every animation frame runs this sequence:
+
+1. Pointer samples add dye to the colour field and velocity to the momentum field through GPU splat passes.
+2. Curl is measured from velocity and vorticity confinement restores small rotating structures.
+3. Divergence measures where the provisional velocity field is compressing or expanding.
+4. A ping-pong Jacobi solve iterates the pressure field between two floating-point framebuffers.
+5. The pressure gradient is subtracted from velocity, projecting it toward an incompressible field.
+6. Velocity and dye are each advected through the corrected flow with configurable dissipation.
+7. A final display shader tone-maps the dye, adds subtle surface lighting, vignette, and dithering, then draws to the screen.
+
+Velocity, dye, and pressure each use paired floating-point render targets; divergence and curl use dedicated single targets. The controller reallocates them from aspect-aware quality presets, caps display DPR, suspends updates in hidden tabs, and deletes every texture, framebuffer, program, vertex array, observer, listener, and animation frame when the route unmounts. WebGL2 and `EXT_color_buffer_float` are checked before the chamber opens; unsupported devices receive a readable fallback rather than a broken canvas.
+
+React deliberately does not receive per-frame simulation data. Pointer records and the solver live in refs, while the only recurring UI update is one small performance sample per second. This prevents the fluid loop from becoming a React render loop.
+
+### 5. Performance strategy
 
 - Large experiences are route-level lazy chunks.
 - Device heuristics lower particles, shadows, geometry, and pixel ratio on modest hardware.
@@ -149,6 +178,8 @@ Only user-facing values—total restoration, landmark status, dash count, dialog
 - Physics examines only recent paint strokes instead of every historical mark.
 - Hidden tabs suspend the audio context and animation work where possible.
 - Reduced-motion preferences lower camera and interface movement.
+- Fluid buffers scale independently from display pixels, manual bilinear advection works without float-linear filtering, and Auto quality steps down after sustained slow frames.
+- Fluid Lab is a lazy route chunk and adds no shader compilation or framebuffers to the main portfolio, fighter, Audio Reactor, or Paper Drifter.
 
 ## Getting started
 
@@ -223,6 +254,7 @@ The tests cover:
 - Login, signed-cookie restoration, invalid clearance, and logout Function behavior.
 - Supported audio formats, frequency measurements, stereo balance, beat cooldowns, and transport formatting.
 - 2D movement actions, screen-to-world drawing transforms, paint-platform sampling, open-order story progression, and all soundtrack assets.
+- Fluid palettes, automatic quality heuristics, aspect-aware framebuffer sizing, WebGL pointer mapping, reduced-motion defaults, and the presence of every required solver stage.
 
 Interactive changes should also be checked in a browser at desktop and mobile widths because WebGL capability, Canvas pointer input, autoplay policy, and graphics performance differ by device.
 
