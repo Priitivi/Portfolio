@@ -55,7 +55,7 @@ Hazards and triggers use rectangle overlap after movement. This makes their read
 
 The side-scrolling camera follows a horizontal dead zone instead of pinning the player to screen centre. Player velocity supplies a bounded look-ahead, revealing more space in the direction of travel. The camera eases to its target and clamps to the level bounds. Reverse-gravity sections add a small vertical anticipation offset.
 
-Shake uses clamped impact presets rather than additive impulses. Hard landings are almost imperceptible, checkpoints are subtle, deaths are moderate, and major world changes have the largest response. Repeated events refresh the stronger active impulse without stacking amplitude beyond 5.5 virtual pixels. Reduced-shake mode and the operating system's reduced-motion preference make the render offset zero without changing physics or trap cues.
+Shake uses clamped impact presets rather than additive impulses. Hard landings are almost imperceptible, checkpoints are subtle, deaths are moderate, and major world changes have the largest response. Repeated events refresh the stronger active impulse without stacking amplitude beyond 4.5 virtual pixels. Reduced-shake mode and the operating system's reduced-motion preference make the render offset zero without changing physics or trap cues.
 
 ## Level system
 
