@@ -8,6 +8,7 @@ const AudioReactor = lazy(() => import("./audio-reactor/AudioReactor"));
 const PaintSurfer = lazy(() => import("./paint-surfer/PaintSurfer"));
 const FluidLab = lazy(() => import("./fluid-lab/FluidLab"));
 const ShortcutLab = lazy(() => import("./shortcut-lab/ShortcutLab"));
+const DeceptiveTrial = lazy(() => import("./deceptive-trial/DeceptiveTrial"));
 
 export default function LabApp() {
   const [authState, setAuthState] = useState("checking");
@@ -105,6 +106,14 @@ export default function LabApp() {
     return (
       <Suspense fallback={<main className="lab-boot" role="status"><div className="lab-scanlines" aria-hidden="true" /><span>EXPERIMENT 004</span><strong>BOOTING SHORTCUT LAB…</strong><i /></main>}>
         <ShortcutLab navigate={navigate} />
+      </Suspense>
+    );
+  }
+
+  if (pathname === "/lab/deceptive-trial") {
+    return (
+      <Suspense fallback={<main className="lab-boot" role="status"><div className="lab-scanlines" aria-hidden="true" /><span>EXPERIMENT 005</span><strong>REVIEWING THE RULES…</strong><i /></main>}>
+        <DeceptiveTrial navigate={navigate} />
       </Suspense>
     );
   }
