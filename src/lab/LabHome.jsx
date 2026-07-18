@@ -50,6 +50,8 @@ export default function LabHome({ navigate, onLogout }) {
             <article className={`lab-experiment-card ${experiment.preview ? "has-preview" : ""}`} key={experiment.id}>
               {experiment.preview === "fluid" ? (
                 <div className="lab-card-preview lab-card-preview-fluid" aria-hidden="true"><i /><i /><i /><i /><span>LIVE FIELD / POINTER READY</span></div>
+              ) : experiment.preview === "shortcut" ? (
+                <div className="lab-card-preview lab-card-preview-shortcut" aria-hidden="true"><div className="lab-preview-osbar"><b>SL</b><i /><i /><span>09:42</span></div><div className="lab-preview-window"><header><i /> VECTOR EDITOR <b>— ×</b></header><main><aside>01<br />02<br />03<br />04</aside><code><em>const</em> shortcut = <strong>&quot;instinct&quot;</strong>;<br /><em>await</em> train(shortcut);<br /><span>// fast, safe, repeatable</span></code></main></div><div className="lab-preview-keys"><kbd>Ctrl</kbd><b>+</b><kbd>P</kbd></div><small>COMBO ×12&nbsp;&nbsp; SCORE 2,840</small></div>
               ) : (
                 <div className="lab-card-signal" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /></div>
               )}
@@ -63,7 +65,7 @@ export default function LabHome({ navigate, onLogout }) {
           ))}
 
           <article className="lab-experiment-card lab-experiment-empty">
-            <div><span>CHAMBER 004</span><strong>COMING SOON</strong></div>
+            <div><span>CHAMBER 005</span><strong>COMING SOON</strong></div>
             <h3>Space reserved.</h3>
             <p>Another unstable idea will be wired into this bay when it survives first contact with reality.</p>
           </article>
