@@ -1,257 +1,312 @@
 # Priitivi — Creative Developer Portfolio
 
-An interactive portfolio that treats personal work as a set of playable interfaces. The public site combines an editorial landing page, a character-creation boss fight, and a protected experimental Lab containing real-time Web Audio and WebGL projects.
+An interactive developer portfolio built as a collection of playable interfaces, real-time simulations, and experimental web experiences.
 
-Live site: [priitivi.com](https://priitivi.com)
+The site combines a clear editorial portfolio with a 3D combat experience and a protected laboratory containing audio-reactive visuals, a paint-driven platform game, a GPU fluid simulation, and an interactive shortcut-training desktop.
 
-## What is here?
+**Live site:** [priitivi.com](https://priitivi.com)
+
+---
+
+## Overview
+
+This repository contains three connected parts:
 
 ### Main portfolio
 
-- Editorial hero, biography, project case files, CV download, and contact form.
-- A responsive 2D presentation built for clarity before spectacle.
-- An animated crashed UFO and navbar entry that lead to Priit's Lab.
-- A lazy-loaded 3D fighter available directly from the hero and navigation.
+A responsive editorial portfolio focused on presenting projects, experience, skills, and contact information clearly.
+
+Highlights include:
+
+- Animated landing page and project case studies
+- Biography, CV download, and contact form
+- Responsive navigation and accessible layouts
+- Crashed-UFO portal into Priit's Lab
+- Lazy-loaded entry into Portfolio Fighter
 
 ### Portfolio Fighter
 
-- Character creator with configurable appearance, clothing, and weapon.
-- Comic-book story introduction and guided controls.
-- Procedural 3D boss arena with attacks, dodging, health phases, and a caped boss.
-- Portfolio information unlocked between combat phases.
-- Keyboard and touch controls.
+A playable 3D portfolio experience built around a boss battle.
+
+Features include:
+
+- Character customisation
+- Configurable clothing, appearance, and weapon
+- Comic-style story introduction
+- Procedural 3D combat arena
+- Attacks, dodging, health phases, and boss encounters
+- Portfolio content unlocked between combat phases
+- Keyboard and touch controls
 
 ### Priit's Lab
 
-The Lab is a protected route at `/lab`. Its experiments are loaded only after the Lab bundle is requested.
+Priit's Lab is a protected route at `/lab` containing four interactive experiments. Each experience is lazy-loaded so it does not affect the initial portfolio bundle.
 
-1. **Psychedelic Audio Reactor** — upload a local track and transform its waveform, frequency bands, stereo balance, and detected beats into four real-time visual systems.
-2. **The Paper Drifter** — explore a 5,400-pixel 2D paper world where mouse or touch strokes become physical platforms. Draw routes, paint-dash across gaps, and restore four landmarks in any order while choosing from fourteen local tracks.
-3. **Fluid Lab** — disturb a full-screen, pressure-solved GPU fluid field with mouse, pen, or touch. Pointer velocity injects momentum while six palettes, live solver controls, adaptive resolution, fullscreen, and keyboard shortcuts make the simulation feel like an instrument.
-4. **Shortcut Lab** — train practical productivity shortcuts inside a contained simulated desktop. Tutorial, adaptive practice, timed sprints, deterministic daily sets, and three multi-app workflows run across fake browser, editor, terminal, files, mail, notes, and spreadsheet applications.
+| Experiment | Description |
+| --- | --- |
+| **Psychedelic Audio Reactor** | Upload a local audio track and transform waveform, frequency, stereo, and beat data into four real-time visual systems. |
+| **The Paper Drifter** | Explore a hand-crafted 2D paper world where drawn strokes become physical platforms and colour restores lost landmarks. |
+| **Fluid Lab** | Interact with a pressure-solved GPU fluid simulation using mouse, pen, or touch input, configurable palettes, and live solver controls. |
+| **Shortcut Lab** | Learn practical productivity shortcuts inside a simulated desktop containing fake browser, editor, terminal, files, mail, notes, and spreadsheet applications. |
+
+---
+
+## Featured experiments
+
+### Psychedelic Audio Reactor
+
+A Web Audio and React Three Fiber experiment that turns a local audio file into a reactive visual environment.
+
+The analysis pipeline measures:
+
+- Waveform amplitude
+- Sub-bass, bass, mid, and treble energy
+- Spectral centroid
+- Stereo balance
+- Beat impulses
+
+The analyser writes high-frequency values into mutable refs rather than React state. React Three Fiber scenes read those values from the render loop, avoiding unnecessary component rerenders.
+
+### The Paper Drifter
+
+A 2D platforming experiment rendered with the Canvas API.
+
+The player explores a 5,400-pixel paper world where drawing is part of the level design:
+
+1. Pointer coordinates are converted into persistent world-space strokes.
+2. Strokes are rendered using layered ink, pigment, and highlight passes.
+3. Suitable line segments become walkable platforms and ramps.
+4. Painted regions restore colour to four landmarks in any order.
+
+The game also includes jumping, coyote time, dashing, particles, touch controls, camera movement, and a selectable local soundtrack.
+
+### Fluid Lab
+
+A raw WebGL2 fluid simulation with a multi-pass GPU solver.
+
+Each animation frame performs:
+
+1. Pointer dye and momentum splats
+2. Curl calculation
+3. Vorticity confinement
+4. Divergence calculation
+5. Ping-pong Jacobi pressure iterations
+6. Pressure-gradient subtraction
+7. Velocity advection
+8. Dye advection and dissipation
+9. Tone-mapped display shading
+
+The simulation includes adaptive quality, aspect-aware framebuffer sizing, reduced-motion support, fullscreen controls, six palettes, and graceful WebGL fallback messaging.
+
+### Shortcut Lab
+
+A browser-based productivity training game inspired by typing trainers, but focused on real keyboard shortcuts and contextual workflows.
+
+The user works inside a contained simulated desktop with:
+
+- Draggable, resizable, focusable, and minimisable windows
+- Fake browser
+- Fake code editor
+- Fake terminal
+- Fake file explorer
+- Fake mail
+- Fake notes
+- Fake spreadsheet
+- Dock, launcher, clock, fullscreen, settings, and pause controls
+
+Shortcut Lab includes:
+
+- 42 data-driven challenges
+- Tutorial mode
+- Adaptive practice
+- Timed sprint sessions
+- Three multi-application workflows
+- Deterministic daily challenges
+- Scoring, combos, accuracy, and reaction-time tracking
+- Local mastery and progress persistence
+- Windows/Linux and macOS labels
+- Virtual keyboard support
+- Reduced-motion, sound, and accessibility settings
+- Mobile fallback
+
+Reserved browser and operating-system shortcuts are never relied on as unsafe physical inputs. Where necessary, the real shortcut is shown while the action is practised through a virtual keyboard or clearly labelled training substitute.
+
+---
 
 ## Tech stack
 
 | Layer | Technology | Purpose |
 | --- | --- | --- |
-| UI | React 19 | Components and application state |
+| UI | React 19 | Components, screens, and application state |
 | Build | Vite 6 | Development server, code splitting, and production builds |
-| 3D | Three.js + React Three Fiber | Procedural characters, environments, shaders, particles, and game loops |
+| 3D | Three.js and React Three Fiber | Characters, arenas, shaders, particles, and 3D game loops |
 | 2D | Canvas 2D API | Paper-world rendering, drawing, particles, and platform physics |
-| GPU simulation | WebGL2 + GLSL ES 3.0 | Multi-pass fluid advection, pressure projection, vorticity, dye, and display shading |
-| Motion | Framer Motion | Landing-page transitions |
-| Styling | Tailwind CSS + custom CSS | Utility styles and bespoke visual systems |
-| Audio | Web Audio API | FFT analysis, waveform energy, beat detection, and local playback |
-| Auth | Netlify Functions + Node crypto | Password verification and signed Lab sessions |
-| Tests | Node test runner | Security, analysis, and gameplay helper tests |
+| GPU simulation | WebGL2 and GLSL ES 3.0 | Fluid fields, shader passes, advection, pressure, and display rendering |
+| Motion | Framer Motion | Portfolio transitions and interface animation |
+| Styling | Tailwind CSS and custom CSS | Responsive layout and bespoke visual systems |
+| Audio | Web Audio API | Frequency analysis, waveform energy, stereo balance, and beat detection |
+| Forms | React Hook Form | Contact form state and validation |
+| Authentication | Netlify Functions and Node crypto | Password verification and signed Lab sessions |
+| Testing | Node test runner | Security, simulation helpers, challenge logic, and gameplay utilities |
+| Hosting | Netlify | Static hosting, serverless Functions, and SPA redirects |
 
-## Architecture at a glance
+---
+
+## Architecture
 
 ```mermaid
 flowchart TD
     Entry[main.jsx] --> App[App.jsx]
-    App --> Portfolio[Standard portfolio]
-    App --> Fighter[Lazy GameExperience]
+
+    App --> Portfolio[Main portfolio]
+    App --> Fighter[Lazy Portfolio Fighter]
     App --> Lab[Lazy LabApp]
+
     Lab --> Gate[LabGate]
     Gate --> Session[Netlify session function]
     Lab --> Dashboard[LabHome]
-    Dashboard --> Reactor[Lazy AudioReactor]
-    Dashboard --> Painter[Lazy PaintSurfer]
-    Dashboard --> Fluid[Lazy FluidLab]
-    Dashboard --> Shortcuts[Lazy ShortcutLab]
-    Reactor --> WebAudio[AudioEngine + analysis]
-    Reactor --> ReactorScene[Four R3F scenes]
-    Painter --> PaperCanvas[PaperWorldCanvas loop]
-    PaperCanvas --> Drawing[World-space paint terrain]
-    PaperCanvas --> Story[Four open-order landmarks]
-    Fluid --> Solver[FluidSimulation controller]
-    Solver --> Fields[Velocity + dye + pressure framebuffers]
-    Fields --> Passes[Advection + curl + divergence + Jacobi + projection]
-    Shortcuts --> ShortcutEngine[Challenge + scoring engine]
-    Shortcuts --> SafeInput[Shortcut safety manager]
-    Shortcuts --> FakeDesktop[Window manager + simulated apps]
-    ShortcutEngine --> LocalMastery[Adaptive local mastery]
+
+    Dashboard --> Audio[Lazy Audio Reactor]
+    Dashboard --> Drifter[Lazy Paper Drifter]
+    Dashboard --> Fluid[Lazy Fluid Lab]
+    Dashboard --> Shortcuts[Lazy Shortcut Lab]
+
+    Audio --> WebAudio[Web Audio analysis]
+    Audio --> R3F[React Three Fiber scenes]
+
+    Drifter --> Canvas[Canvas 2D game loop]
+    Canvas --> Paint[World-space paint geometry]
+    Canvas --> Physics[Platform and movement physics]
+
+    Fluid --> WebGL[Raw WebGL2 solver]
+    WebGL --> Fields[Velocity, dye, pressure, divergence, curl]
+    Fields --> Passes[Advection, Jacobi, projection, display]
+
+    Shortcuts --> Engine[Challenge and scoring engine]
+    Shortcuts --> Safety[Shortcut safety manager]
+    Shortcuts --> Desktop[Simulated desktop and apps]
+    Engine --> Mastery[Adaptive local mastery]
 ```
 
-The application intentionally uses a small route boundary instead of a full routing dependency. `App.jsx` delegates `/lab` paths to `LabApp`, and `LabApp` tracks its nested pathname with the History API. Each expensive interactive experience is imported with `React.lazy`, keeping it out of the initial portfolio bundle.
+The application intentionally avoids a full routing dependency. `App.jsx` delegates `/lab` paths to `LabApp`, which manages nested Lab navigation with the History API.
+
+Expensive experiences are imported through `React.lazy`, keeping them outside the initial portfolio bundle.
+
+---
 
 ## Project structure
 
 ```text
 Portfolio/
-├─ netlify/
-│  └─ functions/
-│     ├─ lab-session.mjs          # Login, session validation, and logout
-│     └─ _shared/lab-security.mjs # Scrypt hashing and signed-session helpers
-├─ public/
-│  └─ audio/                      # Paper Drifter soundtrack assets
-├─ scripts/
-│  └─ hash-lab-password.mjs       # Hidden-input password hash helper
-├─ src/
-│  ├─ components/                 # Public portfolio sections and UFO portal
-│  ├─ data/                       # Portfolio and fighter content
-│  ├─ game/
-│  │  ├─ GameExperience.jsx       # Fighter state machine and interface
-│  │  ├─ ArenaScene.jsx           # Real-time combat scene
-│  │  └─ game.css
-│  ├─ lab/
-│  │  ├─ auth/                    # Browser calls to the session endpoint
-│  │  ├─ audio-reactor/
-│  │  │  ├─ audio/                # FFT bands, amplitude, centroid, and beats
-│  │  │  ├─ hooks/                # Analysis loop and adaptive quality
-│  │  │  └─ scene/                # Neural, liquid, astral, and collapse modes
-│  │  ├─ paint-surfer/
-│  │  │  ├─ PaintSurfer.jsx       # Game shell, HUD, music, and controls
-│  │  │  ├─ PaperWorldCanvas.jsx  # 2D renderer, physics, paint, and camera
-│  │  │  ├─ paperWorld.js         # Pure world, collision, and story helpers
-│  │  │  └─ usePaintControls.js   # Persistent keyboard input state
-│  │  ├─ fluid-lab/
-│  │  │  ├─ FluidLab.jsx           # Chamber shell, input, shortcuts, fullscreen, and fallback UI
-│  │  │  ├─ FluidControls.jsx      # Palettes, solver sliders, quality, and actions
-│  │  │  ├─ FluidSimulation.js     # Raw WebGL2 pipeline, framebuffers, passes, and lifecycle
-│  │  │  ├─ fluidConfig.js         # Palettes, presets, defaults, and pure helpers
-│  │  │  ├─ shaders.js             # GLSL programs for every solver and display pass
-│  │  │  └─ fluid-lab.css
-│  │  ├─ LabApp.jsx               # Protected Lab route boundary
-│  │  └─ LabHome.jsx              # Experiment dashboard
-│  ├─ App.jsx                     # Top-level experience switch
-│  └─ index.css                   # Public portfolio visual system
-├─ tests/                         # Node security, Function, audio, and game tests
-└─ netlify.toml                   # Build, Function, and SPA redirect rules
+├── netlify/
+│   └── functions/
+│       ├── lab-session.mjs
+│       └── _shared/
+│           └── lab-security.mjs
+├── public/
+│   └── audio/
+├── scripts/
+│   └── hash-lab-password.mjs
+├── src/
+│   ├── components/
+│   ├── data/
+│   ├── game/
+│   │   ├── GameExperience.jsx
+│   │   ├── ArenaScene.jsx
+│   │   └── game.css
+│   ├── lab/
+│   │   ├── auth/
+│   │   ├── audio-reactor/
+│   │   ├── paint-surfer/
+│   │   ├── fluid-lab/
+│   │   ├── shortcut-lab/
+│   │   │   ├── apps/
+│   │   │   ├── components/
+│   │   │   ├── core/
+│   │   │   ├── data/
+│   │   │   ├── ShortcutLab.jsx
+│   │   │   └── shortcut-lab.css
+│   │   ├── LabApp.jsx
+│   │   └── LabHome.jsx
+│   ├── App.jsx
+│   ├── main.jsx
+│   └── index.css
+├── tests/
+├── netlify.toml
+├── package.json
+└── vite.config.js
 ```
 
-## How the interesting systems work
+---
 
-### 1. Protected Lab sessions
+## Lab authentication
 
-The password never enters the client bundle. A Netlify Function receives the submitted password and compares it with a salted scrypt hash using a timing-safe comparison. A successful login returns a signed, short-lived cookie with these properties:
+The Lab password is never included in the browser bundle.
 
-- `HttpOnly` — unavailable to browser JavaScript.
-- `Secure` — sent only over HTTPS in production.
-- `SameSite=Strict` — resists cross-site requests.
-- 30-minute expiry.
+A Netlify Function receives the submitted password and compares it with a salted scrypt hash using timing-safe verification. A successful login returns a signed, short-lived cookie configured with:
 
-The gate is access control for the route, not a secrecy boundary for compiled frontend code. Never put confidential data inside a static client bundle.
+- `HttpOnly`
+- `Secure` in production
+- `SameSite=Strict`
+- 30-minute expiry
 
-### 2. Audio Reactor pipeline
+The Lab gate controls access to the route, but it is not a secrecy boundary for compiled frontend code. Confidential information should never be placed in a static client bundle.
 
-`AudioEngine` creates one media element and connects it to Web Audio analysers. Every animation frame produces a small mutable analysis object containing:
+---
 
-- RMS-style waveform amplitude.
-- Sub-bass, bass, low-mid, mid, high-mid, and treble energy.
-- Spectral centroid for perceived brightness.
-- Stereo balance from split left/right channels.
-- Beat impulses from a moving energy history and cooldown.
+## Shortcut safety model
 
-React does not rerender at audio frequency. The analyser writes into refs, and React Three Fiber scenes read those refs inside `useFrame`. This keeps high-frequency work out of the component render cycle.
+Shortcut Lab classifies shortcuts as:
 
-### 3. Paper Drifter game loop
+- `safe`
+- `browser-reserved`
+- `os-reserved`
 
-`PaperWorldCanvas` is a Canvas 2D game loop with a fixed logical world and a smooth horizontal camera. Player position, velocity, coyote-time jumping, dash state, particles, paint strokes, and camera position live in refs. Keyboard and touch inputs live in a `Set`, so simultaneous controls never need frame-rate React rerenders.
+Browser and operating-system shortcuts remain under the control of the browser or OS. The lab does not claim it can block every reserved chord.
 
-Drawing is also level design:
+Safe shortcuts are handled inside the simulation. Reserved shortcuts are displayed accurately but trained through labelled alternatives or the clickable virtual keyboard.
 
-1. Pointer coordinates are transformed from screen space into persistent world space.
-2. Each stroke is stored as a capped polyline and rendered with ink, pigment, and highlight passes.
-3. Descending player feet sample nearby line segments, turning suitable strokes into walkable platforms and ramps.
-4. Paint cells near a landmark restore its colour without forcing a fixed completion order.
-
-Only user-facing values—total restoration, landmark status, dash count, dialogs, and music state—use React state. The animation loop remains mutable and allocation-conscious. The soundtrack UI exposes all fourteen supplied tracks while the browser loads only the selected source.
-
-### 4. Fluid Lab solver
-
-`FluidSimulation` owns a raw WebGL2 pipeline so the numerical work stays on the GPU and React only handles human-scale UI state. Every animation frame runs this sequence:
-
-1. Pointer samples add dye to the colour field and velocity to the momentum field through GPU splat passes.
-2. Curl is measured from velocity and vorticity confinement restores small rotating structures.
-3. Divergence measures where the provisional velocity field is compressing or expanding.
-4. A ping-pong Jacobi solve iterates the pressure field between two floating-point framebuffers.
-5. The pressure gradient is subtracted from velocity, projecting it toward an incompressible field.
-6. Velocity and dye are each advected through the corrected flow with configurable dissipation.
-7. A final display shader tone-maps the dye, adds subtle surface lighting, vignette, and dithering, then draws to the screen.
-
-Velocity, dye, and pressure each use paired floating-point render targets; divergence and curl use dedicated single targets. The controller reallocates them from aspect-aware quality presets, caps display DPR, suspends updates in hidden tabs, and deletes every texture, framebuffer, program, vertex array, observer, listener, and animation frame when the route unmounts. WebGL2 and `EXT_color_buffer_float` are checked before the chamber opens; unsupported devices receive a readable fallback rather than a broken canvas.
-
-React deliberately does not receive per-frame simulation data. Pointer records and the solver live in refs, while the only recurring UI update is one small performance sample per second. This prevents the fluid loop from becoming a React render loop.
-
-### 5. Shortcut Lab architecture
-
-Shortcut Lab is lazy-loaded at `/lab/shortcut-lab` after Lab authentication. It has no backend, account, paid service, external font, or added runtime dependency. Its simulated applications never execute commands, open browser tabs, or access files.
-
-The experience is split into four layers:
-
-1. `data/challenges.js` defines the curriculum. Every challenge names an application, category, difficulty, platform support, expected shortcut, optional safe training chord, risk class, initial/success state, explanation, action, and points. Workflows reference challenge IDs instead of duplicating challenge logic.
-2. `core/shortcuts.js` normalizes keyboard events, applies macOS modifier mapping, requires exact modifier matches, diagnoses near misses, and classifies reserved chords. The global listener ignores repeated events and real form controls, only prevents default after an accepted safe/training input, and is removed on unmount.
-3. `core/progress.js` owns pure scoring, combo, accuracy, mastery, adaptive weighting, deterministic daily selection, and defensive persistence parsing. Incorrect, slow, hinted, or stale shortcuts receive greater practice weight.
-4. `ShortcutLab.jsx` coordinates modes, timers, feedback, window focus, simulated app effects, optional locally generated sound, pausing, results, and persistence. Fake apps are split across `apps/`; the desktop, windows, screens, HUD, and virtual keyboard live under `components/`.
-
-#### Shortcut safety model
-
-Shortcut risk is one of `safe`, `browser-reserved`, or `os-reserved`. The browser and operating system have final control over reserved shortcuts; the lab does not claim otherwise and does not use `beforeunload` as a guard.
-
-- Safe and reliably interceptable application chords run inside the simulated app.
-- Browser-reserved actions such as real tab close, new tab, restore tab, tab cycling, and address focus display the real chord but train with a labelled substitute or the clickable virtual keyboard.
-- Operating-system actions such as `Alt + Tab` and `Win + D` use explicit lab-only substitutes.
-- `Alt + F4`, `F5`, `Ctrl + R`, `Win + L`, `Ctrl + Shift + Escape`, and `Cmd + Q` are registered as reserved and are never assigned as physical challenge inputs.
-- Inputs, textareas, selects, and editable content do not feed the global challenge listener.
-
-The current safe substitutions are:
-
-| Real action | Real shortcut | Lab training input |
+| Action | Real shortcut | Lab training input |
 | --- | --- | --- |
 | Focus address bar | `Ctrl/Cmd + L` | `Ctrl/Cmd + Alt/Option + Shift + L` |
-| Restore tab | `Ctrl/Cmd + Shift + T` | `Ctrl/Cmd + Alt/Option + Shift + R` |
-| Next / previous tab | `Ctrl/Cmd + Tab` / `Ctrl/Cmd + Shift + Tab` | `Alt/Option + Shift + Right/Left` |
-| Close / new tab | `Ctrl/Cmd + W` / `Ctrl/Cmd + T` | `Ctrl/Cmd + Alt/Option + Shift + W/N` |
+| Restore closed tab | `Ctrl/Cmd + Shift + T` | `Ctrl/Cmd + Alt/Option + Shift + R` |
+| Next or previous tab | `Ctrl/Cmd + Tab` / `Ctrl/Cmd + Shift + Tab` | `Alt/Option + Shift + Right/Left` |
+| Close or open tab | `Ctrl/Cmd + W` / `Ctrl/Cmd + T` | `Ctrl/Cmd + Alt/Option + Shift + W/N` |
 | Switch application | `Alt/Option + Tab` | `Ctrl/Cmd + Alt/Option + Shift + A` |
 | Show desktop | `Win + D` | `Ctrl/Cmd + Alt/Option + Shift + D` |
 
-#### Modes, progress, and supported platforms
+Inputs, textareas, selects, and editable regions are excluded from the global challenge listener. Timers and keyboard listeners are removed when the experience pauses or unmounts.
 
-- Tutorial teaches eight core actions, then repeats them without visible answers.
-- Practice selects an app/category and weights weaker or stale shortcuts more heavily.
-- Sprint supports 15/30/60-second and 10/25/open challenge presets.
-- Workflows provide three continuous scenarios: fix and test a project, research and summarise an issue, and organise files and send an update.
-- Daily Challenge hashes the local calendar date into the same ten-item set for that day.
-- Results include score, accuracy, average/fastest reaction, combo, personal-best comparison, and an attempt timeline.
+---
 
-Windows/Linux uses `Ctrl`, `Alt`, and `Win` labels. macOS maps primary `Ctrl` definitions to `⌘` and displays `⌥` for Alt. The preference and all progress live under `priit-shortcut-lab-v1` in `localStorage`. Corrupt or unavailable storage falls back safely to defaults. Touch devices can browse tutorials and use the virtual keyboard; full muscle-memory training is intentionally described as a physical-keyboard experience.
+## Performance strategy
 
-#### Adding a challenge or simulated app
+The interactive experiences are designed to avoid adding unnecessary work to the normal portfolio.
 
-To add a challenge:
+- Lab experiments are split into route-level lazy chunks.
+- Three.js quality settings lower shadows, particles, geometry, and pixel ratio on weaker devices.
+- Audio analysis writes to refs instead of rerendering React components at audio frequency.
+- Paper Drifter caps device pixel ratio, particles, stroke count, and points per stroke.
+- Physics samples recent paint geometry rather than scanning all historical strokes.
+- Fluid simulation buffers scale independently from display resolution.
+- Fluid Lab can reduce quality after sustained slow frame times.
+- Hidden tabs suspend animation and audio work where possible.
+- Reduced-motion preferences lower camera and interface animation.
+- Shortcut Lab uses CSS and vector UI rather than large image assets.
+- Shortcut Lab removes timers and event listeners when inactive.
+- Unsupported WebGL devices receive readable fallbacks rather than broken canvases.
 
-1. Add a unique object through `makeChallenge` in `data/challenges.js`.
-2. Use an existing action or handle a new action in the target fake app.
-3. Mark reserved input honestly and provide `trainingShortcut` when physical capture is unsafe.
-4. If it belongs in a workflow, reference its ID in `data/workflows.js`.
-5. Extend `tests/shortcut-lab.test.mjs` when normalization, safety, scoring, or selection behavior changes.
-
-To add an app, create a focused component in `apps/`, register its label, accent, and initial window in `components/windowConfig.js`, render it from `DesktopShell.jsx`, and add application-specific challenges. Fake terminal commands must remain allow-listed simulations; fake file and browser actions must remain in local React state.
-
-Known limitations: browsers differ in reserved-shortcut delivery; fullscreen can be declined by browser policy; window dragging and resizing prioritize desktop pointers; progress is local to one browser profile; and there is no cross-device account or leaderboard by design.
-
-### 6. Performance strategy
-
-- Large experiences are route-level lazy chunks.
-- Device heuristics lower particles, shadows, geometry, and pixel ratio on modest hardware.
-- The Audio Reactor can reduce DPR dynamically when frame times remain slow.
-- Paper-world rendering caps device pixel ratio, stroke count, points per stroke, and particles.
-- Physics examines only recent paint strokes instead of every historical mark.
-- Hidden tabs suspend the audio context and animation work where possible.
-- Reduced-motion preferences lower camera and interface movement.
-- Fluid buffers scale independently from display pixels, manual bilinear advection works without float-linear filtering, and Auto quality steps down after sustained slow frames.
-- Fluid Lab is a lazy route chunk and adds no shader compilation or framebuffers to the main portfolio, fighter, Audio Reactor, or Paper Drifter.
-- Shortcut Lab is a route-level lazy chunk, uses CSS/vector UI instead of image assets, adds no dependency, and removes timers and keyboard listeners when inactive or unmounted.
+---
 
 ## Getting started
 
-Requirements:
+### Requirements
 
-- Node.js 20 or newer.
-- npm.
-- Netlify CLI for the authenticated Lab workflow.
+- Node.js 20 or newer
+- npm
+- Netlify CLI for the full authenticated Lab workflow
+
+### Installation
 
 ```bash
 git clone https://github.com/Priitivi/Portfolio.git
@@ -265,7 +320,7 @@ npm ci
 npm run dev
 ```
 
-This is enough for the public portfolio and 3D fighter. It does not run the Lab authentication Function.
+This starts the portfolio and Portfolio Fighter through Vite. It does not run the Netlify Function used by Lab authentication.
 
 ### Full local Lab preview
 
@@ -279,32 +334,46 @@ Create an uncommitted `.env` file:
 
 ```dotenv
 LAB_PASSWORD_HASH=scrypt$your_generated_value
-LAB_SESSION_SECRET=use-a-random-secret-at-least-32-characters-long
+LAB_SESSION_SECRET=replace-this-with-a-random-secret-at-least-32-characters-long
 ```
 
-Then start the Netlify development runtime:
+Start the Netlify development runtime:
 
 ```bash
 npx netlify dev
 ```
 
-Open `http://localhost:8888/lab`.
+Open:
 
-Do not commit `.env`, place secrets in `netlify.toml`, or expose the plaintext password through a `VITE_` variable.
+```text
+http://localhost:8888/lab
+```
 
-## Commands
+Do not:
+
+- Commit `.env`
+- Put secrets directly in `netlify.toml`
+- Expose the plaintext password through a `VITE_` variable
+
+---
+
+## Available commands
 
 | Command | Description |
 | --- | --- |
-| `npm run dev` | Start the Vite public-site preview |
-| `npx netlify dev` | Start Vite with local redirects and Functions |
+| `npm run dev` | Start the Vite development server |
+| `npx netlify dev` | Start Vite with Netlify redirects and Functions |
 | `npm run build` | Create the production bundle in `dist/` |
 | `npm run preview` | Preview the production bundle |
 | `npm run lint` | Run ESLint across the repository |
-| `npm test` | Run security, Function, audio, and gameplay tests |
+| `npm test` | Run the Node test suite |
 | `npm run lab:hash-password` | Generate a salted Lab password hash |
 
+---
+
 ## Testing
+
+Run the full local verification suite:
 
 ```bash
 npm run lint
@@ -314,35 +383,100 @@ npm run build
 
 The tests cover:
 
-- Password hashing, timing-safe verification, session expiry, and tamper rejection.
-- Login, signed-cookie restoration, invalid clearance, and logout Function behavior.
-- Supported audio formats, frequency measurements, stereo balance, beat cooldowns, and transport formatting.
-- 2D movement actions, screen-to-world drawing transforms, paint-platform sampling, open-order story progression, and all soundtrack assets.
-- Fluid palettes, automatic quality heuristics, aspect-aware framebuffer sizing, WebGL pointer mapping, reduced-motion defaults, and the presence of every required solver stage.
-- Shortcut normalization, exact modifiers, platform labels, risk classification, safe training input, scoring, combo reset, mastery updates, deterministic daily sets, persistence recovery, curriculum size, and workflow references.
+- Password hashing and timing-safe verification
+- Session expiry and tamper rejection
+- Lab login, cookie restoration, invalid clearance, and logout
+- Audio format support and signal-analysis helpers
+- Stereo balance, beat cooldowns, and transport formatting
+- Paper Drifter movement, transforms, collision sampling, story progression, and soundtrack references
+- Fluid palettes, quality selection, framebuffer sizing, pointer mapping, and solver-stage presence
+- Shortcut normalization and exact modifier handling
+- Windows/macOS label mapping
+- Shortcut safety classification and training substitutes
+- Scoring, combos, mastery, deterministic daily sets, and persistence recovery
+- Shortcut curriculum and workflow references
 
-Interactive changes should also be checked in a browser at desktop and mobile widths because WebGL capability, Canvas pointer input, autoplay policy, and graphics performance differ by device.
+Interactive changes should also be tested manually at desktop and mobile widths because graphics capability, pointer input, autoplay policy, fullscreen behaviour, and performance differ across browsers and devices.
+
+---
+
+## Adding a Shortcut Lab challenge
+
+1. Add a unique challenge through `makeChallenge` in `src/lab/shortcut-lab/data/challenges.js`.
+2. Use an existing simulated action or add a focused action to the relevant fake application.
+3. Classify reserved shortcuts honestly.
+4. Provide a `trainingShortcut` when physical capture is unsafe.
+5. Reference the challenge ID from a workflow when needed.
+6. Extend `tests/shortcut-lab.test.mjs` when changing normalization, safety, scoring, mastery, or selection behaviour.
+
+Workflows should reference challenge IDs rather than duplicating challenge logic.
+
+Fake terminal commands must remain allow-listed simulations. Fake browser, file, mail, and editor actions must remain inside local application state.
+
+---
+
+## Adding a simulated application
+
+To add another Shortcut Lab application:
+
+1. Create a focused component under `src/lab/shortcut-lab/apps/`.
+2. Register its label, accent, icon, and initial window configuration.
+3. Render it through the desktop shell.
+4. Add app-specific challenge actions and state transitions.
+5. Add challenges to the data layer.
+6. Add tests for any new shared shortcut or scoring behaviour.
+
+Avoid turning the simulated applications into real operating-system integrations. The lab should never execute shell commands, access local files, or manipulate real browser tabs.
+
+---
 
 ## Deployment
 
-The project is configured for Netlify:
+The repository is configured for Netlify.
 
-- Build command: `npm run build`
-- Publish directory: `dist`
-- Functions directory: `netlify/functions`
-- SPA rewrites: `/lab` and `/lab/*`
-- Function rewrite: `/lab/api/session`
+- **Build command:** `npm run build`
+- **Publish directory:** `dist`
+- **Functions directory:** `netlify/functions`
+- **SPA rewrites:** `/lab` and `/lab/*`
+- **Function rewrite:** `/lab/api/session`
 
-Add `LAB_PASSWORD_HASH` and `LAB_SESSION_SECRET` through the Netlify environment-variable UI, then redeploy so Functions receive them.
+Add these environment variables through the Netlify dashboard:
+
+```dotenv
+LAB_PASSWORD_HASH=...
+LAB_SESSION_SECRET=...
+```
+
+Redeploy after changing environment variables so the Functions runtime receives the new values.
+
+---
+
+## Known limitations
+
+- Shortcut Lab progress is local to one browser profile.
+- The project does not include user accounts, cloud sync, or a public leaderboard.
+- Browsers differ in which reserved shortcuts reach webpage event handlers.
+- Fullscreen requests can be declined by browser policy.
+- Window dragging and resizing are designed primarily for desktop pointer input.
+- Touch controls cannot reproduce physical-keyboard muscle memory.
+- WebGL and Web Audio behaviour varies across devices.
+- Audio playback may require an explicit user gesture.
+- Local audio files remain on the user's device and are not uploaded by the application.
+
+---
 
 ## Audio and usage note
 
-Files under `public/audio` are media supplied specifically for this portfolio and are not automatically covered by any source-code reuse permission. Confirm that you hold the necessary public-performance and redistribution rights before deploying or forking those tracks; otherwise replace them with properly licensed audio and update `soundtracks.js`.
+Files under `public/audio` were supplied for use in this portfolio and are not automatically covered by source-code reuse permissions.
 
-This repository is available to study and learn from. Please credit Priitivi Ravi if reusing substantial visual or gameplay concepts, and check individual media rights separately.
+Before deploying a fork, confirm that you hold the required public-performance and redistribution rights for those tracks. Otherwise, replace them with properly licensed audio and update the soundtrack configuration.
+
+The source code is publicly available for study and learning. Please credit **Priitivi Ravi** when reusing substantial visual, architectural, or gameplay concepts.
+
+---
 
 ## Contact
 
-- Website: [priitivi.com](https://priitivi.com)
-- GitHub: [@Priitivi](https://github.com/Priitivi)
-- Email: [priitivi@gmail.com](mailto:priitivi@gmail.com)
+- **Website:** [priitivi.com](https://priitivi.com)
+- **GitHub:** [@Priitivi](https://github.com/Priitivi)
+- **Email:** [priitivi@gmail.com](mailto:priitivi@gmail.com)
