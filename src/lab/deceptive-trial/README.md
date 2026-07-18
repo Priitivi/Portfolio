@@ -55,7 +55,7 @@ Hazards and triggers use rectangle overlap after movement. This makes their read
 
 The side-scrolling camera follows a horizontal dead zone instead of pinning the player to screen centre. Player velocity supplies a bounded look-ahead, revealing more space in the direction of travel. The camera eases to its target and clamps to the level bounds. Reverse-gravity sections add a small vertical anticipation offset.
 
-Shake is a decaying render offset. Reduced-shake mode makes that offset zero without changing physics or trap cues.
+Shake uses clamped impact presets rather than additive impulses. Hard landings are almost imperceptible, checkpoints are subtle, deaths are moderate, and major world changes have the largest response. Repeated events refresh the stronger active impulse without stacking amplitude beyond 5.5 virtual pixels. Reduced-shake mode and the operating system's reduced-motion preference make the render offset zero without changing physics or trap cues.
 
 ## Level system
 
@@ -90,7 +90,7 @@ Level coordinates use the 1280 × 720 virtual stage. Ground begins at y=640. The
 
 ## Add a hazard or trigger
 
-For a new placement of an existing hazard, add a data record with `x`, `y`, `w`, `h`, `type`, and `active`. Dormant moving hazards also use `dormant: true` and a unique `id`; an `activateHazard` trigger names that ID through `target`.
+For a new placement of an existing hazard, add a data record with `x`, `y`, `w`, `h`, `type`, and `active`. Dormant moving hazards also use `dormant: true` and a unique `id`; an `activateHazard` trigger names that ID through `target`. Optional `activationDelay` supplies a non-colliding visual and audio tell before movement begins. Background boulders use `y` for their staged position and `rollY` for the explicit foreground collision lane, so level data, timing tests, and rendering share the same geometry.
 
 For a new hazard family:
 
@@ -138,7 +138,9 @@ Never change an existing ID after release; the ID is the save-game contract.
 
 ## Audio and animation
 
-All sounds are synthesized at runtime. Short oscillator envelopes create jump, land, death, checkpoint, secret, collect, UI, and victory cues. Three low-volume filtered oscillators create mood-specific ambient harmony. The graph is initialized lazily, resumed from a user gesture, updated from volume settings, and disconnected on route exit.
+All sounds are synthesized at runtime. Short oscillator envelopes create jump, land, death, checkpoint, secret, collect, UI, and victory cues. A scheduled storybook score layers a recurring music-box motif, soft bass pulses, restrained clockwork ticks, low ambient harmony, and later dissonant punctuation. Tempo, scale, density, rhythm, and tension increase across four three-level acts; deterministic motif variations keep its identity without repeating the exact same phrase every loop. Music ducks briefly beneath checkpoints, deaths, and victory cues, and the master compressor keeps simultaneous voices controlled.
+
+The supplied files in `public/audio` are not used by The Deceptive Trial because their public-performance and redistribution rights are not established for this game. A future recorded soundtrack can replace the scheduled score behind the existing `AudioEngine` music gain, leaving settings, effects, lifecycle, and routing unchanged.
 
 Player stride, cloak, landing squash, dust, weather, foliage, parallax hills, checkpoints, motes, hazards, intro cards, and victory effects are procedural. Reduced flashing shortens presentation transitions; `prefers-reduced-motion` removes interface animation; reduced shake removes only camera shake.
 
