@@ -29,6 +29,7 @@ The Lab is a protected route at `/lab`. Its experiments are loaded only after th
 2. **The Paper Drifter** — explore a 5,400-pixel 2D paper world where mouse or touch strokes become physical platforms. Draw routes, paint-dash across gaps, and restore four landmarks in any order while choosing from fourteen local tracks.
 3. **Fluid Lab** — disturb a full-screen, pressure-solved GPU fluid field with mouse, pen, or touch. Pointer velocity injects momentum while six palettes, live solver controls, adaptive resolution, fullscreen, and keyboard shortcuts make the simulation feel like an instrument.
 4. **Shortcut Lab** — train practical productivity shortcuts inside a contained simulated desktop. Tutorial, adaptive practice, timed sprints, deterministic daily sets, and three multi-app workflows run across fake browser, editor, terminal, files, mail, notes, and spreadsheet applications.
+5. **The Deceptive Trial** — play a twelve-level storybook precision platformer whose traps subvert learned rules instead of relying on randomness. It includes checkpoints, secrets, 32 achievements, local statistics, generated audio, remappable controls, and touch input.
 
 ## Tech stack
 
@@ -60,6 +61,7 @@ flowchart TD
     Dashboard --> Painter[Lazy PaintSurfer]
     Dashboard --> Fluid[Lazy FluidLab]
     Dashboard --> Shortcuts[Lazy ShortcutLab]
+    Dashboard --> Trial[Lazy DeceptiveTrial]
     Reactor --> WebAudio[AudioEngine + analysis]
     Reactor --> ReactorScene[Four R3F scenes]
     Painter --> PaperCanvas[PaperWorldCanvas loop]
@@ -72,6 +74,9 @@ flowchart TD
     Shortcuts --> SafeInput[Shortcut safety manager]
     Shortcuts --> FakeDesktop[Window manager + simulated apps]
     ShortcutEngine --> LocalMastery[Adaptive local mastery]
+    Trial --> TrialEngine[Fixed-step Canvas 2D engine]
+    TrialEngine --> TrialLevels[Data-driven 12-level campaign]
+    TrialEngine --> TrialProgress[Local saves + stats + achievements]
 ```
 
 The application intentionally uses a small route boundary instead of a full routing dependency. `App.jsx` delegates `/lab` paths to `LabApp`, and `LabApp` tracks its nested pathname with the History API. Each expensive interactive experience is imported with `React.lazy`, keeping it out of the initial portfolio bundle.
@@ -113,6 +118,13 @@ Portfolio/
 │  │  │  ├─ fluidConfig.js         # Palettes, presets, defaults, and pure helpers
 │  │  │  ├─ shaders.js             # GLSL programs for every solver and display pass
 │  │  │  └─ fluid-lab.css
+│  │  ├─ deceptive-trial/
+│  │  │  ├─ DeceptiveTrial.jsx     # Menus, saves, settings, results, and route shell
+│  │  │  ├─ GameCanvas.jsx         # Canvas lifecycle, HUD, and mobile controls
+│  │  │  ├─ TrialMenu.jsx          # Menu, levels, achievements, statistics, and settings
+│  │  │  ├─ engine/                # Physics, collision, rendering, audio, rules, input, and level data
+│  │  │  ├─ README.md              # Engine and level-authoring guide
+│  │  │  └─ deceptive-trial.css
 │  │  ├─ LabApp.jsx               # Protected Lab route boundary
 │  │  └─ LabHome.jsx              # Experiment dashboard
 │  ├─ App.jsx                     # Top-level experience switch
@@ -232,7 +244,17 @@ To add an app, create a focused component in `apps/`, register its label, accent
 
 Known limitations: browsers differ in reserved-shortcut delivery; fullscreen can be declined by browser policy; window dragging and resizing prioritize desktop pointers; progress is local to one browser profile; and there is no cross-device account or leaderboard by design.
 
-### 6. Performance strategy
+### 6. The Deceptive Trial engine
+
+The Deceptive Trial is lazy-loaded at `/lab/deceptive-trial`. React owns human-scale interface state while `GameEngine` runs a 120 Hz fixed physics step and a display-rate Canvas 2D renderer without causing per-frame React renders. The campaign is entirely data-driven: platforms, hazards, triggers, signs, NPCs, collectibles, checkpoints, secrets, goals, and decorations are parsed into isolated runtime clones.
+
+Movement includes ground and air acceleration, separate friction, run speed, coyote time, jump buffering, variable jump height, gravity reversal, collision resolution, landing squash, dust, death particles, camera dead zones, velocity look-ahead, and instant checkpoint respawns. Reusable trigger actions create the expectation traps—speed-sensitive bridges, delayed falling hazards, mid-jump wind changes, mirrored input, fake checkpoints, fake exits, and gravity changes—while the level data supplies the timing and foreshadowing.
+
+`priit-deceptive-trial-v1` stores only local progress, settings, best times, statistics, secrets, and achievements. Defensive parsing restores defaults when storage is corrupt or unavailable. Audio cues and two campaign mood families are synthesized with Web Audio; no borrowed game art or sound assets are shipped.
+
+See [The Deceptive Trial engineering guide](src/lab/deceptive-trial/README.md) for architecture, engine and collision details, save and achievement design, performance strategy, folder structure, level/hazard/enemy/achievement authoring, limitations, and development commands.
+
+### 7. Performance strategy
 
 - Large experiences are route-level lazy chunks.
 - Device heuristics lower particles, shadows, geometry, and pixel ratio on modest hardware.
@@ -244,6 +266,7 @@ Known limitations: browsers differ in reserved-shortcut delivery; fullscreen can
 - Fluid buffers scale independently from display pixels, manual bilinear advection works without float-linear filtering, and Auto quality steps down after sustained slow frames.
 - Fluid Lab is a lazy route chunk and adds no shader compilation or framebuffers to the main portfolio, fighter, Audio Reactor, or Paper Drifter.
 - Shortcut Lab is a route-level lazy chunk, uses CSS/vector UI instead of image assets, adds no dependency, and removes timers and keyboard listeners when inactive or unmounted.
+- The Deceptive Trial is a 59 kB lazy JavaScript chunk before gzip, caps DPR at 2, caps particles, uses viewport culling through Canvas clipping, keeps runtime objects mutable, and sends HUD updates to React at 10 Hz instead of every frame.
 
 ## Getting started
 
@@ -318,6 +341,7 @@ The tests cover:
 - Login, signed-cookie restoration, invalid clearance, and logout Function behavior.
 - Supported audio formats, frequency measurements, stereo balance, beat cooldowns, and transport formatting.
 - 2D movement actions, screen-to-world drawing transforms, paint-platform sampling, open-order story progression, and all soundtrack assets.
+- The Deceptive Trial campaign schema, upright and reversed-gravity collision, checkpoints, trigger and bridge rules, victory conditions, save recovery, persistence, and achievement milestones.
 - Fluid palettes, automatic quality heuristics, aspect-aware framebuffer sizing, WebGL pointer mapping, reduced-motion defaults, and the presence of every required solver stage.
 - Shortcut normalization, exact modifiers, platform labels, risk classification, safe training input, scoring, combo reset, mastery updates, deterministic daily sets, persistence recovery, curriculum size, and workflow references.
 
