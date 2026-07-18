@@ -37,4 +37,14 @@ export const experiments = [
     preview: "shortcut",
     signals: ["Simulated desktop", "42 shortcut drills", "Adaptive mastery", "Local progress"],
   },
+  {
+    id: "deceptive-trial",
+    experimentNumber: "005",
+    title: "The Deceptive Trial",
+    status: "Playable",
+    description: "A handcrafted precision platformer where every rule is trustworthy—right up until the carefully foreshadowed exception.",
+    route: "/lab/deceptive-trial",
+    preview: "deceptive",
+    signals: ["Canvas 2D", "12-level campaign", "Expectation traps", "Keyboard + touch"],
+  },
 ];
