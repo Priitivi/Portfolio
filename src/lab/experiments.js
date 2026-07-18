@@ -27,4 +27,14 @@ export const experiments = [
     preview: "fluid",
     signals: ["WebGL2", "GPU shaders", "Ping-pong buffers", "Mouse + touch"],
   },
+  {
+    id: "shortcut-lab",
+    experimentNumber: "004",
+    title: "Shortcut Lab",
+    status: "Playable",
+    description: "A simulated desktop productivity trainer where practical keyboard workflows become fast, adaptive, score-driven drills.",
+    route: "/lab/shortcut-lab",
+    preview: "shortcut",
+    signals: ["Simulated desktop", "42 shortcut drills", "Adaptive mastery", "Local progress"],
+  },
 ];

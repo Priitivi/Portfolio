@@ -28,6 +28,7 @@ The Lab is a protected route at `/lab`. Its experiments are loaded only after th
 1. **Psychedelic Audio Reactor** — upload a local track and transform its waveform, frequency bands, stereo balance, and detected beats into four real-time visual systems.
 2. **The Paper Drifter** — explore a 5,400-pixel 2D paper world where mouse or touch strokes become physical platforms. Draw routes, paint-dash across gaps, and restore four landmarks in any order while choosing from fourteen local tracks.
 3. **Fluid Lab** — disturb a full-screen, pressure-solved GPU fluid field with mouse, pen, or touch. Pointer velocity injects momentum while six palettes, live solver controls, adaptive resolution, fullscreen, and keyboard shortcuts make the simulation feel like an instrument.
+4. **Shortcut Lab** — train practical productivity shortcuts inside a contained simulated desktop. Tutorial, adaptive practice, timed sprints, deterministic daily sets, and three multi-app workflows run across fake browser, editor, terminal, files, mail, notes, and spreadsheet applications.
 
 ## Tech stack
 
@@ -58,6 +59,7 @@ flowchart TD
     Dashboard --> Reactor[Lazy AudioReactor]
     Dashboard --> Painter[Lazy PaintSurfer]
     Dashboard --> Fluid[Lazy FluidLab]
+    Dashboard --> Shortcuts[Lazy ShortcutLab]
     Reactor --> WebAudio[AudioEngine + analysis]
     Reactor --> ReactorScene[Four R3F scenes]
     Painter --> PaperCanvas[PaperWorldCanvas loop]
@@ -66,6 +68,10 @@ flowchart TD
     Fluid --> Solver[FluidSimulation controller]
     Solver --> Fields[Velocity + dye + pressure framebuffers]
     Fields --> Passes[Advection + curl + divergence + Jacobi + projection]
+    Shortcuts --> ShortcutEngine[Challenge + scoring engine]
+    Shortcuts --> SafeInput[Shortcut safety manager]
+    Shortcuts --> FakeDesktop[Window manager + simulated apps]
+    ShortcutEngine --> LocalMastery[Adaptive local mastery]
 ```
 
 The application intentionally uses a small route boundary instead of a full routing dependency. `App.jsx` delegates `/lab` paths to `LabApp`, and `LabApp` tracks its nested pathname with the History API. Each expensive interactive experience is imported with `React.lazy`, keeping it out of the initial portfolio bundle.
@@ -169,7 +175,64 @@ Velocity, dye, and pressure each use paired floating-point render targets; diver
 
 React deliberately does not receive per-frame simulation data. Pointer records and the solver live in refs, while the only recurring UI update is one small performance sample per second. This prevents the fluid loop from becoming a React render loop.
 
-### 5. Performance strategy
+### 5. Shortcut Lab architecture
+
+Shortcut Lab is lazy-loaded at `/lab/shortcut-lab` after Lab authentication. It has no backend, account, paid service, external font, or added runtime dependency. Its simulated applications never execute commands, open browser tabs, or access files.
+
+The experience is split into four layers:
+
+1. `data/challenges.js` defines the curriculum. Every challenge names an application, category, difficulty, platform support, expected shortcut, optional safe training chord, risk class, initial/success state, explanation, action, and points. Workflows reference challenge IDs instead of duplicating challenge logic.
+2. `core/shortcuts.js` normalizes keyboard events, applies macOS modifier mapping, requires exact modifier matches, diagnoses near misses, and classifies reserved chords. The global listener ignores repeated events and real form controls, only prevents default after an accepted safe/training input, and is removed on unmount.
+3. `core/progress.js` owns pure scoring, combo, accuracy, mastery, adaptive weighting, deterministic daily selection, and defensive persistence parsing. Incorrect, slow, hinted, or stale shortcuts receive greater practice weight.
+4. `ShortcutLab.jsx` coordinates modes, timers, feedback, window focus, simulated app effects, optional locally generated sound, pausing, results, and persistence. Fake apps are split across `apps/`; the desktop, windows, screens, HUD, and virtual keyboard live under `components/`.
+
+#### Shortcut safety model
+
+Shortcut risk is one of `safe`, `browser-reserved`, or `os-reserved`. The browser and operating system have final control over reserved shortcuts; the lab does not claim otherwise and does not use `beforeunload` as a guard.
+
+- Safe and reliably interceptable application chords run inside the simulated app.
+- Browser-reserved actions such as real tab close, new tab, restore tab, tab cycling, and address focus display the real chord but train with a labelled substitute or the clickable virtual keyboard.
+- Operating-system actions such as `Alt + Tab` and `Win + D` use explicit lab-only substitutes.
+- `Alt + F4`, `F5`, `Ctrl + R`, `Win + L`, `Ctrl + Shift + Escape`, and `Cmd + Q` are registered as reserved and are never assigned as physical challenge inputs.
+- Inputs, textareas, selects, and editable content do not feed the global challenge listener.
+
+The current safe substitutions are:
+
+| Real action | Real shortcut | Lab training input |
+| --- | --- | --- |
+| Focus address bar | `Ctrl/Cmd + L` | `Ctrl/Cmd + Alt/Option + Shift + L` |
+| Restore tab | `Ctrl/Cmd + Shift + T` | `Ctrl/Cmd + Alt/Option + Shift + R` |
+| Next / previous tab | `Ctrl/Cmd + Tab` / `Ctrl/Cmd + Shift + Tab` | `Alt/Option + Shift + Right/Left` |
+| Close / new tab | `Ctrl/Cmd + W` / `Ctrl/Cmd + T` | `Ctrl/Cmd + Alt/Option + Shift + W/N` |
+| Switch application | `Alt/Option + Tab` | `Ctrl/Cmd + Alt/Option + Shift + A` |
+| Show desktop | `Win + D` | `Ctrl/Cmd + Alt/Option + Shift + D` |
+
+#### Modes, progress, and supported platforms
+
+- Tutorial teaches eight core actions, then repeats them without visible answers.
+- Practice selects an app/category and weights weaker or stale shortcuts more heavily.
+- Sprint supports 15/30/60-second and 10/25/open challenge presets.
+- Workflows provide three continuous scenarios: fix and test a project, research and summarise an issue, and organise files and send an update.
+- Daily Challenge hashes the local calendar date into the same ten-item set for that day.
+- Results include score, accuracy, average/fastest reaction, combo, personal-best comparison, and an attempt timeline.
+
+Windows/Linux uses `Ctrl`, `Alt`, and `Win` labels. macOS maps primary `Ctrl` definitions to `⌘` and displays `⌥` for Alt. The preference and all progress live under `priit-shortcut-lab-v1` in `localStorage`. Corrupt or unavailable storage falls back safely to defaults. Touch devices can browse tutorials and use the virtual keyboard; full muscle-memory training is intentionally described as a physical-keyboard experience.
+
+#### Adding a challenge or simulated app
+
+To add a challenge:
+
+1. Add a unique object through `makeChallenge` in `data/challenges.js`.
+2. Use an existing action or handle a new action in the target fake app.
+3. Mark reserved input honestly and provide `trainingShortcut` when physical capture is unsafe.
+4. If it belongs in a workflow, reference its ID in `data/workflows.js`.
+5. Extend `tests/shortcut-lab.test.mjs` when normalization, safety, scoring, or selection behavior changes.
+
+To add an app, create a focused component in `apps/`, register its label, accent, and initial window in `components/windowConfig.js`, render it from `DesktopShell.jsx`, and add application-specific challenges. Fake terminal commands must remain allow-listed simulations; fake file and browser actions must remain in local React state.
+
+Known limitations: browsers differ in reserved-shortcut delivery; fullscreen can be declined by browser policy; window dragging and resizing prioritize desktop pointers; progress is local to one browser profile; and there is no cross-device account or leaderboard by design.
+
+### 6. Performance strategy
 
 - Large experiences are route-level lazy chunks.
 - Device heuristics lower particles, shadows, geometry, and pixel ratio on modest hardware.
@@ -180,6 +243,7 @@ React deliberately does not receive per-frame simulation data. Pointer records a
 - Reduced-motion preferences lower camera and interface movement.
 - Fluid buffers scale independently from display pixels, manual bilinear advection works without float-linear filtering, and Auto quality steps down after sustained slow frames.
 - Fluid Lab is a lazy route chunk and adds no shader compilation or framebuffers to the main portfolio, fighter, Audio Reactor, or Paper Drifter.
+- Shortcut Lab is a route-level lazy chunk, uses CSS/vector UI instead of image assets, adds no dependency, and removes timers and keyboard listeners when inactive or unmounted.
 
 ## Getting started
 
@@ -255,6 +319,7 @@ The tests cover:
 - Supported audio formats, frequency measurements, stereo balance, beat cooldowns, and transport formatting.
 - 2D movement actions, screen-to-world drawing transforms, paint-platform sampling, open-order story progression, and all soundtrack assets.
 - Fluid palettes, automatic quality heuristics, aspect-aware framebuffer sizing, WebGL pointer mapping, reduced-motion defaults, and the presence of every required solver stage.
+- Shortcut normalization, exact modifiers, platform labels, risk classification, safe training input, scoring, combo reset, mastery updates, deterministic daily sets, persistence recovery, curriculum size, and workflow references.
 
 Interactive changes should also be checked in a browser at desktop and mobile widths because WebGL capability, Canvas pointer input, autoplay policy, and graphics performance differ by device.
 

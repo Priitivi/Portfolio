@@ -7,6 +7,7 @@ import "./lab.css";
 const AudioReactor = lazy(() => import("./audio-reactor/AudioReactor"));
 const PaintSurfer = lazy(() => import("./paint-surfer/PaintSurfer"));
 const FluidLab = lazy(() => import("./fluid-lab/FluidLab"));
+const ShortcutLab = lazy(() => import("./shortcut-lab/ShortcutLab"));
 
 export default function LabApp() {
   const [authState, setAuthState] = useState("checking");
@@ -96,6 +97,14 @@ export default function LabApp() {
     return (
       <Suspense fallback={<main className="lab-boot" role="status"><div className="lab-scanlines" aria-hidden="true" /><span>EXPERIMENT 003</span><strong>PRESSURISING FLUID FIELD…</strong><i /></main>}>
         <FluidLab navigate={navigate} onLogout={logout} />
+      </Suspense>
+    );
+  }
+
+  if (pathname === "/lab/shortcut-lab") {
+    return (
+      <Suspense fallback={<main className="lab-boot" role="status"><div className="lab-scanlines" aria-hidden="true" /><span>EXPERIMENT 004</span><strong>BOOTING SHORTCUT LAB…</strong><i /></main>}>
+        <ShortcutLab navigate={navigate} />
       </Suspense>
     );
   }
