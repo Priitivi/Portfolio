@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 import { parsePlatform, resolveHorizontal, resolveVertical } from "../src/lab/deceptive-trial/engine/collision.js";
 import { achievements, evaluateAchievements, loadSave, parseSave, persistSave } from "../src/lab/deceptive-trial/engine/progress.js";
 import { levels, loadLevel, parseLevel } from "../src/lab/deceptive-trial/engine/levels.js";
-import { activateCheckpoint, canFireTrigger, isVictory, nextUnlockedLevel, shouldBreakBridge } from "../src/lab/deceptive-trial/engine/rules.js";
+import { PHYSICS, SHAKE_MAX } from "../src/lab/deceptive-trial/engine/constants.js";
+import { activateCheckpoint, armHazard, canFireTrigger, getJumpApexHeight, getJumpAscentTime, getJumpRange, isVictory, mergeShakeImpact, nextUnlockedLevel, shouldBreakBridge } from "../src/lab/deceptive-trial/engine/rules.js";
+import { getMusicProfile } from "../src/lab/deceptive-trial/engine/AudioEngine.js";
 
 test("campaign ships twelve valid, unique, data-driven levels", () => {
   assert.equal(levels.length, 12);
@@ -69,6 +71,61 @@ test("trigger and victory rules are deterministic and expectation-aware", () => 
   assert.equal(isVictory(player, { x: 15, y: 15, w: 50, h: 50, active: true }), true);
   assert.equal(isVictory(player, { x: 15, y: 15, w: 50, h: 50, active: false }), false);
   assert.equal(nextUnlockedLevel(3, 11), 11);
+});
+
+test("Level 5 has a physically reachable route, readable boulder tell, checkpoint, and exit", () => {
+  const level = loadLevel(4);
+  const apex = getJumpApexHeight();
+  const elevatedPlatforms = level.platforms.filter((platform) => platform.type === "stone" && platform.y < 640);
+  const groundGaps = level.hazards.filter((hazard) => hazard.type === "spikes").map((hazard) => hazard.w);
+  const trigger = level.triggers.find((item) => item.id === "camera-cue");
+  const boulder = level.hazards.find((hazard) => hazard.id === "rolling-ruin");
+  const finalGround = level.platforms.find((platform) => platform.type === "ground" && platform.x <= level.goal.x && platform.x + platform.w >= level.goal.x + level.goal.w);
+
+  assert.ok(elevatedPlatforms.every((platform) => 640 - platform.y <= apex), "every elevated platform fits below the jump apex");
+  assert.ok(groundGaps.every((gap) => gap < getJumpRange(PHYSICS.walkSpeed)), "every required ground gap is clearable without run speed");
+  assert.equal(trigger.target, boulder.id);
+  const armedBoulder = structuredClone(boulder);
+  assert.equal(armHazard(armedBoulder, trigger), .28);
+  assert.equal(armedBoulder.dormant, false);
+  assert.equal(armedBoulder.warningDuration, .28);
+  assert.equal(boulder.vx, -430, "the intended boulder speed remains unchanged");
+  assert.ok(boulder.activationDelay >= .25, "the boulder telegraphs before moving");
+  const triggerContactX = trigger.x - PHYSICS.playerWidth;
+  const closingGap = boulder.x - (triggerContactX + PHYSICS.playerWidth);
+  const reactionWindow = boulder.activationDelay + closingGap / (PHYSICS.runSpeed + Math.abs(boulder.vx));
+  const clearanceTime = getJumpAscentTime(640 - boulder.rollY);
+  assert.ok(reactionWindow > clearanceTime + .1, "the boulder tell leaves a readable jump window even at run speed");
+  assert.ok(level.checkpoints[0].x < trigger.x && trigger.x < boulder.x, "checkpoint, cue, and boulder occur in a recoverable order");
+  assert.equal(level.platforms.some((platform) => platform.type === "moving"), false, "Level 5 has no moving-platform dependency");
+  assert.ok(finalGround, "the exit sits on a continuous final ground segment");
+  assert.ok(level.goal.x > level.hazards.at(-1).x + level.hazards.at(-1).w, "the exit remains reachable beyond the final hazard");
+});
+
+test("shake impacts are differentiated and repeated events remain clamped", () => {
+  const landing = mergeShakeImpact(0, 0, "landing");
+  const checkpoint = mergeShakeImpact(0, 0, "checkpoint");
+  const death = mergeShakeImpact(0, 0, "death");
+  const major = mergeShakeImpact(0, 0, "major");
+  assert.ok(landing.shake < checkpoint.shake);
+  assert.ok(checkpoint.shake < death.shake);
+  assert.ok(death.shake < major.shake);
+  assert.ok(death.shake / death.decay <= .21, "death shake decays in roughly 200 ms");
+  assert.ok(major.shake / major.decay <= .21, "major shake remains brief despite its larger amplitude");
+  let repeated = major;
+  for (let index = 0; index < 20; index += 1) repeated = mergeShakeImpact(repeated.shake, repeated.decay, "major");
+  assert.equal(repeated.shake, SHAKE_MAX);
+});
+
+test("procedural music escalates across four campaign acts without changing mid-act", () => {
+  const acts = [0, 3, 6, 9].map(getMusicProfile);
+  assert.equal(getMusicProfile(0), getMusicProfile(2));
+  assert.equal(getMusicProfile(9), getMusicProfile(11));
+  for (let index = 1; index < acts.length; index += 1) {
+    assert.ok(acts[index].tempo > acts[index - 1].tempo);
+    assert.ok(acts[index].density > acts[index - 1].density);
+    assert.ok(acts[index].bass > acts[index - 1].bass);
+  }
 });
 
 test("save parsing recovers from corrupt data and retains accessibility defaults", () => {

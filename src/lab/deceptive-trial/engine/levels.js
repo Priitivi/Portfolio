@@ -57,8 +57,8 @@ export const levels = [
   {
     id: "blind-corner", number: 5, name: "The Blind Corner", subtitle: "The camera would never keep a secret from you.",
     width: 2600, start: { x: 100, y: 570 }, mood: "blue", weather: "rain",
-    platforms: [ground(0, 650), ground(790, 360), ground(1270, 520), ground(1900, 700), p(610, 510, 110), p(1180, 535, 90), p(1640, 490, 150)],
-    hazards: [spike(650, 612, 140), spike(1150, 612, 120), spike(1790, 612, 110), { id: "rolling-ruin", type: "boulder", x: 1530, y: 300, w: 92, h: 92, active: true, dormant: true, vx: -430 }],
+    platforms: [ground(0, 650), ground(790, 360), ground(1270, 520), ground(1900, 700), p(610, 516, 110), p(1180, 535, 90), p(1640, 516, 150)],
+    hazards: [spike(650, 612, 140), spike(1150, 612, 120), spike(1790, 612, 110), { id: "rolling-ruin", type: "boulder", x: 1530, y: 300, rollY: 548, w: 92, h: 92, active: true, dormant: true, activationDelay: .28, vx: -430 }],
     signs: [sign("corner-sign", 220, "The path ahead is fully visible.\nPlease ignore the decorative moon."), sign("look-sign", 1340, "Sometimes the background is just waiting its turn.", false)],
     collectibles: [mote("blind-1", 665, 465), mote("blind-2", 1695, 445)], checkpoints: [checkpoint("blind-cp", 1320)], goal: goal(2490),
     secrets: [secret("blind-secret", 2010, 595, "A moon-shaped production note: foreground after cue 17.")],

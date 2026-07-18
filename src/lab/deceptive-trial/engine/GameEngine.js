@@ -3,7 +3,7 @@ import Renderer from "./Renderer.js";
 import { findOverlaps, resolveHorizontal, resolveVertical } from "./collision.js";
 import { PHYSICS, VIEW_HEIGHT, VIEW_WIDTH, clamp, rectsOverlap } from "./constants.js";
 import { loadLevel } from "./levels.js";
-import { activateCheckpoint, canFireTrigger, isVictory, shouldBreakBridge } from "./rules.js";
+import { activateCheckpoint, armHazard, canFireTrigger, isVictory, mergeShakeImpact, shouldBreakBridge } from "./rules.js";
 
 const makePlayer = (start) => ({
   x: start.x, y: start.y, w: PHYSICS.playerWidth, h: PHYSICS.playerHeight,
@@ -61,8 +61,9 @@ export default class GameEngine {
     this.completed = false;
     this.completeTimer = 0;
     this.shake = 0;
+    this.shakeDecay = 0;
     this.message = "";
-    this.audio.setMood(this.level.mood);
+    this.audio.setMood(this.level.mood, this.levelIndex);
     this.emitHud(true);
   }
 
@@ -114,7 +115,7 @@ export default class GameEngine {
     this.levelTime += dt;
     this.hudClock += dt;
     this.statsClock += dt;
-    this.shake = Math.max(0, this.shake - dt * 26);
+    this.shake = Math.max(0, this.shake - dt * this.shakeDecay);
     this.player.landSquash = Math.max(0, this.player.landSquash - dt * 5.5);
     this.updateParticles(dt);
     this.updatePlatforms(dt);
@@ -189,6 +190,7 @@ export default class GameEngine {
     resolveHorizontal(player, activePlatforms);
 
     const previousY = player.y;
+    const impactSpeed = Math.abs(player.vy);
     player.y += player.vy * dt;
     const landed = resolveVertical(player, activePlatforms, previousY, player.gravityDirection);
     player.onGround = Boolean(landed);
@@ -197,12 +199,13 @@ export default class GameEngine {
         player.landSquash = 1;
         this.audio.play("land");
         this.spawnDust(player.x + player.w / 2, player.gravityDirection > 0 ? player.y + player.h : player.y, 10, "#d7c6a7");
+        if (impactSpeed > 650) this.addShake("landing");
       }
       if (landed.type === "collapse" && landed.collapseTimer == null) landed.collapseTimer = landed.collapseDelay ?? .55;
       if (landed.type === "jumpPad") {
         player.vy = -PHYSICS.jumpSpeed * 1.35 * player.gravityDirection;
         player.onGround = false;
-        this.shake = 5;
+        this.addShake("jumpPad");
       }
     }
     if (!player.onGround) { this.airtime += dt; this.maxAirtime = Math.max(this.maxAirtime, this.airtime); }
@@ -223,7 +226,7 @@ export default class GameEngine {
       }
       if (platform.collapseTimer != null) {
         platform.collapseTimer -= dt;
-        if (platform.collapseTimer <= 0) { platform.active = false; platform.solid = false; this.shake = 6; this.spawnDust(platform.x + platform.w / 2, platform.y, 15, "#9b7b66"); }
+        if (platform.collapseTimer <= 0) { platform.active = false; platform.solid = false; this.addShake("collapse"); this.spawnDust(platform.x + platform.w / 2, platform.y, 15, "#9b7b66"); }
       }
     }
   }
@@ -231,13 +234,17 @@ export default class GameEngine {
   updateHazards(dt) {
     for (const hazard of this.hazards) {
       if (!hazard.active || hazard.dormant) continue;
+      if (hazard.warningTimer > 0) {
+        hazard.warningTimer = Math.max(0, hazard.warningTimer - dt);
+        continue;
+      }
       if (hazard.type === "fallingSpike") {
         hazard.vy += 1900 * dt;
         hazard.y += hazard.vy * dt;
       }
       if (hazard.type === "boulder") {
         hazard.x += (hazard.vx || -360) * dt;
-        hazard.y = 548 + Math.sin(this.time * 7) * 5;
+        hazard.y = (hazard.rollY ?? 548) + Math.sin(this.time * 7) * 5;
       }
     }
   }
@@ -291,6 +298,8 @@ export default class GameEngine {
       this.checkpointId = activation.checkpointId;
       this.respawnPoint = activation.respawnPoint;
       this.audio.play("checkpoint");
+      item.activatedAt = this.time;
+      this.addShake("checkpoint");
       this.onEvent?.("checkpoint", { id: item.id, realCheckpoint: true });
       this.spawnDust(item.x + 10, item.y + 20, 24, "#f2bc6d");
     }
@@ -320,14 +329,18 @@ export default class GameEngine {
     switch (trigger.action) {
       case "activateHazard": {
         const hazard = this.hazards.find((item) => item.id === trigger.target);
-        if (hazard) { hazard.dormant = false; this.shake = 4; }
+        if (hazard) {
+          armHazard(hazard, trigger);
+          this.addShake("hazard");
+          if (hazard.warningTimer > 0) this.audio.play("warning");
+        }
         if (trigger.dishonestSign) this.onEvent?.("survivedDishonestSign", {});
         break;
       }
       case "breakBridgeIfRunning": {
         if (!shouldBreakBridge(this.player.vx)) break;
         const platform = this.platforms.find((item) => item.id === trigger.target);
-        if (platform?.active) { platform.active = false; platform.solid = false; this.shake = 9; this.onEvent?.("survivedDishonestSign", {}); }
+        if (platform?.active) { platform.active = false; platform.solid = false; this.addShake("major"); this.onEvent?.("survivedDishonestSign", {}); }
         break;
       }
       case "wind": this.wind = trigger.value || 0; break;
@@ -335,7 +348,7 @@ export default class GameEngine {
         this.player.gravityDirection = trigger.value;
         this.player.vy = 80 * trigger.value;
         this.player.onGround = false;
-        this.shake = 5;
+        this.addShake("gravity");
         break;
       }
       case "reverseControls": this.controlsReversed = Boolean(trigger.value); break;
@@ -343,7 +356,9 @@ export default class GameEngine {
         const item = this.level.checkpoints.find((checkpoint) => checkpoint.id === trigger.target);
         if (item && !item.activated) {
           item.activated = true;
+          item.activatedAt = this.time;
           this.audio.play("checkpoint");
+          this.addShake("checkpoint");
           this.onEvent?.("fakeCheckpoint", { id: item.id });
           this.onDialogue?.({ speaker: "Checkpoint", text: "Progress saved!*\n\n*Progress not saved.", tone: "warning" });
         }
@@ -375,7 +390,7 @@ export default class GameEngine {
     this.player.visible = false;
     this.player.vx = 0;
     this.player.vy = 0;
-    this.shake = 13;
+    this.addShake("death");
     this.audio.play("death");
     this.spawnDust(this.player.x + this.player.w / 2, this.player.y + this.player.h / 2, 30, "#e6776e");
     this.onEvent?.("death", { message });
@@ -412,6 +427,7 @@ export default class GameEngine {
     this.completed = true;
     this.player.vx = 0;
     this.audio.play("victory");
+    this.addShake("major");
     this.spawnDust(this.level.goal.x + 30, this.level.goal.y + 45, 36, "#f4d78b");
     this.onEvent?.("levelVictory", { levelIndex: this.levelIndex, time: this.levelTime, clearedWithoutDeath: this.deathsThisLevel === 0, clearedWithoutCollecting: this.collectedThisLevel === 0, airtime: this.maxAirtime });
   }
@@ -428,6 +444,12 @@ export default class GameEngine {
     this.camera.x += (target - this.camera.x) * Math.min(1, dt * 4.8);
     const verticalTarget = this.player.gravityDirection < 0 ? -40 : 0;
     this.camera.y += (verticalTarget - this.camera.y) * Math.min(1, dt * 3.5);
+  }
+
+  addShake(kind) {
+    const impact = mergeShakeImpact(this.shake, this.shakeDecay, kind);
+    this.shake = impact.shake;
+    this.shakeDecay = impact.decay;
   }
 
   spawnDust(x, y, count, color) {
