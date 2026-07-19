@@ -2,7 +2,7 @@
 
 An interactive developer portfolio built as a collection of playable interfaces, real-time simulations, and experimental web experiences.
 
-The site combines a clear editorial portfolio with a 3D combat experience and a protected laboratory containing audio-reactive visuals, a paint-driven platform game, a GPU fluid simulation, and an interactive shortcut-training desktop.
+The site combines a clear editorial portfolio with a 3D combat experience and a protected laboratory containing audio-reactive visuals, platform games, a GPU fluid simulation, and an interactive shortcut-training desktop.
 
 **Live site:** [priitivi.com](https://priitivi.com)
 
@@ -40,7 +40,7 @@ Features include:
 
 ### Priit's Lab
 
-Priit's Lab is a protected route at `/lab` containing four interactive experiments. Each experience is lazy-loaded so it does not affect the initial portfolio bundle.
+Priit's Lab is a protected route at `/lab` containing five interactive experiments. Each experience is lazy-loaded so it does not affect the initial portfolio bundle.
 
 | Experiment | Description |
 | --- | --- |
@@ -48,6 +48,7 @@ Priit's Lab is a protected route at `/lab` containing four interactive experimen
 | **The Paper Drifter** | Explore a hand-crafted 2D paper world where drawn strokes become physical platforms and colour restores lost landmarks. |
 | **Fluid Lab** | Interact with a pressure-solved GPU fluid simulation using mouse, pen, or touch input, configurable palettes, and live solver controls. |
 | **Shortcut Lab** | Learn practical productivity shortcuts inside a simulated desktop containing fake browser, editor, terminal, files, mail, notes, and spreadsheet applications. |
+| **The Deceptive Trial** | Survive a data-driven platform campaign whose rules, traps, and expectations shift across twelve increasingly tense levels. |
 
 ---
 
@@ -130,6 +131,16 @@ Shortcut Lab includes:
 - Mobile fallback
 
 Reserved browser and operating-system shortcuts are never relied on as unsafe physical inputs. Where necessary, the real shortcut is shown while the action is practised through a virtual keyboard or clearly labelled training substitute.
+
+### The Deceptive Trial
+
+The Deceptive Trial is a Canvas 2D platform campaign at `/lab/deceptive-trial`. React owns interface state while `GameEngine` runs a fixed physics step and display-rate renderer. Its data-driven levels combine moving platforms, hazards, checkpoints, secrets, gravity changes, mirrored input, fake exits, and other expectation traps.
+
+Movement includes acceleration, coyote time, jump buffering, variable jump height, camera look-ahead, landing feedback, and instant checkpoint respawns. Camera shake uses clamped impact presets: landings are nearly imperceptible, checkpoints subtle, deaths moderate, and major world changes strongest. Reduced-shake mode and the operating system's reduced-motion preference disable the offset without affecting gameplay cues.
+
+Audio cues and an adaptive four-act storybook score are synthesized with Web Audio. A recurring music-box motif gains rhythmic density and tension over the campaign, while deterministic variations and effect ducking avoid an overly repetitive loop. No audio files with unverified redistribution rights are used.
+
+See [The Deceptive Trial engineering guide](src/lab/deceptive-trial/README.md) for engine, level-authoring, accessibility, audio, and performance details.
 
 ---
 

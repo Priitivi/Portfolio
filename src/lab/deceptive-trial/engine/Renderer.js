@@ -28,6 +28,7 @@ export default class Renderer {
     this.ctx = canvas.getContext("2d", { alpha: false });
     this.settings = settings;
     this.dpr = 1;
+    this.prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
   }
 
   resize(dpr = 1) {
@@ -44,8 +45,10 @@ export default class Renderer {
     const palette = palettes[world.level.mood] || palettes.dawn;
     this.drawSky(world, palette);
     ctx.save();
-    const shake = this.settings.reducedShake ? 0 : world.shake;
-    ctx.translate(Math.sin(world.time * 77) * shake, Math.cos(world.time * 63) * shake * .7);
+    const shake = this.settings.reducedShake || this.prefersReducedMotion ? 0 : world.shake;
+    const shakeX = (Math.sin(world.time * 53) * .72 + Math.sin(world.time * 31) * .28) * shake;
+    const shakeY = (Math.cos(world.time * 47) * .68 + Math.cos(world.time * 29) * .22) * shake * .58;
+    ctx.translate(shakeX, shakeY);
     ctx.translate(-world.camera.x, -world.camera.y);
     this.drawBackDecor(world, palette);
     this.drawPlatforms(world, palette);
@@ -174,7 +177,11 @@ export default class Renderer {
       ctx.fillStyle = this.settings.colourblind ? "#f08a24" : palette[4];
       ctx.strokeStyle = palette[3]; ctx.lineWidth = 3;
       if (hazard.type === "boulder") {
-        ctx.translate(hazard.x + hazard.w / 2, hazard.y + hazard.h / 2); ctx.rotate(world.time * 3);
+        const warningJitter = hazard.warningTimer > 0 ? Math.sin(world.time * 72) * 3 : 0;
+        const warningProgress = hazard.warningTimer > 0 && hazard.warningDuration > 0 ? 1 - hazard.warningTimer / hazard.warningDuration : 1;
+        const warningEase = warningProgress * warningProgress;
+        const renderY = hazard.warningTimer > 0 ? hazard.baseY + ((hazard.rollY ?? hazard.y) - hazard.baseY) * warningEase : hazard.y;
+        ctx.translate(hazard.x + hazard.w / 2 + warningJitter, renderY + hazard.h / 2); ctx.rotate(hazard.warningTimer > 0 ? warningProgress * .35 : world.time * 3);
         ctx.beginPath(); ctx.arc(0, 0, hazard.w / 2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
         for (let i = 0; i < 6; i += 1) { ctx.rotate(Math.PI / 3); ctx.fillRect(25, -4, 18, 8); }
       } else {
@@ -218,6 +225,19 @@ export default class Renderer {
     });
 
     world.level.checkpoints.forEach((item) => {
+      if (item.activatedAt != null) {
+        const age = world.time - item.activatedAt;
+        if (age >= 0 && age < .8) {
+          ctx.save();
+          ctx.globalAlpha = (1 - age / .8) * .45;
+          ctx.strokeStyle = "#f3d98b";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(item.x + 9, item.y + 23, 18 + age * 52, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
       ctx.strokeStyle = item.fake ? "#6ee7b7" : palette[4]; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(item.x + 8, item.y + item.h); ctx.lineTo(item.x + 8, item.y + 8); ctx.stroke();
       ctx.fillStyle = item.activated ? "#f3d98b" : (item.fake ? "#5cd3a7" : palette[4]);
       ctx.beginPath(); ctx.moveTo(item.x + 10, item.y + 10); ctx.quadraticCurveTo(item.x + 42, item.y + 20, item.x + 11, item.y + 42); ctx.closePath(); ctx.fill();
