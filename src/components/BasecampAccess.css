@@ -25,23 +25,44 @@
 .basecamp-access-art {
   position: relative;
   min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: clamp(12px, 2vw, 28px);
   overflow: hidden;
+  background: var(--access-deep);
+  isolation: isolate;
+}
+
+.basecamp-access-art::before {
+  content: "";
+  position: absolute;
+  inset: -24px;
+  z-index: 0;
+  background:
+    linear-gradient(rgba(9, 26, 24, 0.18), rgba(9, 26, 24, 0.48)),
+    url("/basecamp-og.png") center / cover;
+  filter: blur(16px) saturate(0.72);
+  transform: scale(1.06);
 }
 
 .basecamp-access-art::after {
   content: "";
   position: absolute;
   inset: 0;
+  z-index: 2;
   background:
-    linear-gradient(90deg, transparent 58%, var(--access-deep)),
+    linear-gradient(90deg, transparent 70%, var(--access-deep)),
     linear-gradient(0deg, rgba(9, 26, 24, 0.28), transparent 45%);
   pointer-events: none;
 }
 
 .basecamp-access-art img {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.28);
 }
 
 .basecamp-access-panel {
@@ -221,8 +242,11 @@
   }
 
   .basecamp-access-art {
-    min-height: 36vh;
-    max-height: 420px;
+    min-height: 0;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    max-height: none;
+    padding: 0;
   }
 
   .basecamp-access-art::after {
@@ -230,8 +254,8 @@
   }
 
   .basecamp-access-panel {
-    min-height: 64vh;
-    padding-top: 56px;
+    min-height: 0;
+    padding: 58px clamp(24px, 8vw, 64px) 48px;
   }
 
   .basecamp-access-back {
@@ -241,7 +265,7 @@
 
 @media (max-width: 560px) {
   .basecamp-access-panel {
-    padding: 54px 22px 42px;
+    padding: 54px max(20px, env(safe-area-inset-right)) max(36px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
   }
 
   .basecamp-access-back {
@@ -249,7 +273,33 @@
   }
 
   .basecamp-access-panel h1 {
-    font-size: clamp(3.1rem, 17vw, 4.8rem);
+    margin-bottom: 16px;
+    font-size: clamp(2.8rem, 15vw, 4.3rem);
+  }
+
+  .basecamp-access-lock {
+    width: 42px;
+    height: 42px;
+    margin-bottom: 20px;
+  }
+
+  .basecamp-access-intro {
+    margin-bottom: 22px;
+    line-height: 1.55;
+  }
+
+  .basecamp-access-form {
+    gap: 15px;
+  }
+
+  .basecamp-access-form input,
+  .basecamp-access-form > button[type="submit"] {
+    min-height: 50px;
+    font-size: 16px;
+  }
+
+  .basecamp-access-note {
+    margin-top: 26px;
   }
 }
 

@@ -1,3 +1,7 @@
+/lab/api/session  /.netlify/functions/lab-session  200!
+/basecamp/api/state  /.netlify/functions/basecamp-state  200!
+/basecamp/api/chat  /.netlify/functions/basecamp-chat  200!
+
 /basecamp-assets/*  /basecamp-assets/:splat  200!  Role=basecamp
 /campsites/*  /campsites/:splat  200!  Role=basecamp
 

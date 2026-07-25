@@ -177,7 +177,11 @@ function BasecampAccess() {
   return (
     <main className="basecamp-access-shell">
       <section className="basecamp-access-art" aria-label="Durdle Basecamp 2026">
-        <img src="/basecamp-og.png" alt="Durdle Basecamp, 21–23 August 2026" />
+        <img
+          src="/basecamp-og.png"
+          alt="Durdle Basecamp, 21–23 August 2026"
+          fetchPriority="high"
+        />
       </section>
 
       <section className="basecamp-access-panel">

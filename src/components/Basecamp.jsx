@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion as Motion } from "framer-motion";
 import { logout as logoutIdentity } from "@netlify/identity";
 import TripMap from "./TripMap";
@@ -6,7 +6,17 @@ import "./Basecamp.css";
 
 const TRIP_DATE = new Date("2026-08-21T08:00:00+01:00");
 const STORAGE_KEY = "durdle-basecamp-mvp-v1";
+const LOCAL_CHAT_KEY = "durdle-basecamp-chat-preview-v1";
 const MAP_LIST_URL = "https://maps.app.goo.gl/ZXMz1S5F36en7BND8";
+const NAV_ITEMS = [
+  { id: "overview", label: "Basecamp" },
+  { id: "campsites", label: "Campsites" },
+  { id: "map", label: "Map" },
+  { id: "plan", label: "Itinerary" },
+  { id: "kit", label: "Kit" },
+  { id: "spend", label: "Spend" },
+  { id: "chat", label: "Chat" },
+];
 
 const crew = [
   { id: "priitivi", name: "Priitivi", home: "Ealing", role: "Crew" },
@@ -175,12 +185,8 @@ const initialTrip = {
   expenses: [],
 };
 
-function getInitialTrip() {
+function mergeTripState(savedTrip) {
   try {
-    const saved = window.localStorage.getItem(STORAGE_KEY);
-    if (!saved) return initialTrip;
-
-    const savedTrip = JSON.parse(saved);
     const savedCampsites = Array.isArray(savedTrip.campsites) ? savedTrip.campsites : [];
     const knownIds = new Set(initialCampsites.map((campsite) => campsite.id));
     const restoredCampsites = initialCampsites.map((campsite) => {
@@ -213,6 +219,30 @@ function getInitialTrip() {
   }
 }
 
+function getInitialTrip() {
+  try {
+    const saved = window.localStorage.getItem(STORAGE_KEY);
+    return saved ? mergeTripState(JSON.parse(saved)) : initialTrip;
+  } catch {
+    return initialTrip;
+  }
+}
+
+function getInitialChat() {
+  try {
+    const saved = window.localStorage.getItem(LOCAL_CHAT_KEY);
+    return saved ? JSON.parse(saved) : [];
+  } catch {
+    return [];
+  }
+}
+
+function getSharedTrip(trip) {
+  const sharedTrip = { ...trip };
+  delete sharedTrip.activeMember;
+  return sharedTrip;
+}
+
 function getDaysUntilTrip() {
   const difference = TRIP_DATE.getTime() - Date.now();
   return Math.max(0, Math.ceil(difference / 86400000));
@@ -228,6 +258,7 @@ function getSafeExternalUrl(value) {
 }
 
 function Basecamp() {
+  const isLocalPreview = ["localhost", "127.0.0.1"].includes(window.location.hostname);
   const [trip, setTrip] = useState(getInitialTrip);
   const [activeView, setActiveView] = useState("overview");
   const [candidateForm, setCandidateForm] = useState({ name: "", area: "", note: "" });
@@ -241,16 +272,169 @@ function Basecamp() {
     category: "Camp",
     owner: "Group",
   });
+  const [editingItineraryId, setEditingItineraryId] = useState("");
+  const [itineraryEditForm, setItineraryEditForm] = useState({
+    day: "Friday",
+    time: "",
+    title: "",
+    detail: "",
+  });
+  const [editingPackingId, setEditingPackingId] = useState("");
+  const [packingEditForm, setPackingEditForm] = useState({
+    label: "",
+    category: "Camp",
+    owner: "Group",
+  });
   const [expenseForm, setExpenseForm] = useState({
     description: "",
     amount: "",
     paidBy: "Priitivi",
   });
   const [noteDrafts, setNoteDrafts] = useState({});
+  const [syncStatus, setSyncStatus] = useState(isLocalPreview ? "Local preview" : "Connecting");
+  const [chatMessages, setChatMessages] = useState(isLocalPreview ? getInitialChat : []);
+  const [chatDraft, setChatDraft] = useState("");
+  const [chatStatus, setChatStatus] = useState(isLocalPreview ? "Saved on this device" : "Connecting");
+  const [chatSending, setChatSending] = useState(false);
+  const tripRef = useRef(trip);
+  const remoteReadyRef = useRef(false);
+  const applyingRemoteRef = useRef(false);
+  const lastRemoteUpdateRef = useRef("");
+  const touchStartRef = useRef(null);
+  const tabRefs = useRef({});
+  const chatEndRef = useRef(null);
 
   useEffect(() => {
+    tripRef.current = trip;
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(trip));
   }, [trip]);
+
+  useEffect(() => {
+    if (!isLocalPreview) return undefined;
+    window.localStorage.setItem(LOCAL_CHAT_KEY, JSON.stringify(chatMessages));
+    return undefined;
+  }, [chatMessages, isLocalPreview]);
+
+  useEffect(() => {
+    if (isLocalPreview) return undefined;
+
+    let cancelled = false;
+
+    const loadSharedTrip = async () => {
+      try {
+        const response = await fetch("/basecamp/api/state", {
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        });
+        if (!response.ok) throw new Error(`State request failed: ${response.status}`);
+        const payload = await response.json();
+        if (cancelled) return;
+
+        if (payload.state && payload.updatedAt !== lastRemoteUpdateRef.current) {
+          applyingRemoteRef.current = true;
+          lastRemoteUpdateRef.current = payload.updatedAt || "";
+          setTrip((current) => ({
+            ...mergeTripState(payload.state),
+            activeMember: current.activeMember,
+          }));
+        } else if (!payload.state && !remoteReadyRef.current) {
+          const initialiseResponse = await fetch("/basecamp/api/state", {
+            method: "PUT",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ state: getSharedTrip(tripRef.current) }),
+          });
+          if (!initialiseResponse.ok) {
+            throw new Error(`State initialise failed: ${initialiseResponse.status}`);
+          }
+          const initialisePayload = await initialiseResponse.json();
+          lastRemoteUpdateRef.current = initialisePayload.updatedAt || "";
+        }
+
+        remoteReadyRef.current = true;
+        setSyncStatus("Shared");
+      } catch {
+        if (!cancelled) setSyncStatus("Offline copy");
+      }
+    };
+
+    loadSharedTrip();
+    const intervalId = window.setInterval(loadSharedTrip, 15000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [isLocalPreview]);
+
+  useEffect(() => {
+    if (isLocalPreview || !remoteReadyRef.current) return undefined;
+    if (applyingRemoteRef.current) {
+      applyingRemoteRef.current = false;
+      return undefined;
+    }
+
+    setSyncStatus("Saving");
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        const response = await fetch("/basecamp/api/state", {
+          method: "PUT",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ state: getSharedTrip(trip) }),
+        });
+        if (!response.ok) throw new Error(`State save failed: ${response.status}`);
+        const payload = await response.json();
+        lastRemoteUpdateRef.current = payload.updatedAt || "";
+        setSyncStatus("Shared");
+      } catch {
+        setSyncStatus("Offline copy");
+      }
+    }, 700);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [trip, isLocalPreview]);
+
+  useEffect(() => {
+    if (isLocalPreview) return undefined;
+
+    let cancelled = false;
+    const loadChat = async () => {
+      try {
+        const response = await fetch("/basecamp/api/chat", {
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        });
+        if (!response.ok) throw new Error(`Chat request failed: ${response.status}`);
+        const payload = await response.json();
+        if (cancelled) return;
+        setChatMessages(Array.isArray(payload.messages) ? payload.messages : []);
+        setChatStatus("Live");
+      } catch {
+        if (!cancelled) setChatStatus("Offline");
+      }
+    };
+
+    loadChat();
+    const intervalId = window.setInterval(loadChat, 10000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [isLocalPreview]);
+
+  useEffect(() => {
+    tabRefs.current[activeView]?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+  }, [activeView]);
+
+  useEffect(() => {
+    if (activeView === "chat") {
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [activeView, chatMessages]);
 
   useEffect(() => {
     const previousTitle = document.title;
@@ -289,8 +473,6 @@ function Basecamp() {
   const perPersonSpent = totalSpent / crew.length;
   const perPersonRemaining = Math.max(0, 250 - perPersonSpent);
   const albumHref = getSafeExternalUrl(trip.albumUrl);
-  const isLocalPreview = ["localhost", "127.0.0.1"].includes(window.location.hostname);
-
   const rankedCampsites = useMemo(
     () => [...trip.campsites].sort((a, b) => b.votes.length - a.votes.length),
     [trip.campsites],
@@ -396,6 +578,46 @@ function Basecamp() {
     }));
   };
 
+  const startEditingItinerary = (item) => {
+    setEditingItineraryId(item.id);
+    setItineraryEditForm({
+      day: item.day,
+      time: item.time,
+      title: item.title,
+      detail: item.detail,
+    });
+  };
+
+  const saveItineraryItem = (event, itemId) => {
+    event.preventDefault();
+    if (!itineraryEditForm.title.trim()) return;
+
+    updateTrip((current) => ({
+      ...current,
+      itinerary: current.itinerary.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              day: itineraryEditForm.day,
+              time: itineraryEditForm.time.trim() || "Time TBC",
+              title: itineraryEditForm.title.trim(),
+              detail: itineraryEditForm.detail.trim() || `Updated by ${activeMember.name}.`,
+            }
+          : item,
+      ),
+    }));
+    setEditingItineraryId("");
+  };
+
+  const removeItineraryItem = (itemId) => {
+    if (!window.confirm("Remove this activity from the shared itinerary?")) return;
+    updateTrip((current) => ({
+      ...current,
+      itinerary: current.itinerary.filter((item) => item.id !== itemId),
+    }));
+    if (editingItineraryId === itemId) setEditingItineraryId("");
+  };
+
   const addPackingItem = (event) => {
     event.preventDefault();
     if (!packingForm.label.trim()) return;
@@ -423,6 +645,44 @@ function Basecamp() {
         item.id === itemId ? { ...item, done: !item.done } : item,
       ),
     }));
+  };
+
+  const startEditingPacking = (item) => {
+    setEditingPackingId(item.id);
+    setPackingEditForm({
+      label: item.label,
+      category: item.category,
+      owner: item.owner,
+    });
+  };
+
+  const savePackingItem = (event, itemId) => {
+    event.preventDefault();
+    if (!packingEditForm.label.trim()) return;
+
+    updateTrip((current) => ({
+      ...current,
+      packing: current.packing.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              label: packingEditForm.label.trim(),
+              category: packingEditForm.category,
+              owner: packingEditForm.owner,
+            }
+          : item,
+      ),
+    }));
+    setEditingPackingId("");
+  };
+
+  const removePackingItem = (itemId) => {
+    if (!window.confirm("Remove this item from the shared kit list?")) return;
+    updateTrip((current) => ({
+      ...current,
+      packing: current.packing.filter((item) => item.id !== itemId),
+    }));
+    if (editingPackingId === itemId) setEditingPackingId("");
   };
 
   const addExpense = (event) => {
@@ -457,6 +717,91 @@ function Basecamp() {
     }));
   };
 
+  const changeView = (nextView) => {
+    if (NAV_ITEMS.some((item) => item.id === nextView)) {
+      setActiveView(nextView);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const moveBetweenViews = (direction) => {
+    const currentIndex = NAV_ITEMS.findIndex((item) => item.id === activeView);
+    const nextIndex = Math.min(
+      NAV_ITEMS.length - 1,
+      Math.max(0, currentIndex + direction),
+    );
+    if (nextIndex !== currentIndex) changeView(NAV_ITEMS[nextIndex].id);
+  };
+
+  const handleTouchStart = (event) => {
+    const target = event.target;
+    if (
+      target instanceof Element
+      && target.closest("input, textarea, select, button, a, .leaflet-container")
+    ) {
+      touchStartRef.current = null;
+      return;
+    }
+
+    const touch = event.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleTouchEnd = (event) => {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!start) return;
+
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    if (Math.abs(deltaX) < 55 || Math.abs(deltaX) <= Math.abs(deltaY) * 1.2) return;
+    moveBetweenViews(deltaX < 0 ? 1 : -1);
+  };
+
+  const sendChatMessage = async (event) => {
+    event.preventDefault();
+    const text = chatDraft.trim();
+    if (!text || chatSending) return;
+
+    setChatSending(true);
+    if (isLocalPreview) {
+      setChatMessages((current) => [
+        ...current,
+        {
+          id: `preview-${Date.now()}`,
+          author: activeMember.name,
+          text,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+      setChatDraft("");
+      setChatSending(false);
+      return;
+    }
+
+    try {
+      const response = await fetch("/basecamp/api/chat", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      if (!response.ok) throw new Error(`Message send failed: ${response.status}`);
+      const payload = await response.json();
+      setChatMessages((current) => [
+        ...current.filter((message) => message.id !== payload.message.id),
+        payload.message,
+      ]);
+      setChatDraft("");
+      setChatStatus("Live");
+    } catch {
+      setChatStatus("Could not send");
+    } finally {
+      setChatSending(false);
+    }
+  };
+
   const signOut = async () => {
     try {
       await logoutIdentity();
@@ -465,14 +810,7 @@ function Basecamp() {
     }
   };
 
-  const navItems = [
-    { id: "overview", label: "Basecamp" },
-    { id: "campsites", label: "Campsites" },
-    { id: "map", label: "Map" },
-    { id: "plan", label: "Itinerary" },
-    { id: "kit", label: "Kit" },
-    { id: "spend", label: "Spend" },
-  ];
+  const activeViewIndex = NAV_ITEMS.findIndex((item) => item.id === activeView);
 
   return (
     <div className="basecamp-shell">
@@ -485,7 +823,7 @@ function Basecamp() {
           <span className="basecamp-mark" aria-hidden="true">DB</span>
           <div>
             <strong>Durdle Basecamp</strong>
-            <span>Invite-only crew room</span>
+            <span>Invite-only · {syncStatus}</span>
           </div>
         </div>
 
@@ -512,20 +850,27 @@ function Basecamp() {
       </header>
 
       <nav className="basecamp-tabs" aria-label="Trip workspace">
-        {navItems.map((item) => (
+        {NAV_ITEMS.map((item) => (
           <button
             key={item.id}
+            ref={(element) => {
+              tabRefs.current[item.id] = element;
+            }}
             type="button"
             className={activeView === item.id ? "is-active" : ""}
             aria-current={activeView === item.id ? "page" : undefined}
-            onClick={() => setActiveView(item.id)}
+            onClick={() => changeView(item.id)}
           >
             {item.label}
           </button>
         ))}
       </nav>
 
-      <main className="basecamp-main">
+      <main
+        className="basecamp-main"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         <AnimatePresence mode="wait">
           {activeView === "overview" && (
             <Motion.div
@@ -541,7 +886,7 @@ function Basecamp() {
                   <h1>The road to<br />Durdle Door.</h1>
                   <p>big bass irl w the boys</p>
                   <div className="hero-actions">
-                    <button type="button" onClick={() => setActiveView("campsites")}>
+                    <button type="button" onClick={() => changeView("campsites")}>
                       Choose basecamp
                     </button>
                     <a href={MAP_LIST_URL} target="_blank" rel="noreferrer">
@@ -606,7 +951,7 @@ function Basecamp() {
                       <button
                         type="button"
                         key={campsite.id}
-                        onClick={() => setActiveView("campsites")}
+                        onClick={() => changeView("campsites")}
                       >
                         <span>0{index + 1}</span>
                         <strong>{campsite.name}</strong>
@@ -624,7 +969,7 @@ function Basecamp() {
                     Compare beginner-friendly Weymouth charters and keep Sunday as
                     the weather fallback.
                   </p>
-                  <button type="button" onClick={() => setActiveView("plan")}>
+                  <button type="button" onClick={() => changeView("plan")}>
                     View weekend plan
                   </button>
                 </article>
@@ -647,7 +992,7 @@ function Basecamp() {
                     <span style={{ width: `${packingProgress}%` }} />
                   </div>
                   <p>{completedPacking} of {trip.packing.length} items ready.</p>
-                  <button type="button" onClick={() => setActiveView("kit")}>
+                  <button type="button" onClick={() => changeView("kit")}>
                     Open packing list
                   </button>
                 </article>
@@ -978,16 +1323,103 @@ function Basecamp() {
                         .filter((item) => item.day === day)
                         .map((item) => (
                           <div className="basecamp-card itinerary-item" key={item.id}>
-                            <div className="itinerary-time">{item.time}</div>
-                            <h2>{item.title}</h2>
-                            <p>{item.detail}</p>
-                            <button
-                              type="button"
-                              className={item.status === "Confirmed" ? "is-confirmed" : ""}
-                              onClick={() => toggleItineraryStatus(item.id)}
-                            >
-                              {item.status}
-                            </button>
+                            {editingItineraryId === item.id ? (
+                              <form
+                                className="inline-editor itinerary-editor"
+                                onSubmit={(event) => saveItineraryItem(event, item.id)}
+                              >
+                                <div className="inline-editor-pair">
+                                  <label>
+                                    <span>Day</span>
+                                    <select
+                                      value={itineraryEditForm.day}
+                                      onChange={(event) =>
+                                        setItineraryEditForm((current) => ({
+                                          ...current,
+                                          day: event.target.value,
+                                        }))
+                                      }
+                                    >
+                                      <option>Friday</option>
+                                      <option>Saturday</option>
+                                      <option>Sunday</option>
+                                    </select>
+                                  </label>
+                                  <label>
+                                    <span>Time</span>
+                                    <input
+                                      value={itineraryEditForm.time}
+                                      onChange={(event) =>
+                                        setItineraryEditForm((current) => ({
+                                          ...current,
+                                          time: event.target.value,
+                                        }))
+                                      }
+                                    />
+                                  </label>
+                                </div>
+                                <label>
+                                  <span>Activity</span>
+                                  <input
+                                    value={itineraryEditForm.title}
+                                    onChange={(event) =>
+                                      setItineraryEditForm((current) => ({
+                                        ...current,
+                                        title: event.target.value,
+                                      }))
+                                    }
+                                    required
+                                  />
+                                </label>
+                                <label>
+                                  <span>Notes</span>
+                                  <textarea
+                                    rows="3"
+                                    value={itineraryEditForm.detail}
+                                    onChange={(event) =>
+                                      setItineraryEditForm((current) => ({
+                                        ...current,
+                                        detail: event.target.value,
+                                      }))
+                                    }
+                                  />
+                                </label>
+                                <div className="item-actions">
+                                  <button type="submit" className="primary-action">Save</button>
+                                  <button type="button" onClick={() => setEditingItineraryId("")}>
+                                    Cancel
+                                  </button>
+                                </div>
+                              </form>
+                            ) : (
+                              <>
+                                <div className="itinerary-time">{item.time}</div>
+                                <h2>{item.title}</h2>
+                                <p>{item.detail}</p>
+                                <div className="item-actions">
+                                  <button
+                                    type="button"
+                                    className={item.status === "Confirmed" ? "is-confirmed" : ""}
+                                    onClick={() => toggleItineraryStatus(item.id)}
+                                  >
+                                    {item.status}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => startEditingItinerary(item)}
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="danger-action"
+                                    onClick={() => removeItineraryItem(item.id)}
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              </>
+                            )}
                           </div>
                         ))}
                     </div>
@@ -1084,17 +1516,100 @@ function Basecamp() {
                       {trip.packing
                         .filter((item) => item.category === category)
                         .map((item) => (
-                          <label className={item.done ? "is-done" : ""} key={item.id}>
-                            <input
-                              type="checkbox"
-                              checked={item.done}
-                              onChange={() => togglePackingItem(item.id)}
-                            />
-                            <span>
-                              <strong>{item.label}</strong>
-                              <small>{item.owner}</small>
-                            </span>
-                          </label>
+                          <div
+                            className={`kit-item ${item.done ? "is-done" : ""}`}
+                            key={item.id}
+                          >
+                            {editingPackingId === item.id ? (
+                              <form
+                                className="inline-editor kit-editor"
+                                onSubmit={(event) => savePackingItem(event, item.id)}
+                              >
+                                <label>
+                                  <span>Item</span>
+                                  <input
+                                    value={packingEditForm.label}
+                                    onChange={(event) =>
+                                      setPackingEditForm((current) => ({
+                                        ...current,
+                                        label: event.target.value,
+                                      }))
+                                    }
+                                    required
+                                  />
+                                </label>
+                                <div className="inline-editor-pair">
+                                  <label>
+                                    <span>Category</span>
+                                    <select
+                                      value={packingEditForm.category}
+                                      onChange={(event) =>
+                                        setPackingEditForm((current) => ({
+                                          ...current,
+                                          category: event.target.value,
+                                        }))
+                                      }
+                                    >
+                                      <option>Camp</option>
+                                      <option>Boat</option>
+                                      <option>Food</option>
+                                      <option>Bookings</option>
+                                    </select>
+                                  </label>
+                                  <label>
+                                    <span>Owner</span>
+                                    <select
+                                      value={packingEditForm.owner}
+                                      onChange={(event) =>
+                                        setPackingEditForm((current) => ({
+                                          ...current,
+                                          owner: event.target.value,
+                                        }))
+                                      }
+                                    >
+                                      <option>Group</option>
+                                      <option>Everyone</option>
+                                      {crew.map((member) => (
+                                        <option key={member.id}>{member.name}</option>
+                                      ))}
+                                    </select>
+                                  </label>
+                                </div>
+                                <div className="item-actions">
+                                  <button type="submit" className="primary-action">Save</button>
+                                  <button type="button" onClick={() => setEditingPackingId("")}>
+                                    Cancel
+                                  </button>
+                                </div>
+                              </form>
+                            ) : (
+                              <>
+                                <label className="kit-check">
+                                  <input
+                                    type="checkbox"
+                                    checked={item.done}
+                                    onChange={() => togglePackingItem(item.id)}
+                                  />
+                                  <span>
+                                    <strong>{item.label}</strong>
+                                    <small>{item.owner}</small>
+                                  </span>
+                                </label>
+                                <div className="item-actions kit-item-actions">
+                                  <button type="button" onClick={() => startEditingPacking(item)}>
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="danger-action"
+                                    onClick={() => removePackingItem(item.id)}
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </div>
                         ))}
                     </div>
                   </article>
@@ -1289,8 +1804,106 @@ function Basecamp() {
               </section>
             </Motion.div>
           )}
+
+          {activeView === "chat" && (
+            <Motion.div
+              key="chat"
+              className="basecamp-view"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+            >
+              <section className="view-intro">
+                <div>
+                  <span className="section-kicker">Crew radio · {chatStatus}</span>
+                  <h1>Keep the plans moving.</h1>
+                  <p>
+                    A private thread for the four of you. Messages are kept with
+                    the shared trip data, not posted publicly.
+                  </p>
+                </div>
+              </section>
+
+              <section className="basecamp-card chat-room" aria-label="Crew chat">
+                <div className="chat-feed" aria-live="polite">
+                  {chatMessages.length === 0 ? (
+                    <div className="empty-state chat-empty">
+                      <strong>No messages yet.</strong>
+                      <span>Start with campsite preferences or fishing availability.</span>
+                    </div>
+                  ) : (
+                    chatMessages.map((message) => (
+                      <article
+                        className={`chat-message ${
+                          message.author === activeMember.name ? "is-self" : ""
+                        }`}
+                        key={message.id}
+                      >
+                        <header>
+                          <strong>{message.author}</strong>
+                          <time dateTime={message.createdAt}>
+                            {new Intl.DateTimeFormat("en-GB", {
+                              day: "numeric",
+                              month: "short",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            }).format(new Date(message.createdAt))}
+                          </time>
+                        </header>
+                        <p>{message.text}</p>
+                      </article>
+                    ))
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+
+                <form className="chat-composer" onSubmit={sendChatMessage}>
+                  <label>
+                    <span>Message the crew</span>
+                    <textarea
+                      rows="3"
+                      maxLength="500"
+                      value={chatDraft}
+                      onChange={(event) => setChatDraft(event.target.value)}
+                      placeholder="What do the boys need to know?"
+                      required
+                    />
+                  </label>
+                  <div>
+                    <small>{chatDraft.length}/500</small>
+                    <button type="submit" disabled={chatSending || !chatDraft.trim()}>
+                      {chatSending ? "Sending…" : "Send message"}
+                    </button>
+                  </div>
+                </form>
+              </section>
+            </Motion.div>
+          )}
         </AnimatePresence>
       </main>
+
+      <div className="basecamp-page-controls" aria-label="Move between sections">
+        <button
+          type="button"
+          aria-label="Previous section"
+          disabled={activeViewIndex === 0}
+          onClick={() => moveBetweenViews(-1)}
+        >
+          <span aria-hidden="true">←</span>
+        </button>
+        <span aria-hidden="true">{activeViewIndex + 1} / {NAV_ITEMS.length}</span>
+        <button
+          type="button"
+          aria-label="Next section"
+          disabled={activeViewIndex === NAV_ITEMS.length - 1}
+          onClick={() => moveBetweenViews(1)}
+        >
+          <span aria-hidden="true">→</span>
+        </button>
+      </div>
+      <p className="sr-only" aria-live="polite">
+        {NAV_ITEMS[activeViewIndex]?.label} section
+      </p>
     </div>
   );
 }
