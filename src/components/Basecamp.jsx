@@ -754,6 +754,7 @@ function Basecamp() {
   const [mobilePlanDay, setMobilePlanDay] = useState("Friday");
   const [photos, setPhotos] = useState([]);
   const [photoCaption, setPhotoCaption] = useState("");
+  const [photoFileName, setPhotoFileName] = useState("");
   const [photoStatus, setPhotoStatus] = useState(isLocalPreview ? "Preview only" : "Connecting");
   const [photoError, setPhotoError] = useState("");
   const [photoUploading, setPhotoUploading] = useState(false);
@@ -1462,6 +1463,7 @@ function Basecamp() {
       }
 
       setPhotoCaption("");
+      setPhotoFileName("");
       formElement.reset();
     } catch (error) {
       setPhotoError(error.message || "The upload could not be saved.");
@@ -3256,15 +3258,24 @@ function Basecamp() {
                       stored separately from the shared planning data.
                     </p>
                   </div>
-                  <label>
+                  <label className="photo-file-field" htmlFor="basecamp-photo-file">
                     <span>Photo</span>
-                    <input
-                      ref={photoFileRef}
-                      type="file"
-                      name="image"
-                      accept="image/*"
-                      required
-                    />
+                    <span className={`photo-file-picker ${photoFileName ? "has-file" : ""}`}>
+                      <strong>{photoFileName || "Choose from phone or computer"}</strong>
+                      <small>{photoFileName ? "Tap to choose a different photo" : "Camera, photo library or files"}</small>
+                      <input
+                        ref={photoFileRef}
+                        id="basecamp-photo-file"
+                        type="file"
+                        name="image"
+                        accept="image/*,.heic,.heif"
+                        onChange={(event) => {
+                          setPhotoFileName(event.target.files?.[0]?.name || "");
+                          setPhotoError("");
+                        }}
+                        required
+                      />
+                    </span>
                   </label>
                   <label>
                     <span>Caption · optional</span>
