@@ -1,0 +1,10 @@
+/basecamp-assets/*  /basecamp-assets/:splat  200!  Role=basecamp
+/campsites/*  /campsites/:splat  200!  Role=basecamp
+
+/basecamp  /index.html  200!  Role=basecamp
+/basecamp  /basecamp-login  302
+
+/basecamp/*  /index.html  200!  Role=basecamp
+/basecamp/*  /basecamp-login  302
+
+/*  /index.html  200

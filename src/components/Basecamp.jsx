@@ -1,0 +1,1298 @@
+import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion as Motion } from "framer-motion";
+import { logout as logoutIdentity } from "@netlify/identity";
+import TripMap from "./TripMap";
+import "./Basecamp.css";
+
+const TRIP_DATE = new Date("2026-08-21T08:00:00+01:00");
+const STORAGE_KEY = "durdle-basecamp-mvp-v1";
+const MAP_LIST_URL = "https://maps.app.goo.gl/ZXMz1S5F36en7BND8";
+
+const crew = [
+  { id: "priitivi", name: "Priitivi", home: "Ealing", role: "Crew" },
+  { id: "husain", name: "Husain", home: "Edgware", role: "Crew" },
+  { id: "dhanesh", name: "Dhanesh", home: "Rayners Lane", role: "Crew" },
+  { id: "oliver", name: "Oliver", home: "Ealing", role: "Crew" },
+];
+
+const initialCampsites = [
+  {
+    id: "eweleaze",
+    name: "Eweleaze Farm",
+    area: "Osmington · Weymouth",
+    status: "Research",
+    rating: "4.5 ★",
+    coordinates: [50.6384621, -2.4031664],
+    image: "/campsites/eweleaze.webp",
+    imageAlt: "Tents spread across the coastal fields at Eweleaze Farm",
+    sourceUrl: "https://eweleaze.co.uk/eweleaze-farm/camping/",
+    sourceLabel: "Eweleaze Farm",
+    votes: [],
+    notes: [],
+  },
+  {
+    id: "portesham",
+    name: "Portesham Dairy Farm Campsite",
+    area: "Portesham · Weymouth",
+    status: "Research",
+    rating: "4.7 ★",
+    coordinates: [50.667977, -2.563157],
+    image: "/campsites/portesham.webp",
+    imageAlt: "Green pitches at Portesham Dairy Farm Campsite",
+    sourceUrl: "https://www.porteshamdairyfarm.co.uk/",
+    sourceLabel: "Portesham Dairy Farm",
+    votes: [],
+    notes: [],
+  },
+  {
+    id: "east-field",
+    name: "East Field",
+    area: "Eweleaze Farm · Osmington",
+    status: "Research",
+    rating: "5.0 ★",
+    coordinates: [50.6375746, -2.4014606],
+    image: "/campsites/east-field.webp",
+    imageAlt: "Sea view from the East Field bell tent area at Eweleaze Farm",
+    sourceUrl: "https://eweleaze.co.uk/eweleaze-farm/glamping/east-field/",
+    sourceLabel: "Eweleaze Farm",
+    votes: [],
+    notes: [],
+  },
+  {
+    id: "sweet-hill",
+    name: "Sweet Hill Farm",
+    area: "Southwell · Portland",
+    status: "Research",
+    rating: "4.5 ★",
+    coordinates: [50.5275055, -2.4488156],
+    image: "/campsites/sweet-hill.webp",
+    imageAlt: "Open coastal view from Sweet Hill Farm on Portland",
+    sourceUrl: "https://sweethillfarm.co.uk/",
+    sourceLabel: "Sweet Hill Farm",
+    votes: [],
+    notes: [],
+  },
+  {
+    id: "rosewall",
+    name: "Rosewall Camping",
+    area: "Osmington Mills · Weymouth",
+    status: "Research",
+    rating: "4.6 ★",
+    coordinates: [50.641112, -2.378175],
+    image: "/campsites/rosewall.webp",
+    imageAlt: "Aerial view over the pitches at Rosewall Camping",
+    sourceUrl: "https://www.campsites.co.uk/search/campsites-in-dorset/weymouth/rosewall-camping",
+    sourceLabel: "Campsites.co.uk",
+    votes: [],
+    notes: [],
+  },
+  {
+    id: "ringstead",
+    name: "Ringstead Bay Camping",
+    area: "Ringstead · Dorchester",
+    status: "Research",
+    rating: "5.0 ★",
+    coordinates: [50.6341842, -2.3617009],
+    image: "/campsites/ringstead.webp",
+    imageAlt: "Coastal camping field at Ringstead Bay Camping",
+    sourceUrl: "https://ringsteadbaycamping.co.uk/",
+    sourceLabel: "Ringstead Bay Camping",
+    votes: [],
+    notes: [],
+  },
+  {
+    id: "sea-barn",
+    name: "Sea Barn Farm Fleet",
+    area: "Fleet · Weymouth",
+    status: "Research",
+    rating: "3.9 ★",
+    coordinates: [50.623753, -2.529066],
+    image: "/campsites/sea-barn.webp",
+    imageAlt: "Aerial view of Sea Barn Farm beside the Fleet lagoon",
+    sourceUrl: "https://www.seabarnfarm.co.uk/",
+    sourceLabel: "Sea Barn Farm",
+    votes: [],
+    notes: [],
+  },
+];
+
+const initialTrip = {
+  activeMember: "priitivi",
+  albumUrl: "",
+  campsites: initialCampsites,
+  itinerary: [
+    {
+      id: "fri-meet",
+      day: "Friday",
+      time: "07:00–08:00",
+      title: "Meet in Edgware",
+      detail: "Load Husain’s car and run the departure checklist.",
+      status: "Confirmed",
+    },
+    {
+      id: "fri-camp",
+      day: "Friday",
+      time: "After arrival",
+      title: "Pitch basecamp",
+      detail: "Check in, set up tents and keep the first evening flexible.",
+      status: "Idea",
+    },
+    {
+      id: "sat-fish",
+      day: "Saturday",
+      time: "Time TBC",
+      title: "Beginner fishing charter",
+      detail: "Aim for a four-to-five-hour shared or private boat trip.",
+      status: "Idea",
+    },
+    {
+      id: "sat-coast",
+      day: "Saturday",
+      time: "After fishing",
+      title: "Coast and camp dinner",
+      detail: "Durdle Door, Man O’War Beach or Lulworth Cove depending on energy.",
+      status: "Idea",
+    },
+    {
+      id: "sun-home",
+      day: "Sunday",
+      time: "Morning",
+      title: "Pack down and final stop",
+      detail: "Leave room for one viewpoint before the drive home.",
+      status: "Idea",
+    },
+  ],
+  packing: [
+    { id: "tent", label: "Tent and pegs", category: "Camp", owner: "Group", done: false },
+    { id: "sleep", label: "Sleeping bags and mats", category: "Camp", owner: "Group", done: false },
+    { id: "torch", label: "Torches and spare batteries", category: "Camp", owner: "Group", done: false },
+    { id: "charter", label: "Fishing charter confirmation", category: "Bookings", owner: "Dhanesh", done: false },
+    { id: "campsite", label: "Campsite confirmation", category: "Bookings", owner: "Priitivi", done: false },
+    { id: "waterproof", label: "Waterproof layer", category: "Boat", owner: "Everyone", done: false },
+    { id: "sun", label: "Sun protection", category: "Boat", owner: "Everyone", done: false },
+    { id: "food", label: "Breakfast, snacks and water", category: "Food", owner: "Group", done: false },
+  ],
+  expenses: [],
+};
+
+function getInitialTrip() {
+  try {
+    const saved = window.localStorage.getItem(STORAGE_KEY);
+    if (!saved) return initialTrip;
+
+    const savedTrip = JSON.parse(saved);
+    const savedCampsites = Array.isArray(savedTrip.campsites) ? savedTrip.campsites : [];
+    const knownIds = new Set(initialCampsites.map((campsite) => campsite.id));
+    const restoredCampsites = initialCampsites.map((campsite) => {
+      const savedCampsite = savedCampsites.find((candidate) => candidate.id === campsite.id);
+      return savedCampsite
+        ? {
+            ...campsite,
+            ...savedCampsite,
+            area: campsite.area,
+            rating: campsite.rating,
+            coordinates: campsite.coordinates,
+            image: campsite.image,
+            imageAlt: campsite.imageAlt,
+            sourceUrl: campsite.sourceUrl,
+            sourceLabel: campsite.sourceLabel,
+          }
+        : campsite;
+    });
+
+    return {
+      ...initialTrip,
+      ...savedTrip,
+      campsites: [
+        ...restoredCampsites,
+        ...savedCampsites.filter((campsite) => !knownIds.has(campsite.id)),
+      ],
+    };
+  } catch {
+    return initialTrip;
+  }
+}
+
+function getDaysUntilTrip() {
+  const difference = TRIP_DATE.getTime() - Date.now();
+  return Math.max(0, Math.ceil(difference / 86400000));
+}
+
+function getSafeExternalUrl(value) {
+  try {
+    const url = new URL(value);
+    return ["http:", "https:"].includes(url.protocol) ? url.href : "";
+  } catch {
+    return "";
+  }
+}
+
+function Basecamp() {
+  const [trip, setTrip] = useState(getInitialTrip);
+  const [activeView, setActiveView] = useState("overview");
+  const [candidateForm, setCandidateForm] = useState({ name: "", area: "", note: "" });
+  const [itineraryForm, setItineraryForm] = useState({
+    day: "Friday",
+    time: "",
+    title: "",
+  });
+  const [packingForm, setPackingForm] = useState({
+    label: "",
+    category: "Camp",
+    owner: "Group",
+  });
+  const [expenseForm, setExpenseForm] = useState({
+    description: "",
+    amount: "",
+    paidBy: "Priitivi",
+  });
+  const [noteDrafts, setNoteDrafts] = useState({});
+
+  useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(trip));
+  }, [trip]);
+
+  useEffect(() => {
+    const previousTitle = document.title;
+    const socialImage = new URL("/basecamp-og.png", window.location.origin).href;
+    const metadata = [
+      ['meta[name="description"]', "A private planning workspace for four friends heading to Durdle Door in August 2026."],
+      ['meta[property="og:title"]', "Durdle Basecamp 2026"],
+      ['meta[property="og:description"]', "Camping, coastline and a first fishing trip—planned together."],
+      ['meta[property="og:image"]', socialImage],
+      ['meta[name="twitter:title"]', "Durdle Basecamp 2026"],
+      ['meta[name="twitter:description"]', "Camping, coastline and a first fishing trip—planned together."],
+      ['meta[name="twitter:image"]', socialImage],
+    ];
+    const previousMetadata = metadata.map(([selector, content]) => {
+      const element = document.querySelector(selector);
+      const previousContent = element?.getAttribute("content") ?? "";
+      element?.setAttribute("content", content);
+      return [element, previousContent];
+    });
+
+    document.title = "Durdle Basecamp 2026";
+    return () => {
+      document.title = previousTitle;
+      previousMetadata.forEach(([element, previousContent]) => {
+        element?.setAttribute("content", previousContent);
+      });
+    };
+  }, []);
+
+  const activeMember = crew.find((member) => member.id === trip.activeMember) ?? crew[0];
+  const completedPacking = trip.packing.filter((item) => item.done).length;
+  const packingProgress = trip.packing.length
+    ? Math.round((completedPacking / trip.packing.length) * 100)
+    : 0;
+  const totalSpent = trip.expenses.reduce((total, expense) => total + expense.amount, 0);
+  const perPersonSpent = totalSpent / crew.length;
+  const perPersonRemaining = Math.max(0, 250 - perPersonSpent);
+  const albumHref = getSafeExternalUrl(trip.albumUrl);
+  const isLocalPreview = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+
+  const rankedCampsites = useMemo(
+    () => [...trip.campsites].sort((a, b) => b.votes.length - a.votes.length),
+    [trip.campsites],
+  );
+
+  const updateTrip = (updater) => {
+    setTrip((current) => updater(current));
+  };
+
+  const toggleVote = (campsiteId) => {
+    updateTrip((current) => ({
+      ...current,
+      campsites: current.campsites.map((campsite) => {
+        if (campsite.id !== campsiteId) return campsite;
+        const hasVoted = campsite.votes.includes(activeMember.id);
+        return {
+          ...campsite,
+          votes: hasVoted
+            ? campsite.votes.filter((vote) => vote !== activeMember.id)
+            : [...campsite.votes, activeMember.id],
+        };
+      }),
+    }));
+  };
+
+  const addCandidate = (event) => {
+    event.preventDefault();
+    const name = candidateForm.name.trim();
+    if (!name) return;
+
+    const candidateId = `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now()}`;
+    const firstNote = candidateForm.note.trim()
+      ? [{ id: `${candidateId}-note`, author: activeMember.name, text: candidateForm.note.trim() }]
+      : [];
+
+    updateTrip((current) => ({
+      ...current,
+      campsites: [
+        ...current.campsites,
+        {
+          id: candidateId,
+          name,
+          area: candidateForm.area.trim() || "Location to confirm",
+          status: "New lead",
+          votes: [activeMember.id],
+          notes: firstNote,
+        },
+      ],
+    }));
+    setCandidateForm({ name: "", area: "", note: "" });
+  };
+
+  const addNote = (campsiteId) => {
+    const text = noteDrafts[campsiteId]?.trim();
+    if (!text) return;
+
+    updateTrip((current) => ({
+      ...current,
+      campsites: current.campsites.map((campsite) =>
+        campsite.id === campsiteId
+          ? {
+              ...campsite,
+              notes: [
+                ...campsite.notes,
+                { id: `${campsiteId}-${Date.now()}`, author: activeMember.name, text },
+              ],
+            }
+          : campsite,
+      ),
+    }));
+    setNoteDrafts((current) => ({ ...current, [campsiteId]: "" }));
+  };
+
+  const addItineraryItem = (event) => {
+    event.preventDefault();
+    if (!itineraryForm.title.trim()) return;
+
+    updateTrip((current) => ({
+      ...current,
+      itinerary: [
+        ...current.itinerary,
+        {
+          id: `plan-${Date.now()}`,
+          day: itineraryForm.day,
+          time: itineraryForm.time.trim() || "Time TBC",
+          title: itineraryForm.title.trim(),
+          detail: `Added by ${activeMember.name}.`,
+          status: "Idea",
+        },
+      ],
+    }));
+    setItineraryForm({ day: "Friday", time: "", title: "" });
+  };
+
+  const toggleItineraryStatus = (itemId) => {
+    updateTrip((current) => ({
+      ...current,
+      itinerary: current.itinerary.map((item) =>
+        item.id === itemId
+          ? { ...item, status: item.status === "Confirmed" ? "Idea" : "Confirmed" }
+          : item,
+      ),
+    }));
+  };
+
+  const addPackingItem = (event) => {
+    event.preventDefault();
+    if (!packingForm.label.trim()) return;
+
+    updateTrip((current) => ({
+      ...current,
+      packing: [
+        ...current.packing,
+        {
+          id: `kit-${Date.now()}`,
+          label: packingForm.label.trim(),
+          category: packingForm.category,
+          owner: packingForm.owner,
+          done: false,
+        },
+      ],
+    }));
+    setPackingForm({ label: "", category: "Camp", owner: "Group" });
+  };
+
+  const togglePackingItem = (itemId) => {
+    updateTrip((current) => ({
+      ...current,
+      packing: current.packing.map((item) =>
+        item.id === itemId ? { ...item, done: !item.done } : item,
+      ),
+    }));
+  };
+
+  const addExpense = (event) => {
+    event.preventDefault();
+    const amount = Number.parseFloat(expenseForm.amount);
+    if (!expenseForm.description.trim() || !Number.isFinite(amount) || amount <= 0) return;
+
+    updateTrip((current) => ({
+      ...current,
+      expenses: [
+        ...current.expenses,
+        {
+          id: `expense-${Date.now()}`,
+          description: expenseForm.description.trim(),
+          amount,
+          paidBy: expenseForm.paidBy,
+          settled: false,
+        },
+      ],
+    }));
+    setExpenseForm({ description: "", amount: "", paidBy: activeMember.name });
+  };
+
+  const toggleExpenseSettled = (expenseId) => {
+    updateTrip((current) => ({
+      ...current,
+      expenses: current.expenses.map((expense) =>
+        expense.id === expenseId
+          ? { ...expense, settled: !expense.settled }
+          : expense,
+      ),
+    }));
+  };
+
+  const signOut = async () => {
+    try {
+      await logoutIdentity();
+    } finally {
+      window.location.assign("/basecamp-login");
+    }
+  };
+
+  const navItems = [
+    { id: "overview", label: "Basecamp" },
+    { id: "campsites", label: "Campsites" },
+    { id: "map", label: "Map" },
+    { id: "plan", label: "Itinerary" },
+    { id: "kit", label: "Kit" },
+    { id: "spend", label: "Spend" },
+  ];
+
+  return (
+    <div className="basecamp-shell">
+      <header className="basecamp-header">
+        <a className="basecamp-back" href="/" aria-label="Back to Priitivi’s portfolio">
+          <span aria-hidden="true">←</span> Portfolio
+        </a>
+
+        <div className="basecamp-identity">
+          <span className="basecamp-mark" aria-hidden="true">DB</span>
+          <div>
+            <strong>Durdle Basecamp</strong>
+            <span>Invite-only crew room</span>
+          </div>
+        </div>
+
+        <div className="basecamp-user-actions">
+          <label className="member-picker">
+            <span>You are</span>
+            <select
+              value={activeMember.id}
+              onChange={(event) =>
+                updateTrip((current) => ({ ...current, activeMember: event.target.value }))
+              }
+            >
+              {crew.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="button" className="basecamp-signout" onClick={signOut}>
+            Sign out
+          </button>
+        </div>
+      </header>
+
+      <nav className="basecamp-tabs" aria-label="Trip workspace">
+        {navItems.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={activeView === item.id ? "is-active" : ""}
+            aria-current={activeView === item.id ? "page" : undefined}
+            onClick={() => setActiveView(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </nav>
+
+      <main className="basecamp-main">
+        <AnimatePresence mode="wait">
+          {activeView === "overview" && (
+            <Motion.div
+              key="overview"
+              className="basecamp-view"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+            >
+              <section className="trip-hero">
+                <div className="trip-hero-copy">
+                  <span className="section-kicker">Chapter one · Dorset coast</span>
+                  <h1>The road to<br />Durdle Door.</h1>
+                  <p>big bass irl w the boys</p>
+                  <div className="hero-actions">
+                    <button type="button" onClick={() => setActiveView("campsites")}>
+                      Choose basecamp
+                    </button>
+                    <a href={MAP_LIST_URL} target="_blank" rel="noreferrer">
+                      Open Dhanesh’s map ↗
+                    </a>
+                  </div>
+                </div>
+
+                <div className="trip-hero-stats" aria-label="Trip summary">
+                  <div>
+                    <span>Departure</span>
+                    <strong>21 Aug</strong>
+                    <small>Meet 07:00–08:00</small>
+                  </div>
+                  <div>
+                    <span>Countdown</span>
+                    <strong>{getDaysUntilTrip()} days</strong>
+                    <small>Friday to Sunday</small>
+                  </div>
+                  <div>
+                    <span>Target</span>
+                    <strong>£250 pp</strong>
+                    <small>All-in working budget</small>
+                  </div>
+                </div>
+
+                <div className="trip-hero-art" aria-hidden="true">
+                  <img src="/basecamp-og.png" alt="" />
+                </div>
+              </section>
+
+              <section className="crew-strip" aria-label="Trip crew">
+                <div className="strip-heading">
+                  <span className="section-kicker">Party lobby</span>
+                  <strong>4 / 4 ready to plan</strong>
+                </div>
+                <div className="crew-list">
+                  {crew.map((member, index) => (
+                    <div className="crew-member" key={member.id}>
+                      <span className="crew-avatar">{member.name.charAt(0)}</span>
+                      <div>
+                        <strong>{member.name}</strong>
+                        <small>{member.role} · {member.home}</small>
+                      </div>
+                      <span className="crew-number">0{index + 1}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="overview-grid">
+                <article className="basecamp-card decision-card">
+                  <div className="card-heading">
+                    <div>
+                      <span className="section-kicker">Decision needed</span>
+                      <h2>Where do we pitch?</h2>
+                    </div>
+                    <span className="card-count">{trip.campsites.length} leads</span>
+                  </div>
+                  <div className="ranked-list">
+                    {rankedCampsites.slice(0, 3).map((campsite, index) => (
+                      <button
+                        type="button"
+                        key={campsite.id}
+                        onClick={() => setActiveView("campsites")}
+                      >
+                        <span>0{index + 1}</span>
+                        <strong>{campsite.name}</strong>
+                        <small>{campsite.votes.length} votes</small>
+                      </button>
+                    ))}
+                  </div>
+                </article>
+
+                <article className="basecamp-card mission-card">
+                  <span className="section-kicker">Primary mission</span>
+                  <div className="mission-number">04–05</div>
+                  <h2>Hours on the water</h2>
+                  <p>
+                    Compare beginner-friendly Weymouth charters and keep Sunday as
+                    the weather fallback.
+                  </p>
+                  <button type="button" onClick={() => setActiveView("plan")}>
+                    View weekend plan
+                  </button>
+                </article>
+
+                <article className="basecamp-card progress-card">
+                  <div className="card-heading">
+                    <div>
+                      <span className="section-kicker">Expedition prep</span>
+                      <h2>Kit progress</h2>
+                    </div>
+                    <strong>{packingProgress}%</strong>
+                  </div>
+                  <div
+                    className="progress-track"
+                    role="progressbar"
+                    aria-valuenow={packingProgress}
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                  >
+                    <span style={{ width: `${packingProgress}%` }} />
+                  </div>
+                  <p>{completedPacking} of {trip.packing.length} items ready.</p>
+                  <button type="button" onClick={() => setActiveView("kit")}>
+                    Open packing list
+                  </button>
+                </article>
+
+                <article className="basecamp-card photo-card">
+                  <div>
+                    <span className="section-kicker">Memories</span>
+                    <h2>Shared photo album</h2>
+                    <p>
+                      Keep Google Photos as the group album, then choose highlights
+                      for the trip story later.
+                    </p>
+                  </div>
+                  <label>
+                    <span>Private album link</span>
+                    <input
+                      type="url"
+                      placeholder="Paste the Google Photos link"
+                      value={trip.albumUrl}
+                      onChange={(event) =>
+                        updateTrip((current) => ({
+                          ...current,
+                          albumUrl: event.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+                  {albumHref && (
+                    <a href={albumHref} target="_blank" rel="noreferrer">
+                      Open shared album ↗
+                    </a>
+                  )}
+                </article>
+              </section>
+
+              <aside className="prototype-notice">
+                <strong>{isLocalPreview ? "Local preview" : "Invite-only access active"}</strong>
+                <p>
+                  {isLocalPreview
+                    ? "Local development bypasses the production sign-in gate. The deployed Basecamp route requires an invited crew account."
+                    : "Netlify verifies the signed-in crew role before serving this page. New accounts cannot register without an invitation."}
+                </p>
+              </aside>
+            </Motion.div>
+          )}
+
+          {activeView === "campsites" && (
+            <Motion.div
+              key="campsites"
+              className="basecamp-view"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+            >
+              <section className="view-intro">
+                <div>
+                  <span className="section-kicker">Field map · Decision board</span>
+                  <h1>Choose our basecamp.</h1>
+                  <p>
+                    Vote as {activeMember.name}, add discoveries and leave the useful
+                    details you want everyone to remember.
+                  </p>
+                </div>
+                <a href={MAP_LIST_URL} target="_blank" rel="noreferrer">
+                  Open all 25 places ↗
+                </a>
+              </section>
+
+              <div className="shortlist-ribbon" aria-label="Campsite shortlist">
+                {rankedCampsites.map((campsite, index) => (
+                  <span key={campsite.id}>
+                    <b>{String(index + 1).padStart(2, "0")}</b>
+                    {campsite.name}
+                  </span>
+                ))}
+              </div>
+
+              <section className="candidate-grid">
+                {rankedCampsites.map((campsite, index) => {
+                  const hasVoted = campsite.votes.includes(activeMember.id);
+                  return (
+                    <article className="basecamp-card candidate-card" key={campsite.id}>
+                      {campsite.image && (
+                        <figure className="candidate-photo">
+                          <img
+                            src={campsite.image}
+                            alt={campsite.imageAlt || `${campsite.name} campsite`}
+                            loading="lazy"
+                          />
+                          {campsite.sourceUrl && (
+                            <a href={campsite.sourceUrl} target="_blank" rel="noreferrer">
+                              Photo: {campsite.sourceLabel || "source"} ↗
+                            </a>
+                          )}
+                        </figure>
+                      )}
+                      <div className="candidate-topline">
+                        <span className="candidate-index">
+                          {String(index + 1).padStart(2, "0")}
+                        </span>
+                        <span className="status-pill">{campsite.status}</span>
+                      </div>
+                      <div>
+                        <h2>{campsite.name}</h2>
+                        <p>{campsite.area}</p>
+                        {campsite.rating && (
+                          <span className="candidate-rating">
+                            {campsite.rating} <small>Google rating</small>
+                          </span>
+                        )}
+                      </div>
+                      <div className="vote-row">
+                        <div className="vote-stack" aria-label={`${campsite.votes.length} votes`}>
+                          {crew.map((member) => (
+                            <span
+                              key={member.id}
+                              className={campsite.votes.includes(member.id) ? "has-voted" : ""}
+                              title={member.name}
+                            >
+                              {member.name.charAt(0)}
+                            </span>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          className={hasVoted ? "is-selected" : ""}
+                          aria-pressed={hasVoted}
+                          onClick={() => toggleVote(campsite.id)}
+                        >
+                          {hasVoted ? "Voted" : "Vote"}
+                        </button>
+                      </div>
+
+                      {campsite.notes.length > 0 && (
+                        <div className="candidate-notes">
+                          {campsite.notes.map((note) => (
+                            <p key={note.id}>
+                              <strong>{note.author}</strong> {note.text}
+                            </p>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="note-composer">
+                        <input
+                          type="text"
+                          value={noteDrafts[campsite.id] ?? ""}
+                          placeholder="Add a useful note"
+                          aria-label={`Add a note about ${campsite.name}`}
+                          onChange={(event) =>
+                            setNoteDrafts((current) => ({
+                              ...current,
+                              [campsite.id]: event.target.value,
+                            }))
+                          }
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") addNote(campsite.id);
+                          }}
+                        />
+                        <button type="button" onClick={() => addNote(campsite.id)}>
+                          Add
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </section>
+
+              <form className="basecamp-card add-form" onSubmit={addCandidate}>
+                <div>
+                  <span className="section-kicker">New lead</span>
+                  <h2>Add a campsite</h2>
+                  <p>Found another option while you’re discussing the trip?</p>
+                </div>
+                <label>
+                  <span>Name</span>
+                  <input
+                    type="text"
+                    value={candidateForm.name}
+                    onChange={(event) =>
+                      setCandidateForm((current) => ({
+                        ...current,
+                        name: event.target.value,
+                      }))
+                    }
+                    placeholder="Campsite name"
+                    required
+                  />
+                </label>
+                <label>
+                  <span>Area</span>
+                  <input
+                    type="text"
+                    value={candidateForm.area}
+                    onChange={(event) =>
+                      setCandidateForm((current) => ({
+                        ...current,
+                        area: event.target.value,
+                      }))
+                    }
+                    placeholder="Town or coastline"
+                  />
+                </label>
+                <label>
+                  <span>First note</span>
+                  <input
+                    type="text"
+                    value={candidateForm.note}
+                    onChange={(event) =>
+                      setCandidateForm((current) => ({
+                        ...current,
+                        note: event.target.value,
+                      }))
+                    }
+                    placeholder="Why should we consider it?"
+                  />
+                </label>
+                <button type="submit">Add to shortlist</button>
+              </form>
+            </Motion.div>
+          )}
+
+          {activeView === "map" && (
+            <Motion.div
+              key="map"
+              className="basecamp-view"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+            >
+              <section className="view-intro map-view-intro">
+                <div>
+                  <span className="section-kicker">Camps · coast · low-effort wanders</span>
+                  <h1>Plot the weekend.</h1>
+                  <p>
+                    Compare every campsite against Durdle Door, Weymouth’s fishing
+                    harbour and the coastal stops worth saving for the drive.
+                  </p>
+                </div>
+                <a href={MAP_LIST_URL} target="_blank" rel="noreferrer">
+                  Open Dhanesh’s list ↗
+                </a>
+              </section>
+
+              <TripMap campsites={trip.campsites} />
+
+              <section className="map-insight-grid" aria-label="Easy walk notes">
+                <article className="basecamp-card">
+                  <span>01 · easiest start</span>
+                  <h2>Lulworth Cove shoreline</h2>
+                  <p>
+                    A gentle, wide approach from the car park to the cove. Treat the
+                    cliff sections beyond it as a different, steeper walk.
+                  </p>
+                  <a
+                    href="https://www.visit-dorset.com/listing/lulworth-cove/80726301/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Check visitor information ↗
+                  </a>
+                </article>
+                <article className="basecamp-card">
+                  <span>02 · short viewpoint</span>
+                  <h2>Stair Hole platforms</h2>
+                  <p>
+                    The opening section is accessible; the full 3.5 km Lulworth and
+                    Fossil Forest route is graded moderate.
+                  </p>
+                  <a
+                    href="https://www.southwestcoastpath.org.uk/walksdb/478/printable/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Read the route notes ↗
+                  </a>
+                </article>
+                <article className="basecamp-card">
+                  <span>03 · flat sea views</span>
+                  <h2>Portland Bill lighthouse</h2>
+                  <p>
+                    A wide, flat path from the car park makes this a good low-energy
+                    final stop before the drive home.
+                  </p>
+                  <a
+                    href="https://www.visit-dorset.com/visitor-information/accessibility/accessible-viewpoints/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Check accessible viewpoints ↗
+                  </a>
+                </article>
+              </section>
+            </Motion.div>
+          )}
+
+          {activeView === "plan" && (
+            <Motion.div
+              key="plan"
+              className="basecamp-view"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+            >
+              <section className="view-intro">
+                <div>
+                  <span className="section-kicker">Field plan 01</span>
+                  <h1>Three days, loosely held.</h1>
+                  <p>
+                    Confirm only what matters. The boat day can move if the weather
+                    says so.
+                  </p>
+                </div>
+              </section>
+
+              <section className="itinerary-board">
+                {["Friday", "Saturday", "Sunday"].map((day, dayIndex) => (
+                  <article className="day-column" key={day}>
+                    <header>
+                      <span>0{dayIndex + 1}</span>
+                      <div>
+                        <strong>{day}</strong>
+                        <small>{["21 August", "22 August", "23 August"][dayIndex]}</small>
+                      </div>
+                    </header>
+                    <div className="day-events">
+                      {trip.itinerary
+                        .filter((item) => item.day === day)
+                        .map((item) => (
+                          <div className="basecamp-card itinerary-item" key={item.id}>
+                            <div className="itinerary-time">{item.time}</div>
+                            <h2>{item.title}</h2>
+                            <p>{item.detail}</p>
+                            <button
+                              type="button"
+                              className={item.status === "Confirmed" ? "is-confirmed" : ""}
+                              onClick={() => toggleItineraryStatus(item.id)}
+                            >
+                              {item.status}
+                            </button>
+                          </div>
+                        ))}
+                    </div>
+                  </article>
+                ))}
+              </section>
+
+              <form className="basecamp-card add-form itinerary-form" onSubmit={addItineraryItem}>
+                <div>
+                  <span className="section-kicker">New plan</span>
+                  <h2>Add an activity</h2>
+                </div>
+                <label>
+                  <span>Day</span>
+                  <select
+                    value={itineraryForm.day}
+                    onChange={(event) =>
+                      setItineraryForm((current) => ({
+                        ...current,
+                        day: event.target.value,
+                      }))
+                    }
+                  >
+                    <option>Friday</option>
+                    <option>Saturday</option>
+                    <option>Sunday</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Time</span>
+                  <input
+                    type="text"
+                    value={itineraryForm.time}
+                    onChange={(event) =>
+                      setItineraryForm((current) => ({
+                        ...current,
+                        time: event.target.value,
+                      }))
+                    }
+                    placeholder="Time TBC"
+                  />
+                </label>
+                <label>
+                  <span>Activity</span>
+                  <input
+                    type="text"
+                    value={itineraryForm.title}
+                    onChange={(event) =>
+                      setItineraryForm((current) => ({
+                        ...current,
+                        title: event.target.value,
+                      }))
+                    }
+                    placeholder="What should we do?"
+                    required
+                  />
+                </label>
+                <button type="submit">Add activity</button>
+              </form>
+            </Motion.div>
+          )}
+
+          {activeView === "kit" && (
+            <Motion.div
+              key="kit"
+              className="basecamp-view"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+            >
+              <section className="view-intro">
+                <div>
+                  <span className="section-kicker">Shared inventory</span>
+                  <h1>Pack once. Pack well.</h1>
+                  <p>Assign shared items and see what is actually ready.</p>
+                </div>
+                <div className="large-progress">
+                  <strong>{packingProgress}%</strong>
+                  <span>{completedPacking} / {trip.packing.length} ready</span>
+                </div>
+              </section>
+
+              <section className="kit-board">
+                {["Bookings", "Camp", "Boat", "Food"].map((category) => (
+                  <article className="basecamp-card kit-category" key={category}>
+                    <header>
+                      <h2>{category}</h2>
+                      <span>
+                        {trip.packing.filter((item) => item.category === category && item.done).length}
+                        /{trip.packing.filter((item) => item.category === category).length}
+                      </span>
+                    </header>
+                    <div>
+                      {trip.packing
+                        .filter((item) => item.category === category)
+                        .map((item) => (
+                          <label className={item.done ? "is-done" : ""} key={item.id}>
+                            <input
+                              type="checkbox"
+                              checked={item.done}
+                              onChange={() => togglePackingItem(item.id)}
+                            />
+                            <span>
+                              <strong>{item.label}</strong>
+                              <small>{item.owner}</small>
+                            </span>
+                          </label>
+                        ))}
+                    </div>
+                  </article>
+                ))}
+              </section>
+
+              <form className="basecamp-card add-form" onSubmit={addPackingItem}>
+                <div>
+                  <span className="section-kicker">New item</span>
+                  <h2>Add to the kit list</h2>
+                </div>
+                <label>
+                  <span>Item</span>
+                  <input
+                    type="text"
+                    value={packingForm.label}
+                    onChange={(event) =>
+                      setPackingForm((current) => ({
+                        ...current,
+                        label: event.target.value,
+                      }))
+                    }
+                    placeholder="What are we missing?"
+                    required
+                  />
+                </label>
+                <label>
+                  <span>Category</span>
+                  <select
+                    value={packingForm.category}
+                    onChange={(event) =>
+                      setPackingForm((current) => ({
+                        ...current,
+                        category: event.target.value,
+                      }))
+                    }
+                  >
+                    <option>Camp</option>
+                    <option>Boat</option>
+                    <option>Food</option>
+                    <option>Bookings</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Owner</span>
+                  <select
+                    value={packingForm.owner}
+                    onChange={(event) =>
+                      setPackingForm((current) => ({
+                        ...current,
+                        owner: event.target.value,
+                      }))
+                    }
+                  >
+                    <option>Group</option>
+                    <option>Everyone</option>
+                    {crew.map((member) => (
+                      <option key={member.id}>{member.name}</option>
+                    ))}
+                  </select>
+                </label>
+                <button type="submit">Add item</button>
+              </form>
+            </Motion.div>
+          )}
+
+          {activeView === "spend" && (
+            <Motion.div
+              key="spend"
+              className="basecamp-view"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+            >
+              <section className="view-intro spend-intro">
+                <div>
+                  <span className="section-kicker">Group spend</span>
+                  <h1>Keep the weekend honest.</h1>
+                  <p>
+                    Record shared costs here; settle the actual balances through
+                    Monzo or Revolut.
+                  </p>
+                </div>
+              </section>
+
+              <section className="budget-grid" aria-label="Budget summary">
+                <article className="basecamp-card budget-stat">
+                  <span>Group target</span>
+                  <strong>£1,000.00</strong>
+                  <small>£250 per person</small>
+                </article>
+                <article className="basecamp-card budget-stat">
+                  <span>Recorded</span>
+                  <strong>£{totalSpent.toFixed(2)}</strong>
+                  <small>£{perPersonSpent.toFixed(2)} per person</small>
+                </article>
+                <article className="basecamp-card budget-stat">
+                  <span>Left per person</span>
+                  <strong>£{perPersonRemaining.toFixed(2)}</strong>
+                  <small>Working estimate</small>
+                </article>
+              </section>
+
+              <section className="expense-layout">
+                <div className="basecamp-card expense-list">
+                  <div className="card-heading">
+                    <div>
+                      <span className="section-kicker">Ledger</span>
+                      <h2>Shared expenses</h2>
+                    </div>
+                  </div>
+
+                  {trip.expenses.length === 0 ? (
+                    <div className="empty-state">
+                      <strong>No costs recorded yet.</strong>
+                      <span>Add the campsite or fishing deposit when somebody books it.</span>
+                    </div>
+                  ) : (
+                    trip.expenses.map((expense) => (
+                      <div className="expense-row" key={expense.id}>
+                        <div>
+                          <strong>{expense.description}</strong>
+                          <span>Paid by {expense.paidBy}</span>
+                        </div>
+                        <strong>£{expense.amount.toFixed(2)}</strong>
+                        <button
+                          type="button"
+                          className={expense.settled ? "is-settled" : ""}
+                          onClick={() => toggleExpenseSettled(expense.id)}
+                        >
+                          {expense.settled ? "Settled" : "Settle externally"}
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <form className="basecamp-card expense-form" onSubmit={addExpense}>
+                  <span className="section-kicker">New cost</span>
+                  <h2>Add an expense</h2>
+                  <label>
+                    <span>Description</span>
+                    <input
+                      type="text"
+                      value={expenseForm.description}
+                      onChange={(event) =>
+                        setExpenseForm((current) => ({
+                          ...current,
+                          description: event.target.value,
+                        }))
+                      }
+                      placeholder="Campsite deposit"
+                      required
+                    />
+                  </label>
+                  <label>
+                    <span>Amount</span>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min="0.01"
+                      step="0.01"
+                      value={expenseForm.amount}
+                      onChange={(event) =>
+                        setExpenseForm((current) => ({
+                          ...current,
+                          amount: event.target.value,
+                        }))
+                      }
+                      placeholder="0.00"
+                      required
+                    />
+                  </label>
+                  <label>
+                    <span>Paid by</span>
+                    <select
+                      value={expenseForm.paidBy}
+                      onChange={(event) =>
+                        setExpenseForm((current) => ({
+                          ...current,
+                          paidBy: event.target.value,
+                        }))
+                      }
+                    >
+                      {crew.map((member) => (
+                        <option key={member.id}>{member.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <button type="submit">Record expense</button>
+                </form>
+              </section>
+            </Motion.div>
+          )}
+        </AnimatePresence>
+      </main>
+    </div>
+  );
+}
+
+export default Basecamp;

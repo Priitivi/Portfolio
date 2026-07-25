@@ -1,0 +1,260 @@
+.basecamp-route-loading {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: #091a18;
+  color: rgba(247, 242, 232, 0.68);
+  font: 700 0.82rem/1.4 Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.basecamp-access-shell {
+  --access-ink: #10211e;
+  --access-deep: #091a18;
+  --access-paper: #f7f2e8;
+  --access-orange: #e66b3c;
+  --access-yellow: #f5c15d;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(420px, 0.7fr);
+  background: var(--access-deep);
+  color: var(--access-paper);
+}
+
+.basecamp-access-art {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.basecamp-access-art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent 58%, var(--access-deep)),
+    linear-gradient(0deg, rgba(9, 26, 24, 0.28), transparent 45%);
+  pointer-events: none;
+}
+
+.basecamp-access-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.basecamp-access-panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(40px, 7vw, 100px);
+}
+
+.basecamp-access-back {
+  position: absolute;
+  top: 34px;
+  left: clamp(40px, 7vw, 100px);
+  color: rgba(247, 242, 232, 0.6);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration-color: rgba(247, 242, 232, 0.28);
+  text-underline-offset: 4px;
+}
+
+.basecamp-access-lock {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 28px;
+  border: 1px solid rgba(247, 242, 232, 0.25);
+  border-radius: 50%;
+  color: var(--access-yellow);
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.basecamp-access-kicker {
+  color: var(--access-orange);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.basecamp-access-panel h1 {
+  max-width: 620px;
+  margin: 12px 0 20px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(3.2rem, 7vw, 6.5rem);
+  font-weight: 400;
+  letter-spacing: -0.055em;
+  line-height: 0.9;
+}
+
+.basecamp-access-intro {
+  max-width: 520px;
+  margin: 0 0 28px;
+  color: rgba(247, 242, 232, 0.62);
+  line-height: 1.65;
+}
+
+.basecamp-access-form {
+  width: min(100%, 480px);
+  display: grid;
+  gap: 18px;
+}
+
+.basecamp-access-form label {
+  display: grid;
+  gap: 7px;
+}
+
+.basecamp-access-form label > span {
+  color: rgba(247, 242, 232, 0.58);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.basecamp-access-form input {
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 14px;
+  background: rgba(247, 242, 232, 0.08);
+  border: 1px solid rgba(247, 242, 232, 0.2);
+  border-radius: 2px;
+  color: var(--access-paper);
+  outline: none;
+}
+
+.basecamp-access-form input:focus {
+  border-color: var(--access-orange);
+  box-shadow: 0 0 0 3px rgba(230, 107, 60, 0.18);
+}
+
+.basecamp-access-form > button[type="submit"] {
+  min-height: 52px;
+  margin-top: 4px;
+  padding: 12px 18px;
+  background: var(--access-orange);
+  border: 1px solid var(--access-orange);
+  border-radius: 2px;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.basecamp-access-form button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.basecamp-access-recovery {
+  justify-self: start;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: rgba(247, 242, 232, 0.58);
+  cursor: pointer;
+  font-size: 0.76rem;
+  text-decoration: underline;
+  text-decoration-color: rgba(247, 242, 232, 0.26);
+  text-underline-offset: 4px;
+}
+
+.basecamp-access-alert {
+  width: min(100%, 480px);
+  margin: 0 0 20px;
+  padding: 12px 14px;
+  border-left: 3px solid currentColor;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.basecamp-access-alert.is-error {
+  background: rgba(230, 107, 60, 0.12);
+  color: #f0a084;
+}
+
+.basecamp-access-alert.is-success {
+  background: rgba(143, 200, 193, 0.12);
+  color: #8fc8c1;
+}
+
+.basecamp-access-note {
+  display: block;
+  max-width: 480px;
+  margin-top: 34px;
+  color: rgba(247, 242, 232, 0.38);
+  line-height: 1.55;
+}
+
+.basecamp-access-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: rgba(247, 242, 232, 0.62);
+}
+
+.basecamp-access-loading span {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(247, 242, 232, 0.2);
+  border-top-color: var(--access-orange);
+  border-radius: 50%;
+  animation: basecamp-access-spin 800ms linear infinite;
+}
+
+@keyframes basecamp-access-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 900px) {
+  .basecamp-access-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .basecamp-access-art {
+    min-height: 36vh;
+    max-height: 420px;
+  }
+
+  .basecamp-access-art::after {
+    background: linear-gradient(0deg, var(--access-deep), transparent 58%);
+  }
+
+  .basecamp-access-panel {
+    min-height: 64vh;
+    padding-top: 56px;
+  }
+
+  .basecamp-access-back {
+    top: 20px;
+  }
+}
+
+@media (max-width: 560px) {
+  .basecamp-access-panel {
+    padding: 54px 22px 42px;
+  }
+
+  .basecamp-access-back {
+    left: 22px;
+  }
+
+  .basecamp-access-panel h1 {
+    font-size: clamp(3.1rem, 17vw, 4.8rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .basecamp-access-loading span {
+    animation-duration: 1.6s;
+  }
+}

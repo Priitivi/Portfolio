@@ -12,8 +12,10 @@
     "lab:hash-password": "node scripts/hash-lab-password.mjs"
   },
   "dependencies": {
+    "@netlify/identity": "^1.2.0",
     "@react-three/fiber": "^9.6.1",
     "framer-motion": "^12.10.5",
+    "leaflet": "^1.9.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.57.0",

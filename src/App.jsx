@@ -5,10 +5,13 @@ import About from "./components/About";
 import Projects from "./components/Projects";
 import Contact from "./components/Contact";
 import LabPortal from "./components/LabPortal";
+import BasecampAccess from "./components/BasecampAccess";
 import { supportsWebGL } from "./utils/webgl";
 
 const GameExperience = lazy(() => import("./game/GameExperience"));
 const LabApp = lazy(() => import("./lab/LabApp"));
+const Basecamp = lazy(() => import("./components/Basecamp"));
+const AUTH_HASH_PATTERN = /^#(confirmation_token|recovery_token|invite_token|email_change_token|access_token)=/;
 
 function StandardPortfolio({ onExplore, webglError }) {
   return (
@@ -39,7 +42,25 @@ function StandardPortfolio({ onExplore, webglError }) {
 function App() {
   const [mode, setMode] = useState("standard");
   const [webglError, setWebglError] = useState(false);
-  const isLabRoute = window.location.pathname === "/lab" || window.location.pathname.startsWith("/lab/");
+  const path = window.location.pathname
+    .replace(/\/+$/, "")
+    .toLowerCase();
+  const isLabRoute = path === "/lab" || path.startsWith("/lab/");
+  const isBasecamp = path.endsWith("/basecamp");
+  const isBasecampAccess = path.endsWith("/basecamp-login")
+    || AUTH_HASH_PATTERN.test(window.location.hash);
+
+  if (isBasecampAccess) {
+    return <BasecampAccess />;
+  }
+
+  if (isBasecamp) {
+    return (
+      <Suspense fallback={<div className="basecamp-route-loading">Opening Basecamp…</div>}>
+        <Basecamp />
+      </Suspense>
+    );
+  }
 
   if (isLabRoute) {
     return (
