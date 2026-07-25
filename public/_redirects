@@ -3,7 +3,9 @@
 /basecamp/api/chat  /.netlify/functions/basecamp-chat  200!
 
 /basecamp-assets/*  /basecamp-assets/:splat  200!  Role=basecamp
+/basecamp-assets/*  /basecamp-login  302!
 /campsites/*  /campsites/:splat  200!  Role=basecamp
+/campsites/*  /basecamp-login  302!
 
 /basecamp  /index.html  200!  Role=basecamp
 /basecamp  /basecamp-login  302
