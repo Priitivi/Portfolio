@@ -12,9 +12,11 @@ const NAV_ITEMS = [
   { id: "overview", label: "Basecamp" },
   { id: "campsites", label: "Campsites" },
   { id: "map", label: "Map" },
+  { id: "fishing", label: "Fishing" },
   { id: "plan", label: "Itinerary" },
   { id: "kit", label: "Kit" },
   { id: "spend", label: "Spend" },
+  { id: "photos", label: "Photos" },
   { id: "chat", label: "Chat" },
 ];
 
@@ -44,6 +46,10 @@ const initialCampsites = [
     imageAlt: "Tents spread across the coastal fields at Eweleaze Farm",
     sourceUrl: "https://eweleaze.co.uk/eweleaze-farm/camping/",
     sourceLabel: "Eweleaze Farm",
+    tripPrice: "£210 total · £52.50 pp",
+    priceNote: "4 adults · Fri + Sat · 1 vehicle",
+    facts: ["Tent-only", "Private beach", "Campfires + hot showers"],
+    watchOut: "Open 20 July–31 August. Weekend adult rate is £24 per night; vehicle is £18 per stay.",
     votes: [],
     notes: [],
   },
@@ -59,6 +65,10 @@ const initialCampsites = [
     imageAlt: "Green pitches at Portesham Dairy Farm Campsite",
     sourceUrl: "https://www.porteshamdairyfarm.co.uk/",
     sourceLabel: "Portesham Dairy Farm",
+    tripPrice: "Live quote",
+    priceNote: "Exact August price is shown in the booking flow",
+    facts: ["Open all year", "Level sheltered pitches", "Pub 200 yd away"],
+    watchOut: "A comfortable practical option, but farther west than the Osmington and Lulworth sites.",
     votes: [],
     notes: [],
   },
@@ -74,6 +84,10 @@ const initialCampsites = [
     imageAlt: "Sea view from the East Field bell tent area at Eweleaze Farm",
     sourceUrl: "https://eweleaze.co.uk/eweleaze-farm/glamping/east-field/",
     sourceLabel: "Eweleaze Farm",
+    tripPrice: "≈ £490 total · £122.50 pp",
+    priceNote: "Eweleaze fees + one 4-person bell tent",
+    facts: ["Bell-tent glamping", "Beds included", "Inside Eweleaze"],
+    watchOut: "East Field is a glamping field within Eweleaze, not a separate campsite. The estimate includes its published base and weekend tent fees.",
     votes: [],
     notes: [],
   },
@@ -89,6 +103,10 @@ const initialCampsites = [
     imageAlt: "Open coastal view from Sweet Hill Farm on Portland",
     sourceUrl: "https://sweethillfarm.co.uk/",
     sourceLabel: "Sweet Hill Farm",
+    tripPrice: "£120 total · £30 pp",
+    priceNote: "4 adults · 2 nights · non-electric",
+    facts: ["Nearly-wild camping", "Portland coast", "Electric optional"],
+    watchOut: "The published high-season adult rate is £15 per night; electric hook-up is extra.",
     votes: [],
     notes: [],
   },
@@ -102,8 +120,14 @@ const initialCampsites = [
     coordinates: [50.641112, -2.378175],
     image: "/campsites/rosewall.webp",
     imageAlt: "Aerial view over the pitches at Rosewall Camping",
-    sourceUrl: "https://www.campsites.co.uk/search/campsites-in-dorset/weymouth/rosewall-camping",
-    sourceLabel: "Campsites.co.uk",
+    sourceUrl: "https://www.weymouthcamping.com/camping/",
+    sourceLabel: "Rosewall Camping",
+    photoSourceUrl: "https://www.campsites.co.uk/search/campsites-in-dorset/weymouth/rosewall-camping",
+    photoSourceLabel: "Campsites.co.uk",
+    tripPrice: "£90 total · £22.50 pp",
+    priceNote: "4 adults · 2 nights · published high season",
+    facts: ["Two wash blocks", "No electric hook-up", "Seasonal shop"],
+    watchOut: "The 2026 tariff warns that a three-night minimum may apply in peak periods—confirm before choosing.",
     votes: [],
     notes: [],
   },
@@ -119,6 +143,10 @@ const initialCampsites = [
     imageAlt: "Coastal camping field at Ringstead Bay Camping",
     sourceUrl: "https://ringsteadbaycamping.co.uk/",
     sourceLabel: "Ringstead Bay Camping",
+    tripPrice: "≈ £102 total · £25.50 pp",
+    priceNote: "Standard pitch + 2 extra adults · 2 nights",
+    facts: ["5-min beach walk", "Fridge + charging", "Raised campfires"],
+    watchOut: "Estimate uses the published standard rate. Check the live calendar in case the August weekend is priced differently.",
     votes: [],
     notes: [],
   },
@@ -134,6 +162,10 @@ const initialCampsites = [
     imageAlt: "Aerial view of Sea Barn Farm beside the Fleet lagoon",
     sourceUrl: "https://www.seabarnfarm.co.uk/",
     sourceLabel: "Sea Barn Farm",
+    tripPrice: "Live quote",
+    priceNote: "Advance booking only",
+    facts: ["Fleet Lagoon views", "Coast path 500 m", "Modern wash block"],
+    watchOut: "The site says “no groups” and a maximum of two households. Four friends should ask for approval before booking.",
     votes: [],
     notes: [],
   },
@@ -144,8 +176,14 @@ const initialCampsites = [
     status: "Extra lead",
     origin: "Nearby research",
     coordinates: [50.62615, -2.27036],
-    sourceUrl: "https://www.durdledoor.co.uk/accommodation",
+    image: "/campsites/durdle-door.jpg",
+    imageAlt: "Durdle Door Holiday Park above the Jurassic Coast",
+    sourceUrl: "https://www.durdledoor.co.uk/touring-and-camping",
     sourceLabel: "Durdle Door Holiday Park",
+    tripPrice: "From £22 per pitch/night",
+    priceNote: "Rookery tent pitch · live quote for 4 adults",
+    facts: ["Walk to Durdle Door", "Tent up to 18 m²", "Shop + bar on site"],
+    watchOut: "The headline price covers two people for one night; enter all four adults and both dates for the real total.",
     votes: [],
     notes: [],
   },
@@ -156,8 +194,16 @@ const initialCampsites = [
     status: "Extra lead",
     origin: "Nearby research",
     coordinates: [50.668327, -2.275631],
+    image: "/campsites/red-lion.jpg",
+    imageAlt: "The grassy camping field at The Red Lion in Winfrith Newburgh",
     sourceUrl: "https://redlionwinfrith.com/campsite/",
     sourceLabel: "The Red Lion",
+    photoSourceUrl: "https://www.ukcampsite.co.uk/sites/details.asp?revid=12800",
+    photoSourceLabel: "UKCampsite.co.uk",
+    tripPrice: "Live quote",
+    priceNote: "Pre-book for the current tent rate",
+    facts: ["Pub beside pitches", "Showers + loos", "10% camper discount"],
+    watchOut: "Very convenient for dinner and a short drive to Lulworth; recent reviews are mixed on peak-time wash facilities.",
     votes: [],
     notes: [],
   },
@@ -168,10 +214,106 @@ const initialCampsites = [
     status: "Extra lead",
     origin: "Nearby research",
     coordinates: [50.698462, -2.215858],
+    image: "/campsites/longthorns.jpg",
+    imageAlt: "Camping field at Longthorns Farm in Dorset",
     sourceUrl: "https://www.longthornsfarm.co.uk/camping",
     sourceLabel: "Longthorns Farm",
+    tripPrice: "From £28 per pitch/night",
+    priceNote: "Live quote may add people or pitch options",
+    facts: ["Campfires", "Woodland + alpacas", "Tents and campervans"],
+    watchOut: "A relaxed inland base beside Monkey World; the balance is due 21 days before arrival.",
     votes: [],
     notes: [],
+  },
+  {
+    id: "shortlake-farm",
+    name: "Shortlake Farm",
+    area: "Osmington · Weymouth",
+    status: "Strong new lead",
+    origin: "Nearby research",
+    coordinates: [50.6394, -2.391],
+    image: "/campsites/shortlake.jpg",
+    imageAlt: "Coastal tents and hay bales at Shortlake Farm",
+    sourceUrl: "https://eweleaze.co.uk/shortlake-farm/camping/",
+    sourceLabel: "Shortlake Farm",
+    tripPrice: "£159 total · £39.75 pp",
+    priceNote: "4 adults · Fri + Sat · 1 vehicle",
+    facts: ["10-min beach walk", "Campfires + hot showers", "Shop, pizza + nearby pub"],
+    watchOut: "Open 3–31 August 2026. It is quieter than Eweleaze but shares access to many of the same coastal facilities.",
+    votes: [],
+    notes: [],
+  },
+];
+
+const fishingCompanies = [
+  {
+    id: "coastal-catcher",
+    name: "Coastal Catcher · Lone Shark III",
+    badge: "Best group fit",
+    image: "/fishing/coastal-catcher.jpg",
+    imageAlt: "Beginner anglers fishing from Coastal Catcher off the Dorset coast",
+    photoUrl: "https://fishingtripsweymouth.com/trip/4-hour-introduction-to-fishing-rod-line-coastal-catcher/",
+    price: "£45 pp",
+    privatePrice: "£450 whole boat · up to 10",
+    duration: "4 hours",
+    minimum: "6 passengers",
+    groupGap: "Your four need 2 more shared passengers",
+    departure: "Weymouth Harbour · live calendar",
+    included: "Rod, line, bait and life vest",
+    note: "A dedicated introduction to sea fishing, running 15 April–1 October 2026. The private boat works out at £112.50 each for four.",
+    url: "https://fishingtripsweymouth.com/trip/4-hour-introduction-to-fishing-rod-line-coastal-catcher/",
+  },
+  {
+    id: "amarisa",
+    name: "Amarisa",
+    badge: "Lowest published price",
+    image: "/fishing/amarisa.png",
+    imageAlt: "The blue-hulled Amarisa fishing boat in Weymouth",
+    photoUrl: "https://www.amarisaweymouth.co.uk/",
+    price: "£40 pp",
+    privatePrice: "Ask for whole-boat quote",
+    duration: "4 hours",
+    minimum: "8 passengers",
+    groupGap: "Your four need 4 more shared passengers",
+    departure: "Morning, afternoon or evening · time varies",
+    included: "Rods, reels, tackle and bait",
+    note: "Daily during school holidays. Meet near Sailors Return at Cosens Quay and arrive 15 minutes early.",
+    url: "https://www.amarisaweymouth.co.uk/4hour/",
+  },
+  {
+    id: "snapper",
+    name: "Snapper Charters",
+    badge: "Beginner friendly",
+    image: "/fishing/snapper.jpg",
+    imageAlt: "A beginner fishing from Snapper Charters off Weymouth",
+    photoUrl: "https://www.snapperweymouth.com/fishing-trips/half-day-fishing-trips/",
+    price: "£45 pp",
+    privatePrice: "Ask for whole-boat quote",
+    duration: "4 hours",
+    minimum: "8 passengers",
+    groupGap: "Your four need 4 more shared passengers",
+    departure: "Often 08:00 or 12:00 · verify live",
+    included: "Rods, reels, tackle and bait",
+    note: "Complete beginners are welcome. The published booking calendar commonly shows morning and midday half-days, but your August times are not posted yet.",
+    url: "https://www.snapperweymouth.com/fishing-trips/half-day-fishing-trips/",
+    bookingUrl: "https://bookwhen.com/snappercharters",
+  },
+  {
+    id: "shellfish",
+    name: "Weymouth Shellfish Charters",
+    badge: "Weather-plan wildcard",
+    image: "/fishing/shellfish.jpg",
+    imageAlt: "The Weymouth Shellfish Charters crew and catamaran",
+    photoUrl: "https://www.weymouthshellfishcharters.co.uk/our-story",
+    price: "£25 pp",
+    privatePrice: "Durdle sightseeing · £27.50 pp",
+    duration: "90 minutes",
+    minimum: "No minimum published",
+    groupGap: "Works as a fallback for four",
+    departure: "Weymouth Harbour · booking calendar",
+    included: "Hands-on crab and lobster pot safari",
+    note: "This is shellfish potting rather than rod-and-line fishing, so treat it as a shorter backup experience.",
+    url: "https://www.weymouthshellfishcharters.co.uk/",
   },
 ];
 
@@ -242,16 +384,10 @@ function mergeTripState(savedTrip) {
       const savedCampsite = savedCampsites.find((candidate) => candidate.id === campsite.id);
       return savedCampsite
         ? {
-            ...campsite,
             ...savedCampsite,
-            area: campsite.area,
-            rating: campsite.rating,
-            coordinates: campsite.coordinates,
-            image: campsite.image,
-            imageAlt: campsite.imageAlt,
-            sourceUrl: campsite.sourceUrl,
-            sourceLabel: campsite.sourceLabel,
-            origin: campsite.origin,
+            ...campsite,
+            votes: Array.isArray(savedCampsite.votes) ? savedCampsite.votes : [],
+            notes: Array.isArray(savedCampsite.notes) ? savedCampsite.notes : [],
           }
         : campsite;
     });
@@ -304,6 +440,37 @@ function getSafeExternalUrl(value) {
     return ["http:", "https:"].includes(url.protocol) ? url.href : "";
   } catch {
     return "";
+  }
+}
+
+async function preparePhotoUpload(file) {
+  const browserReadyTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+  if (browserReadyTypes.has(file.type) && file.size <= 1.6 * 1024 * 1024) {
+    return file;
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = () => reject(new Error("This photo format cannot be read."));
+      element.src = objectUrl;
+    });
+    const longestSide = Math.max(image.naturalWidth, image.naturalHeight);
+    const scale = Math.min(1, 1600 / longestSide);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((resolve) => {
+      canvas.toBlob(resolve, "image/jpeg", 0.82);
+    });
+    if (!blob) throw new Error("This photo could not be prepared.");
+    const filename = `${file.name.replace(/\.[^.]+$/, "") || "basecamp-photo"}.jpg`;
+    return new File([blob], filename, { type: "image/jpeg" });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
   }
 }
 
@@ -364,13 +531,19 @@ function Basecamp() {
   const [chatDraft, setChatDraft] = useState("");
   const [chatStatus, setChatStatus] = useState(isLocalPreview ? "Saved on this device" : "Connecting");
   const [chatSending, setChatSending] = useState(false);
+  const [mobilePlanDay, setMobilePlanDay] = useState("Friday");
+  const [photos, setPhotos] = useState([]);
+  const [photoCaption, setPhotoCaption] = useState("");
+  const [photoStatus, setPhotoStatus] = useState(isLocalPreview ? "Preview only" : "Connecting");
+  const [photoError, setPhotoError] = useState("");
+  const [photoUploading, setPhotoUploading] = useState(false);
   const tripRef = useRef(trip);
   const remoteReadyRef = useRef(false);
   const applyingRemoteRef = useRef(false);
   const lastRemoteUpdateRef = useRef("");
-  const touchStartRef = useRef(null);
   const tabRefs = useRef({});
   const chatEndRef = useRef(null);
+  const photoFileRef = useRef(null);
 
   useEffect(() => {
     if (isLocalPreview) {
@@ -458,6 +631,34 @@ function Basecamp() {
       window.clearInterval(intervalId);
     };
   }, [isLocalPreview]);
+
+  useEffect(() => {
+    if (isLocalPreview || activeView !== "photos") return undefined;
+
+    let cancelled = false;
+    const loadPhotos = async () => {
+      try {
+        const response = await fetch("/basecamp/api/photos", {
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        });
+        if (!response.ok) throw new Error(`Photo request failed: ${response.status}`);
+        const payload = await response.json();
+        if (cancelled) return;
+        setPhotos(Array.isArray(payload.photos) ? payload.photos : []);
+        setPhotoStatus("Shared");
+      } catch {
+        if (!cancelled) setPhotoStatus("Offline");
+      }
+    };
+
+    loadPhotos();
+    const intervalId = window.setInterval(loadPhotos, 20000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [activeView, isLocalPreview]);
 
   useEffect(() => {
     if (isLocalPreview || !remoteReadyRef.current) return undefined;
@@ -855,30 +1056,84 @@ function Basecamp() {
     if (nextIndex !== currentIndex) changeView(NAV_ITEMS[nextIndex].id);
   };
 
-  const handleTouchStart = (event) => {
-    const target = event.target;
-    if (
-      target instanceof Element
-      && target.closest("input, textarea, select, button, a, .leaflet-container")
-    ) {
-      touchStartRef.current = null;
+  const uploadPhoto = async (event) => {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const selectedFile = photoFileRef.current?.files?.[0];
+    if (!selectedFile || photoUploading) return;
+
+    setPhotoUploading(true);
+    setPhotoError("");
+    try {
+      const readyFile = await preparePhotoUpload(selectedFile);
+      if (readyFile.size > 2 * 1024 * 1024) {
+        throw new Error("That photo is still over 2 MB after resizing.");
+      }
+
+      if (isLocalPreview) {
+        setPhotos((current) => [{
+          id: `preview-${Date.now()}`,
+          caption: photoCaption.trim(),
+          uploadedBy: activeMember.name,
+          uploadedAt: new Date().toISOString(),
+          url: URL.createObjectURL(readyFile),
+        }, ...current]);
+        setPhotoStatus("Preview only");
+      } else {
+        const form = new FormData();
+        form.append("image", readyFile);
+        form.append("caption", photoCaption.trim());
+        const response = await fetch("/basecamp/api/photos", {
+          method: "POST",
+          credentials: "same-origin",
+          body: form,
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(
+            payload.code === "IMAGE_TOO_LARGE"
+              ? "That photo is too large. Try a different image."
+              : "The upload could not be saved.",
+          );
+        }
+        setPhotos((current) => [
+          payload.photo,
+          ...current.filter((photo) => photo.id !== payload.photo.id),
+        ]);
+        setPhotoStatus("Shared");
+      }
+
+      setPhotoCaption("");
+      formElement.reset();
+    } catch (error) {
+      setPhotoError(error.message || "The upload could not be saved.");
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
+
+  const removePhoto = async (photo) => {
+    if (!window.confirm("Remove this photo from Basecamp?")) return;
+
+    if (isLocalPreview) {
+      if (photo.url?.startsWith("blob:")) URL.revokeObjectURL(photo.url);
+      setPhotos((current) => current.filter((candidate) => candidate.id !== photo.id));
       return;
     }
 
-    const touch = event.touches[0];
-    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
-  };
-
-  const handleTouchEnd = (event) => {
-    const start = touchStartRef.current;
-    touchStartRef.current = null;
-    if (!start) return;
-
-    const touch = event.changedTouches[0];
-    const deltaX = touch.clientX - start.x;
-    const deltaY = touch.clientY - start.y;
-    if (Math.abs(deltaX) < 55 || Math.abs(deltaX) <= Math.abs(deltaY) * 1.2) return;
-    moveBetweenViews(deltaX < 0 ? 1 : -1);
+    setPhotoError("");
+    try {
+      const response = await fetch("/basecamp/api/photos", {
+        method: "DELETE",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: photo.id }),
+      });
+      if (!response.ok) throw new Error("The photo could not be removed.");
+      setPhotos((current) => current.filter((candidate) => candidate.id !== photo.id));
+    } catch (error) {
+      setPhotoError(error.message);
+    }
   };
 
   const sendChatMessage = async (event) => {
@@ -982,11 +1237,7 @@ function Basecamp() {
         ))}
       </nav>
 
-      <main
-        className="basecamp-main"
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-      >
+      <main className="basecamp-main">
         <AnimatePresence mode="wait">
           {activeView === "overview" && (
             <Motion.div
@@ -999,7 +1250,7 @@ function Basecamp() {
               <section className="trip-hero">
                 <div className="trip-hero-copy">
                   <span className="section-kicker">Durdle Door · 21–23 August 2026</span>
-                  <h1>Big bass IRL<br />with the boys.</h1>
+                  <h1>Big Bass IRL</h1>
                   <p>Three days. One car. A very optimistic amount of fishing.</p>
                   <div className="hero-actions">
                     <button type="button" onClick={() => changeView("campsites")}>
@@ -1085,8 +1336,8 @@ function Basecamp() {
                     Compare beginner-friendly Weymouth charters and keep Sunday as
                     the weather fallback.
                   </p>
-                  <button type="button" onClick={() => changeView("plan")}>
-                    View weekend plan
+                  <button type="button" onClick={() => changeView("fishing")}>
+                    Compare fishing trips
                   </button>
                 </article>
 
@@ -1116,31 +1367,15 @@ function Basecamp() {
                 <article className="basecamp-card photo-card">
                   <div>
                     <span className="section-kicker">Memories</span>
-                    <h2>Shared photo album</h2>
+                    <h2>{photos.length ? `${photos.length} Basecamp photos` : "Shared photo album"}</h2>
                     <p>
-                      Keep Google Photos as the group album, then choose highlights
-                      for the trip story later.
+                      Upload private trip photos here and keep Google Photos linked
+                      as the full group album.
                     </p>
                   </div>
-                  <label>
-                    <span>Private album link</span>
-                    <input
-                      type="url"
-                      placeholder="Paste the Google Photos link"
-                      value={trip.albumUrl}
-                      onChange={(event) =>
-                        updateTrip((current) => ({
-                          ...current,
-                          albumUrl: event.target.value,
-                        }))
-                      }
-                    />
-                  </label>
-                  {albumHref && (
-                    <a href={albumHref} target="_blank" rel="noreferrer">
-                      Open shared album ↗
-                    </a>
-                  )}
+                  <button type="button" onClick={() => changeView("photos")}>
+                    Open trip photos
+                  </button>
                 </article>
               </section>
 
@@ -1168,8 +1403,9 @@ function Basecamp() {
                   <span className="section-kicker">Field map · Decision board</span>
                   <h1>Choose our basecamp.</h1>
                   <p>
-                    All seven campsites from Dhanesh’s list are here, plus three
-                    nearby leads. Your votes and comments post as {activeMember.name}.
+                    All seven campsites from Dhanesh’s list are here, plus four
+                    researched nearby leads. Prices below estimate your exact
+                    four-person, two-night trip where published tariffs allow it.
                   </p>
                 </div>
                 <a href={MAP_LIST_URL} target="_blank" rel="noreferrer">
@@ -1198,9 +1434,13 @@ function Basecamp() {
                             alt={campsite.imageAlt || `${campsite.name} campsite`}
                             loading="lazy"
                           />
-                          {campsite.sourceUrl && (
-                            <a href={campsite.sourceUrl} target="_blank" rel="noreferrer">
-                              Photo: {campsite.sourceLabel || "source"} ↗
+                          {(campsite.photoSourceUrl || campsite.sourceUrl) && (
+                            <a
+                              href={campsite.photoSourceUrl || campsite.sourceUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              Photo: {campsite.photoSourceLabel || campsite.sourceLabel || "source"} ↗
                             </a>
                           )}
                         </figure>
@@ -1233,6 +1473,29 @@ function Basecamp() {
                           </span>
                         )}
                       </div>
+                      {campsite.tripPrice && (
+                        <div className="candidate-research">
+                          <div className="candidate-price">
+                            <span>Trip estimate</span>
+                            <strong>{campsite.tripPrice}</strong>
+                            <small>{campsite.priceNote}</small>
+                          </div>
+                          {Array.isArray(campsite.facts) && (
+                            <div className="candidate-facts" aria-label="Key campsite facts">
+                              {campsite.facts.map((fact) => (
+                                <span key={fact}>{fact}</span>
+                              ))}
+                            </div>
+                          )}
+                          <details>
+                            <summary>Research notes</summary>
+                            <p>{campsite.watchOut}</p>
+                            <a href={campsite.sourceUrl} target="_blank" rel="noreferrer">
+                              Check official details and availability ↗
+                            </a>
+                          </details>
+                        </div>
+                      )}
                       <div className="vote-row">
                         <div className="vote-stack" aria-label={`${campsite.votes.length} votes`}>
                           {crew.map((member) => (
@@ -1479,6 +1742,104 @@ function Basecamp() {
             </Motion.div>
           )}
 
+          {activeView === "fishing" && (
+            <Motion.div
+              key="fishing"
+              className="basecamp-view"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+            >
+              <section className="view-intro fishing-intro">
+                <div>
+                  <span className="section-kicker">Beginner boat shortlist · Weymouth Harbour</span>
+                  <h1>Four hours on the water.</h1>
+                  <p>
+                    These are the clearest beginner-friendly options close to the
+                    campsite search area. Published prices and booking rules were
+                    checked for the 2026 season.
+                  </p>
+                </div>
+              </section>
+
+              <aside className="fishing-callout">
+                <span className="section-kicker">The important bit</span>
+                <strong>Four people do not meet any shared fishing boat minimum yet.</strong>
+                <p>
+                  Coastal Catcher is the closest fit at six passengers. Either join a
+                  sailing that attracts two more people, invite two more, or pay the
+                  £450 whole-boat price. Departure times remain tide, weather and
+                  live-calendar dependent.
+                </p>
+              </aside>
+
+              <section className="fishing-grid" aria-label="Fishing company shortlist">
+                {fishingCompanies.map((company, index) => (
+                  <article className="basecamp-card fishing-card" key={company.id}>
+                    <figure>
+                      <img src={company.image} alt={company.imageAlt} loading="lazy" />
+                      <a href={company.photoUrl} target="_blank" rel="noreferrer">
+                        Photo: official operator ↗
+                      </a>
+                    </figure>
+                    <div className="fishing-card-body">
+                      <div className="fishing-card-topline">
+                        <span>0{index + 1}</span>
+                        <small>{company.badge}</small>
+                      </div>
+                      <div>
+                        <h2>{company.name}</h2>
+                        <p>{company.note}</p>
+                      </div>
+                      <dl className="fishing-facts">
+                        <div>
+                          <dt>Price</dt>
+                          <dd>{company.price}</dd>
+                        </div>
+                        <div>
+                          <dt>Duration</dt>
+                          <dd>{company.duration}</dd>
+                        </div>
+                        <div>
+                          <dt>Minimum</dt>
+                          <dd>{company.minimum}</dd>
+                        </div>
+                        <div>
+                          <dt>Departure</dt>
+                          <dd>{company.departure}</dd>
+                        </div>
+                      </dl>
+                      <div className="fishing-group-fit">
+                        <strong>{company.groupGap}</strong>
+                        <span>{company.privatePrice}</span>
+                        <span>{company.included}</span>
+                      </div>
+                      <div className="fishing-actions">
+                        <a href={company.url} target="_blank" rel="noreferrer">
+                          Check operator ↗
+                        </a>
+                        {company.bookingUrl && (
+                          <a href={company.bookingUrl} target="_blank" rel="noreferrer">
+                            Live departures ↗
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </section>
+
+              <aside className="prototype-notice fishing-disclaimer">
+                <strong>Recheck before paying</strong>
+                <p>
+                  Exact 21–23 August departure times are not published this far ahead.
+                  Operators can also cancel for weather or if the passenger minimum is
+                  not reached, so keep Sunday available as the fallback boat day.
+                </p>
+              </aside>
+            </Motion.div>
+          )}
+
           {activeView === "plan" && (
             <Motion.div
               key="plan"
@@ -1498,9 +1859,30 @@ function Basecamp() {
                 </div>
               </section>
 
+              <div className="itinerary-day-tabs" aria-label="Choose itinerary day">
+                {["Friday", "Saturday", "Sunday"].map((day, index) => (
+                  <button
+                    type="button"
+                    key={day}
+                    className={mobilePlanDay === day ? "is-active" : ""}
+                    aria-pressed={mobilePlanDay === day}
+                    onClick={() => setMobilePlanDay(day)}
+                  >
+                    <span>{day.slice(0, 3)}</span>
+                    <strong>{21 + index}</strong>
+                    <small>Aug</small>
+                  </button>
+                ))}
+              </div>
+
               <section className="itinerary-board">
                 {["Friday", "Saturday", "Sunday"].map((day, dayIndex) => (
-                  <article className="day-column" key={day}>
+                  <article
+                    className={`day-column ${
+                      mobilePlanDay !== day ? "is-mobile-hidden" : ""
+                    }`}
+                    key={day}
+                  >
                     <header>
                       <span>0{dayIndex + 1}</span>
                       <div>
@@ -1584,29 +1966,31 @@ function Basecamp() {
                             ) : (
                               <>
                                 <div className="itinerary-time">{item.time}</div>
-                                <h2>{item.title}</h2>
-                                <p>{item.detail}</p>
-                                <div className="item-actions">
-                                  <button
-                                    type="button"
-                                    className={item.status === "Confirmed" ? "is-confirmed" : ""}
-                                    onClick={() => toggleItineraryStatus(item.id)}
-                                  >
-                                    {item.status}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => startEditingItinerary(item)}
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="danger-action"
-                                    onClick={() => removeItineraryItem(item.id)}
-                                  >
-                                    Remove
-                                  </button>
+                                <div className="itinerary-copy">
+                                  <h2>{item.title}</h2>
+                                  <p>{item.detail}</p>
+                                  <div className="item-actions">
+                                    <button
+                                      type="button"
+                                      className={item.status === "Confirmed" ? "is-confirmed" : ""}
+                                      onClick={() => toggleItineraryStatus(item.id)}
+                                    >
+                                      {item.status}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => startEditingItinerary(item)}
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="danger-action"
+                                      onClick={() => removeItineraryItem(item.id)}
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
                                 </div>
                               </>
                             )}
@@ -1979,6 +2363,136 @@ function Basecamp() {
                   <button type="submit">Record expense</button>
                 </form>
               </section>
+            </Motion.div>
+          )}
+
+          {activeView === "photos" && (
+            <Motion.div
+              key="photos"
+              className="basecamp-view"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+            >
+              <section className="view-intro">
+                <div>
+                  <span className="section-kicker">Private roll · {photoStatus}</span>
+                  <h1>Proof it happened.</h1>
+                  <p>
+                    Basecamp uploads appear here for the invited crew. Google Photos
+                    stays linked as the full shared album.
+                  </p>
+                </div>
+              </section>
+
+              <section className="photo-tools">
+                <form className="basecamp-card photo-upload-card" onSubmit={uploadPhoto}>
+                  <div>
+                    <span className="section-kicker">Basecamp upload</span>
+                    <h2>Add a photo</h2>
+                    <p>
+                      Phone photos are resized before upload. The private file is then
+                      stored separately from the shared planning data.
+                    </p>
+                  </div>
+                  <label>
+                    <span>Photo</span>
+                    <input
+                      ref={photoFileRef}
+                      type="file"
+                      name="image"
+                      accept="image/*"
+                      required
+                    />
+                  </label>
+                  <label>
+                    <span>Caption · optional</span>
+                    <input
+                      type="text"
+                      maxLength="120"
+                      value={photoCaption}
+                      onChange={(event) => setPhotoCaption(event.target.value)}
+                      placeholder="First catch, camp setup…"
+                    />
+                  </label>
+                  <button type="submit" disabled={photoUploading}>
+                    {photoUploading ? "Uploading…" : "Upload privately"}
+                  </button>
+                  {photoError && <p className="photo-error" role="alert">{photoError}</p>}
+                </form>
+
+                <article className="basecamp-card google-album-card">
+                  <div>
+                    <span className="section-kicker">Google Photos</span>
+                    <h2>Link the crew album</h2>
+                    <p>
+                      Paste the shared album URL once. Google does not provide a stable
+                      public gallery feed, so the album opens in Google Photos while
+                      Basecamp uploads appear directly below.
+                    </p>
+                  </div>
+                  <label>
+                    <span>Shared album link</span>
+                    <input
+                      type="url"
+                      placeholder="https://photos.app.goo.gl/…"
+                      value={trip.albumUrl}
+                      onChange={(event) =>
+                        updateTrip((current) => ({
+                          ...current,
+                          albumUrl: event.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+                  {albumHref ? (
+                    <a href={albumHref} target="_blank" rel="noreferrer">
+                      Open shared Google Photos album ↗
+                    </a>
+                  ) : (
+                    <small>No Google Photos album linked yet.</small>
+                  )}
+                </article>
+              </section>
+
+              {photos.length === 0 ? (
+                <section className="basecamp-card empty-state photo-empty">
+                  <strong>No Basecamp photos yet.</strong>
+                  <span>The first private upload will appear here for the crew.</span>
+                </section>
+              ) : (
+                <section className="photo-gallery" aria-label="Crew photo uploads">
+                  {photos.map((photo) => (
+                    <figure className="basecamp-card trip-photo" key={photo.id}>
+                      <img
+                        src={photo.url}
+                        alt={photo.caption || `Photo uploaded by ${photo.uploadedBy}`}
+                        loading="lazy"
+                      />
+                      <figcaption>
+                        <div>
+                          {photo.caption && <strong>{photo.caption}</strong>}
+                          <span>
+                            {photo.uploadedBy}
+                            {photo.uploadedAt && (
+                              <> · {new Intl.DateTimeFormat("en-GB", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              }).format(new Date(photo.uploadedAt))}</>
+                            )}
+                          </span>
+                        </div>
+                        {photo.uploadedBy === activeMember.name && (
+                          <button type="button" onClick={() => removePhoto(photo)}>
+                            Remove
+                          </button>
+                        )}
+                      </figcaption>
+                    </figure>
+                  ))}
+                </section>
+              )}
             </Motion.div>
           )}
 

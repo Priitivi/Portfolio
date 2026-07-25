@@ -675,6 +675,16 @@
   text-underline-offset: 4px;
 }
 
+.photo-card > button {
+  justify-self: start;
+  padding: 11px 15px;
+  background: var(--camp-forest);
+  border: 1px solid var(--camp-forest);
+  color: var(--camp-paper);
+  cursor: pointer;
+  font-weight: 800;
+}
+
 .prototype-notice {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -881,6 +891,74 @@
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.candidate-research {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  background: rgba(36, 72, 61, 0.055);
+  border: 1px solid rgba(36, 72, 61, 0.12);
+}
+
+.candidate-price {
+  display: grid;
+  gap: 2px;
+}
+
+.candidate-price > span,
+.candidate-price > small {
+  color: rgba(16, 33, 30, 0.5);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.candidate-price > strong {
+  color: var(--camp-forest);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.18rem;
+  font-weight: 400;
+}
+
+.candidate-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.candidate-facts > span {
+  padding: 5px 7px;
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid var(--camp-line);
+  font-size: 0.65rem;
+  font-weight: 750;
+}
+
+.candidate-research details {
+  padding-top: 9px;
+  border-top: 1px solid var(--camp-line);
+}
+
+.candidate-research summary {
+  color: var(--camp-ink);
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.candidate-research details p {
+  margin: 9px 0;
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.candidate-research details a {
+  color: var(--camp-forest);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-underline-offset: 3px;
 }
 
 .vote-stack {
@@ -1160,6 +1238,196 @@
   text-underline-offset: 4px;
 }
 
+.fishing-callout {
+  display: grid;
+  grid-template-columns: minmax(170px, 0.45fr) minmax(240px, 0.85fr) minmax(280px, 1.4fr);
+  gap: 24px;
+  align-items: center;
+  padding: 22px 26px;
+  background: var(--camp-ink);
+  color: var(--camp-paper);
+}
+
+.fishing-callout strong {
+  color: var(--camp-yellow);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.45rem;
+  font-weight: 400;
+  line-height: 1.12;
+}
+
+.fishing-callout p {
+  margin: 0;
+  color: rgba(247, 242, 232, 0.68);
+  line-height: 1.55;
+}
+
+.fishing-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.fishing-card {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(180px, 0.75fr) minmax(0, 1.25fr);
+  overflow: hidden;
+}
+
+.fishing-card figure {
+  position: relative;
+  min-height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--camp-deep);
+}
+
+.fishing-card figure::after {
+  content: "";
+  position: absolute;
+  inset: 55% 0 0;
+  background: linear-gradient(transparent, rgba(9, 26, 24, 0.75));
+  pointer-events: none;
+}
+
+.fishing-card figure img {
+  width: 100%;
+  height: 100%;
+  min-height: 370px;
+  object-fit: cover;
+}
+
+.fishing-card figure a {
+  position: absolute;
+  right: 10px;
+  bottom: 9px;
+  z-index: 1;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-underline-offset: 3px;
+}
+
+.fishing-card-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px;
+}
+
+.fishing-card-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fishing-card-topline > span {
+  color: var(--camp-orange);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.15rem;
+}
+
+.fishing-card-topline > small {
+  padding: 5px 8px;
+  background: rgba(120, 155, 120, 0.16);
+  border-radius: 999px;
+  color: var(--camp-forest);
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.fishing-card h2 {
+  margin-bottom: 7px;
+}
+
+.fishing-card-body > div > p {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.fishing-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  background: var(--camp-line);
+  border: 1px solid var(--camp-line);
+}
+
+.fishing-facts > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.fishing-facts dt {
+  color: rgba(16, 33, 30, 0.5);
+  font-size: 0.59rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.fishing-facts dd {
+  margin: 0;
+  font-size: 0.76rem;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.fishing-group-fit {
+  display: grid;
+  gap: 5px;
+  padding: 11px 12px;
+  background: rgba(245, 193, 93, 0.14);
+  border-left: 3px solid var(--camp-yellow);
+}
+
+.fishing-group-fit strong {
+  font-size: 0.78rem;
+}
+
+.fishing-group-fit span {
+  color: rgba(16, 33, 30, 0.58);
+  font-size: 0.7rem;
+}
+
+.fishing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.fishing-actions a {
+  padding: 9px 11px;
+  border: 1px solid var(--camp-forest);
+  color: var(--camp-forest);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.fishing-actions a:first-child {
+  background: var(--camp-forest);
+  color: var(--camp-paper);
+}
+
+.fishing-disclaimer {
+  margin-top: -12px;
+}
+
+.itinerary-day-tabs {
+  display: none;
+}
+
 .itinerary-board {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1205,6 +1473,12 @@
   display: flex;
   flex-direction: column;
   padding: 22px;
+}
+
+.itinerary-copy {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .itinerary-time {
@@ -1553,6 +1827,148 @@
   white-space: pre-wrap;
 }
 
+.chat-message.is-self p,
+.chat-message.is-self header strong {
+  color: #fff8e9;
+}
+
+.photo-tools {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.photo-upload-card,
+.google-album-card {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+  padding: clamp(20px, 3vw, 32px);
+}
+
+.photo-upload-card label,
+.google-album-card label {
+  display: grid;
+  gap: 7px;
+}
+
+.photo-upload-card label > span,
+.google-album-card label > span {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.photo-upload-card input,
+.google-album-card input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid var(--camp-line);
+  color: var(--camp-ink);
+}
+
+.photo-upload-card input[type="file"] {
+  padding: 8px;
+}
+
+.photo-upload-card button {
+  justify-self: start;
+  min-height: 44px;
+  padding: 10px 16px;
+  background: var(--camp-orange);
+  border: 1px solid var(--camp-orange);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.photo-upload-card button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.photo-error {
+  margin: 0;
+  color: #9a3d2c !important;
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.google-album-card {
+  background:
+    radial-gradient(circle at 82% 12%, rgba(143, 200, 193, 0.3), transparent 32%),
+    rgba(255, 255, 255, 0.62);
+}
+
+.google-album-card > a {
+  justify-self: start;
+  color: var(--camp-forest);
+  font-weight: 800;
+  text-underline-offset: 4px;
+}
+
+.google-album-card > small {
+  color: rgba(16, 33, 30, 0.5);
+}
+
+.photo-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.trip-photo {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+.trip-photo > img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: var(--camp-deep);
+}
+
+.trip-photo figcaption {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px 14px;
+}
+
+.trip-photo figcaption > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.trip-photo figcaption strong {
+  overflow-wrap: anywhere;
+  font-size: 0.82rem;
+}
+
+.trip-photo figcaption span {
+  color: rgba(16, 33, 30, 0.5);
+  font-size: 0.68rem;
+}
+
+.trip-photo figcaption button {
+  padding: 2px 0;
+  background: transparent;
+  border: 0;
+  color: #9a3d2c;
+  cursor: pointer;
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .chat-empty {
   margin: auto;
 }
@@ -1621,6 +2037,14 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .fishing-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .photo-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .basecamp-shell .add-form {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1632,10 +2056,6 @@
 }
 
 @media (max-width: 820px) {
-  .basecamp-main {
-    touch-action: pan-y;
-  }
-
   .basecamp-page-controls {
     inset: auto auto max(14px, env(safe-area-inset-bottom)) 50%;
     width: auto;
@@ -1751,6 +2171,15 @@
   }
 
   .photo-card {
+    grid-template-columns: 1fr;
+  }
+
+  .fishing-callout {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .photo-tools {
     grid-template-columns: 1fr;
   }
 
@@ -2187,24 +2616,129 @@
     scroll-snap-align: start;
   }
 
-  .itinerary-board {
-    grid-template-columns: none;
-    grid-auto-flow: column;
-    grid-auto-columns: 86vw;
+  .fishing-callout {
+    gap: 8px;
+    padding: 16px;
+  }
+
+  .fishing-callout strong {
+    font-size: 1.18rem;
+  }
+
+  .fishing-callout p {
+    font-size: 0.76rem;
+    line-height: 1.45;
+  }
+
+  .fishing-grid {
     gap: 10px;
-    margin-inline: -12px;
-    padding-inline: 12px;
-    overflow-x: auto;
-    scroll-padding-inline: 12px;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
+  }
+
+  .fishing-card {
+    grid-template-columns: 1fr;
+  }
+
+  .fishing-card figure {
+    min-height: 0;
+    aspect-ratio: 16 / 8.5;
+  }
+
+  .fishing-card figure img {
+    min-height: 0;
+  }
+
+  .fishing-card-body {
+    gap: 11px;
+    padding: 14px;
+  }
+
+  .fishing-card-body > div > p {
+    font-size: 0.76rem;
+  }
+
+  .fishing-facts > div {
+    padding: 8px;
+  }
+
+  .fishing-facts dd {
+    font-size: 0.7rem;
+  }
+
+  .fishing-disclaimer {
+    margin-top: 0;
+  }
+
+  .itinerary-day-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    padding: 6px;
+    background: rgba(36, 72, 61, 0.07);
+    border: 1px solid var(--camp-line);
+  }
+
+  .itinerary-day-tabs button {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 0 4px;
+    align-items: end;
+    padding: 9px 10px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: rgba(16, 33, 30, 0.58);
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .itinerary-day-tabs button.is-active {
+    background: var(--camp-forest);
+    border-color: var(--camp-forest);
+    color: var(--camp-paper);
+  }
+
+  .itinerary-day-tabs span {
+    grid-column: 1;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .itinerary-day-tabs strong {
+    grid-column: 1;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.45rem;
+    font-weight: 400;
+    line-height: 1;
+  }
+
+  .itinerary-day-tabs small {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    align-self: center;
+    font-size: 0.58rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    writing-mode: vertical-rl;
+  }
+
+  .itinerary-board {
+    display: block;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
   }
 
   .day-column {
     padding: 14px;
     background: rgba(36, 72, 61, 0.055);
     border: 1px solid var(--camp-line);
-    scroll-snap-align: start;
+  }
+
+  .day-column.is-mobile-hidden {
+    display: none;
   }
 
   .day-column > header {
@@ -2218,20 +2752,37 @@
 
   .itinerary-item {
     min-height: 0;
-    padding: 14px;
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .itinerary-time {
+    padding-top: 3px;
+    font-size: 0.62rem;
+    line-height: 1.35;
+  }
+
+  .itinerary-copy {
+    min-width: 0;
+  }
+
+  .itinerary-item > .inline-editor {
+    grid-column: 1 / -1;
   }
 
   .itinerary-item h2 {
-    margin: 6px 0;
-    font-size: 1.2rem;
+    margin: 0 0 4px;
+    font-size: 1.08rem;
   }
 
   .itinerary-item p {
     display: -webkit-box;
-    margin: 0 0 12px;
+    margin: 0 0 9px;
     overflow: hidden;
-    font-size: 0.78rem;
-    line-height: 1.4;
+    font-size: 0.73rem;
+    line-height: 1.35;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
   }
@@ -2361,6 +2912,43 @@
 
   .chat-composer {
     padding: 14px 12px;
+  }
+
+  .photo-tools {
+    gap: 10px;
+  }
+
+  .photo-upload-card,
+  .google-album-card {
+    gap: 11px;
+    padding: 16px;
+  }
+
+  .photo-upload-card p,
+  .google-album-card p {
+    margin-block: 6px;
+    font-size: 0.78rem;
+  }
+
+  .photo-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .trip-photo figcaption {
+    padding: 9px;
+  }
+
+  .trip-photo figcaption strong {
+    font-size: 0.72rem;
+  }
+
+  .trip-photo figcaption span {
+    font-size: 0.6rem;
+  }
+
+  .trip-photo figcaption button {
+    font-size: 0.6rem;
   }
 }
 

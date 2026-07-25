@@ -1,11 +1,14 @@
 /lab/api/session  /.netlify/functions/lab-session  200!
 /basecamp/api/state  /.netlify/functions/basecamp-state  200!
 /basecamp/api/chat  /.netlify/functions/basecamp-chat  200!
+/basecamp/api/photos  /.netlify/functions/basecamp-photos  200!
 
 /basecamp-assets/*  /basecamp-assets/:splat  200!  Role=basecamp
 /basecamp-assets/*  /basecamp-login  302!
 /campsites/*  /campsites/:splat  200!  Role=basecamp
 /campsites/*  /basecamp-login  302!
+/fishing/*  /fishing/:splat  200!  Role=basecamp
+/fishing/*  /basecamp-login  302!
 
 /basecamp  /index.html  200!  Role=basecamp
 /basecamp  /basecamp-login  302
