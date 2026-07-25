@@ -45,6 +45,37 @@ export function enforcePackingAcknowledgements(nextState, previousState, activeC
   return { ...nextState, packing };
 }
 
+export function enforceCampsiteRankings(nextState, previousState, activeCrewId) {
+  const validCampsiteIds = new Set(
+    Array.isArray(nextState.campsites)
+      ? nextState.campsites.map((campsite) => campsite?.id).filter(Boolean)
+      : [],
+  );
+  const previousRankings = previousState?.campsiteRankings
+    && typeof previousState.campsiteRankings === "object"
+    ? previousState.campsiteRankings
+    : {};
+  const nextRankings = nextState?.campsiteRankings
+    && typeof nextState.campsiteRankings === "object"
+    ? nextState.campsiteRankings
+    : {};
+  const requestedRanking = Array.isArray(nextRankings[activeCrewId])
+    ? nextRankings[activeCrewId]
+    : previousRankings[activeCrewId] ?? [];
+  const protectedRankings = Object.fromEntries(
+    Object.entries(previousRankings).map(([memberId, ranking]) => [
+      memberId,
+      Array.isArray(ranking) ? ranking : [],
+    ]),
+  );
+
+  protectedRankings[activeCrewId] = [...new Set(requestedRanking)]
+    .filter((campsiteId) => validCampsiteIds.has(campsiteId))
+    .slice(0, 3);
+
+  return { ...nextState, campsiteRankings: protectedRankings };
+}
+
 export default async function handler(request) {
   const { user, error } = await requireBasecampUser();
   if (error) return error;
@@ -81,8 +112,13 @@ export default async function handler(request) {
   }
 
   const previous = await store.get(STATE_KEY, { type: "json" });
-  const protectedState = enforcePackingAcknowledgements(
+  const packingProtectedState = enforcePackingAcknowledgements(
     body.state,
+    previous?.state,
+    getCrewId(user),
+  );
+  const protectedState = enforceCampsiteRankings(
+    packingProtectedState,
     previous?.state,
     getCrewId(user),
   );

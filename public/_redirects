@@ -2,6 +2,7 @@
 /basecamp/api/state  /.netlify/functions/basecamp-state  200!
 /basecamp/api/chat  /.netlify/functions/basecamp-chat  200!
 /basecamp/api/photos  /.netlify/functions/basecamp-photos  200!
+/basecamp/api/conditions  /.netlify/functions/basecamp-conditions  200!
 
 /basecamp-assets/*  /basecamp-assets/:splat  200!  Role=basecamp
 /basecamp-assets/*  /basecamp-login  302!

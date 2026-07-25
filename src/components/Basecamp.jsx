@@ -8,10 +8,12 @@ const TRIP_DATE = new Date("2026-08-21T08:00:00+01:00");
 const STORAGE_KEY = "durdle-basecamp-mvp-v1";
 const LOCAL_CHAT_KEY = "durdle-basecamp-chat-preview-v1";
 const MAP_LIST_URL = "https://maps.app.goo.gl/ZXMz1S5F36en7BND8";
+const RANK_POINTS = [3, 2, 1];
 const NAV_ITEMS = [
   { id: "overview", label: "Basecamp" },
   { id: "campsites", label: "Campsites" },
   { id: "map", label: "Map" },
+  { id: "conditions", label: "Conditions" },
   { id: "fishing", label: "Fishing" },
   { id: "plan", label: "Itinerary" },
   { id: "kit", label: "Kit" },
@@ -321,6 +323,10 @@ const initialTrip = {
   activeMember: "priitivi",
   albumUrl: "",
   campsites: initialCampsites,
+  campsiteRankings: {},
+  campsiteDecision: {
+    deadline: "2026-08-02",
+  },
   itinerary: [
     {
       id: "fri-meet",
@@ -452,6 +458,93 @@ function isPackingItemComplete(item) {
   return crew.every((member) => acknowledgements.includes(member.id));
 }
 
+function normalizeCampsiteRankings(rankings, validCampsiteIds) {
+  if (!rankings || typeof rankings !== "object") return {};
+  return Object.fromEntries(
+    Object.entries(rankings).map(([memberId, choices]) => [
+      memberId,
+      Array.isArray(choices)
+        ? [...new Set(choices)].filter((id) => validCampsiteIds.has(id)).slice(0, 3)
+        : [],
+    ]),
+  );
+}
+
+function getCampsiteRank(rankings, memberId, campsiteId) {
+  const ranking = Array.isArray(rankings?.[memberId]) ? rankings[memberId] : [];
+  const index = ranking.indexOf(campsiteId);
+  return index >= 0 ? index + 1 : 0;
+}
+
+function getCampsiteRankingStats(rankings, campsiteId) {
+  const memberRanks = crew.map((member) => ({
+    member,
+    rank: getCampsiteRank(rankings, member.id, campsiteId),
+  }));
+  return {
+    memberRanks,
+    score: memberRanks.reduce(
+      (total, entry) => total + (entry.rank ? RANK_POINTS[entry.rank - 1] : 0),
+      0,
+    ),
+    firstChoices: memberRanks.filter((entry) => entry.rank === 1).length,
+  };
+}
+
+function formatDecisionDeadline(value) {
+  if (!value) return "No deadline";
+  const date = new Date(`${value}T12:00:00+01:00`);
+  if (Number.isNaN(date.getTime())) return "No deadline";
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+function getDecisionDaysLeft(value) {
+  if (!value) return null;
+  const deadline = new Date(`${value}T23:59:59+01:00`);
+  if (Number.isNaN(deadline.getTime())) return null;
+  return Math.ceil((deadline.getTime() - Date.now()) / 86400000);
+}
+
+function formatConditionsDate(value) {
+  if (!value) return "Date TBC";
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  }).format(new Date(`${value}T12:00:00+01:00`));
+}
+
+function formatConditionsTime(value) {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(`${value}:00+01:00`));
+}
+
+function weatherToken(label) {
+  const tokens = {
+    Clear: "CLR",
+    "Mostly clear": "SUN",
+    Cloudy: "CLD",
+    Fog: "FOG",
+    Drizzle: "DRZ",
+    Rain: "RAN",
+    Snow: "SNW",
+    Thunder: "STM",
+    Mixed: "MIX",
+  };
+  return tokens[label] ?? "OBS";
+}
+
+function displayMetric(value, suffix = "", digits = 0) {
+  return Number.isFinite(value) ? `${value.toFixed(digits)}${suffix}` : "—";
+}
+
 function mergeTripState(savedTrip) {
   try {
     const savedCampsites = Array.isArray(savedTrip.campsites) ? savedTrip.campsites : [];
@@ -494,6 +587,12 @@ function mergeTripState(savedTrip) {
       const savedItem = savedPacking.find((candidate) => candidate.id === item.id);
       return savedItem ? normalizePackingItem(savedItem, item) : item;
     });
+    const allCampsiteIds = new Set([
+      ...restoredCampsites.map((campsite) => campsite.id),
+      ...savedCampsites
+        .filter((campsite) => !knownIds.has(campsite.id))
+        .map((campsite) => campsite.id),
+    ]);
 
     return {
       ...initialTrip,
@@ -508,6 +607,14 @@ function mergeTripState(savedTrip) {
           .filter((item) => !knownPackingIds.has(item.id))
           .map((item) => normalizePackingItem(item)),
       ],
+      campsiteRankings: normalizeCampsiteRankings(
+        savedTrip.campsiteRankings,
+        allCampsiteIds,
+      ),
+      campsiteDecision: {
+        ...initialTrip.campsiteDecision,
+        ...(savedTrip.campsiteDecision ?? {}),
+      },
     };
   } catch {
     return initialTrip;
@@ -605,7 +712,9 @@ function Basecamp() {
   const isLocalPreview = ["localhost", "127.0.0.1"].includes(window.location.hostname);
   const [trip, setTrip] = useState(getInitialTrip);
   const [identityMember, setIdentityMember] = useState(isLocalPreview ? crew[0] : null);
-  const [activeView, setActiveView] = useState("overview");
+  const [activeView, setActiveView] = useState(
+    window.location.pathname.toLowerCase().endsWith("/docs") ? "docs" : "overview",
+  );
   const [candidateForm, setCandidateForm] = useState({ name: "", area: "", note: "" });
   const [itineraryForm, setItineraryForm] = useState({
     day: "Friday",
@@ -648,6 +757,11 @@ function Basecamp() {
   const [photoStatus, setPhotoStatus] = useState(isLocalPreview ? "Preview only" : "Connecting");
   const [photoError, setPhotoError] = useState("");
   const [photoUploading, setPhotoUploading] = useState(false);
+  const [conditions, setConditions] = useState(null);
+  const [conditionsStatus, setConditionsStatus] = useState(
+    isLocalPreview ? "Production data" : "Waiting",
+  );
+  const [conditionsError, setConditionsError] = useState("");
   const tripRef = useRef(trip);
   const remoteReadyRef = useRef(false);
   const applyingRemoteRef = useRef(false);
@@ -772,6 +886,45 @@ function Basecamp() {
   }, [activeView, isLocalPreview]);
 
   useEffect(() => {
+    if (activeView !== "conditions") return undefined;
+    if (isLocalPreview) {
+      setConditionsStatus("Production data");
+      setConditionsError("Live models load on the protected production route.");
+      return undefined;
+    }
+
+    let cancelled = false;
+    const loadConditions = async () => {
+      setConditionsStatus((current) => current === "Live" ? "Refreshing" : "Loading");
+      try {
+        const response = await fetch("/basecamp/api/conditions", {
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        });
+        if (!response.ok) throw new Error(`Conditions request failed: ${response.status}`);
+        const payload = await response.json();
+        if (cancelled) return;
+        setConditions(payload);
+        setConditionsStatus(payload.stale ? "Cached" : "Live");
+        setConditionsError("");
+      } catch {
+        if (cancelled) return;
+        setConditionsStatus("Unavailable");
+        setConditionsError(
+          "The live models could not be reached. Use the Met Office and tide links below.",
+        );
+      }
+    };
+
+    loadConditions();
+    const intervalId = window.setInterval(loadConditions, 30 * 60 * 1000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [activeView, isLocalPreview]);
+
+  useEffect(() => {
     if (isLocalPreview || !remoteReadyRef.current) return undefined;
     if (applyingRemoteRef.current) {
       applyingRemoteRef.current = false;
@@ -878,29 +1031,45 @@ function Basecamp() {
   const perPersonSpent = totalSpent / crew.length;
   const perPersonRemaining = Math.max(0, 250 - perPersonSpent);
   const albumHref = getSafeExternalUrl(trip.albumUrl);
+  const decisionDaysLeft = getDecisionDaysLeft(trip.campsiteDecision?.deadline);
+  const rankedCrewCount = crew.filter(
+    (member) => (trip.campsiteRankings?.[member.id] ?? []).length > 0,
+  ).length;
   const rankedCampsites = useMemo(
-    () => [...trip.campsites].sort((a, b) => b.votes.length - a.votes.length),
-    [trip.campsites],
+    () => [...trip.campsites].sort((a, b) => {
+      const left = getCampsiteRankingStats(trip.campsiteRankings, a.id);
+      const right = getCampsiteRankingStats(trip.campsiteRankings, b.id);
+      return right.score - left.score
+        || right.firstChoices - left.firstChoices
+        || a.name.localeCompare(b.name);
+    }),
+    [trip.campsiteRankings, trip.campsites],
   );
+  const leadingCampsite = rankedCampsites[0] ?? null;
+  const leadingCampsiteStats = leadingCampsite
+    ? getCampsiteRankingStats(trip.campsiteRankings, leadingCampsite.id)
+    : null;
 
   const updateTrip = (updater) => {
     setTrip((current) => updater(current));
   };
 
-  const toggleVote = (campsiteId) => {
-    updateTrip((current) => ({
-      ...current,
-      campsites: current.campsites.map((campsite) => {
-        if (campsite.id !== campsiteId) return campsite;
-        const hasVoted = campsite.votes.includes(activeMember.id);
-        return {
-          ...campsite,
-          votes: hasVoted
-            ? campsite.votes.filter((vote) => vote !== activeMember.id)
-            : [...campsite.votes, activeMember.id],
-        };
-      }),
-    }));
+  const setCampsiteRank = (campsiteId, rank) => {
+    updateTrip((current) => {
+      const currentRanking = Array.isArray(current.campsiteRankings?.[activeMember.id])
+        ? current.campsiteRankings[activeMember.id]
+        : [];
+      const nextRanking = currentRanking.filter((id) => id !== campsiteId);
+      if (rank > 0) nextRanking.splice(rank - 1, 0, campsiteId);
+
+      return {
+        ...current,
+        campsiteRankings: {
+          ...(current.campsiteRankings ?? {}),
+          [activeMember.id]: nextRanking.slice(0, 3),
+        },
+      };
+    });
   };
 
   const addCandidate = (event) => {
@@ -927,7 +1096,7 @@ function Basecamp() {
           name,
           area: candidateForm.area.trim() || "Location to confirm",
           status: "New lead",
-          votes: [activeMember.id],
+          votes: [],
           notes: firstNote,
         },
       ],
@@ -1395,22 +1564,24 @@ function Basecamp() {
         </div>
       </header>
 
-      <nav className="basecamp-tabs" aria-label="Trip workspace">
-        {NAV_ITEMS.map((item) => (
-          <button
-            key={item.id}
-            ref={(element) => {
-              tabRefs.current[item.id] = element;
-            }}
-            type="button"
-            className={activeView === item.id ? "is-active" : ""}
-            aria-current={activeView === item.id ? "page" : undefined}
-            onClick={() => changeView(item.id)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </nav>
+      {activeView !== "docs" && (
+        <nav className="basecamp-tabs" aria-label="Trip workspace">
+          {NAV_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              ref={(element) => {
+                tabRefs.current[item.id] = element;
+              }}
+              type="button"
+              className={activeView === item.id ? "is-active" : ""}
+              aria-current={activeView === item.id ? "page" : undefined}
+              onClick={() => changeView(item.id)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </nav>
+      )}
 
       <main className="basecamp-main">
         <AnimatePresence mode="wait">
@@ -1490,32 +1661,39 @@ function Basecamp() {
                   </div>
                   <div className="campsite-vote-chart">
                     <div className="vote-chart-axis" aria-hidden="true">
-                      {Array.from({ length: crew.length + 1 }, (_, index) => (
-                        <span key={index}>{index}</span>
+                      {[0, 3, 6, 9, 12].map((score) => (
+                        <span key={score}>{score}</span>
                       ))}
                     </div>
                     <div className="vote-chart-bars">
-                      {rankedCampsites.slice(0, 4).map((campsite) => (
-                      <button
-                        type="button"
-                        key={campsite.id}
-                        onClick={() => changeView("campsites")}
-                        aria-label={`${campsite.name}: ${campsite.votes.length} of ${crew.length} crew votes. Open campsites.`}
-                      >
+                      {rankedCampsites.slice(0, 4).map((campsite) => {
+                        const ranking = getCampsiteRankingStats(
+                          trip.campsiteRankings,
+                          campsite.id,
+                        );
+                        return (
+                          <button
+                            type="button"
+                            key={campsite.id}
+                            onClick={() => changeView("campsites")}
+                            aria-label={`${campsite.name}: ${ranking.score} of 12 ranking points. Open campsites.`}
+                          >
                           <span className="vote-chart-label">{campsite.name}</span>
                           <span className="vote-chart-track" aria-hidden="true">
                             <span
                               style={{
-                                width: `${(campsite.votes.length / crew.length) * 100}%`,
+                                  width: `${(ranking.score / 12) * 100}%`,
                               }}
                             />
                           </span>
-                          <strong>{campsite.votes.length}/{crew.length}</strong>
-                      </button>
-                      ))}
+                            <strong>{ranking.score}/12</strong>
+                          </button>
+                        );
+                      })}
                     </div>
                     <small className="vote-chart-caption">
-                      Crew support · tap a bar to compare all sites
+                      1st = 3 pts · 2nd = 2 · 3rd = 1 · deadline{" "}
+                      {formatDecisionDeadline(trip.campsiteDecision?.deadline)}
                     </small>
                   </div>
                 </article>
@@ -1569,6 +1747,25 @@ function Basecamp() {
                     Open trip photos
                   </button>
                 </article>
+
+                <article className="basecamp-card conditions-overview-card">
+                  <div>
+                    <span className="section-kicker">Coast intelligence</span>
+                    <h2>Weather, waves and tide trend.</h2>
+                    <p>
+                      Live Durdle Door model data, a clear forecast-window countdown,
+                      and the safety links to cross-check before leaving.
+                    </p>
+                  </div>
+                  <div className="conditions-overview-window">
+                    <span>Full weekend weather</span>
+                    <strong>08 Aug</strong>
+                    <small>Tide + wave window · 16 Aug</small>
+                  </div>
+                  <button type="button" onClick={() => changeView("conditions")}>
+                    Open safety board
+                  </button>
+                </article>
               </section>
 
               <aside className="prototype-notice">
@@ -1605,18 +1802,81 @@ function Basecamp() {
                 </a>
               </section>
 
+              <section className="basecamp-card decision-console">
+                <div className="decision-console-copy">
+                  <span className="section-kicker">Ranked decision · top three</span>
+                  <h2>
+                    {leadingCampsiteStats?.score
+                      ? `${leadingCampsite.name} leads with ${leadingCampsiteStats.score} points.`
+                      : "The ranking board is open."}
+                  </h2>
+                  <p>
+                    Give your first choice 3 points, second choice 2 and third
+                    choice 1. You can change your own ranking until booking day.
+                  </p>
+                  <div className="decision-crew-progress" aria-label="Crew ranking progress">
+                    {crew.map((member) => {
+                      const choices = trip.campsiteRankings?.[member.id] ?? [];
+                      return (
+                        <span className={choices.length ? "is-ready" : ""} key={member.id}>
+                          <b>{member.name.charAt(0)}</b>
+                          {choices.length ? `${choices.length}/3` : "Waiting"}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+                <label className="deadline-control">
+                  <span>Booking deadline</span>
+                  <input
+                    type="date"
+                    min="2026-07-25"
+                    max="2026-08-20"
+                    value={trip.campsiteDecision?.deadline ?? ""}
+                    onChange={(event) =>
+                      updateTrip((current) => ({
+                        ...current,
+                        campsiteDecision: {
+                          ...(current.campsiteDecision ?? {}),
+                          deadline: event.target.value,
+                        },
+                      }))
+                    }
+                  />
+                  <strong>{formatDecisionDeadline(trip.campsiteDecision?.deadline)}</strong>
+                  <small>
+                    {decisionDaysLeft === null
+                      ? "Set a date before the trip"
+                      : decisionDaysLeft < 0
+                        ? "Deadline passed"
+                        : decisionDaysLeft === 0
+                          ? "Decision due today"
+                          : `${decisionDaysLeft} days left · ${rankedCrewCount}/4 ranked`}
+                  </small>
+                </label>
+              </section>
+
               <div className="shortlist-ribbon" aria-label="Campsite shortlist">
                 {rankedCampsites.map((campsite, index) => (
                   <span key={campsite.id}>
                     <b>{String(index + 1).padStart(2, "0")}</b>
-                    {campsite.name}
+                    {campsite.name} ·{" "}
+                    {getCampsiteRankingStats(trip.campsiteRankings, campsite.id).score} pts
                   </span>
                 ))}
               </div>
 
               <section className="candidate-grid">
                 {rankedCampsites.map((campsite, index) => {
-                  const hasVoted = campsite.votes.includes(activeMember.id);
+                  const ranking = getCampsiteRankingStats(
+                    trip.campsiteRankings,
+                    campsite.id,
+                  );
+                  const currentRank = getCampsiteRank(
+                    trip.campsiteRankings,
+                    activeMember.id,
+                    campsite.id,
+                  );
                   return (
                     <article className="basecamp-card candidate-card" key={campsite.id}>
                       {campsite.image && (
@@ -1688,26 +1948,48 @@ function Basecamp() {
                           </details>
                         </div>
                       )}
-                      <div className="vote-row">
-                        <div className="vote-stack" aria-label={`${campsite.votes.length} votes`}>
-                          {crew.map((member) => (
+                      <div className="ranked-vote-panel">
+                        <div>
+                          <span className="ranked-score">{ranking.score}</span>
+                          <small>of 12 points</small>
+                        </div>
+                        <div
+                          className="vote-stack ranked-choice-stack"
+                          aria-label={`${campsite.name} crew rankings`}
+                        >
+                          {ranking.memberRanks.map(({ member, rank }) => (
                             <span
                               key={member.id}
-                              className={campsite.votes.includes(member.id) ? "has-voted" : ""}
-                              title={member.name}
+                              className={rank ? "has-voted" : ""}
+                              title={`${member.name}: ${rank ? `choice ${rank}` : "not ranked"}`}
                             >
-                              {member.name.charAt(0)}
+                              <b>{member.name.charAt(0)}</b>
+                              <small>{rank || "–"}</small>
                             </span>
                           ))}
                         </div>
-                        <button
-                          type="button"
-                          className={hasVoted ? "is-selected" : ""}
-                          aria-pressed={hasVoted}
-                          onClick={() => toggleVote(campsite.id)}
-                        >
-                          {hasVoted ? "Voted" : "Vote"}
-                        </button>
+                        <div className="rank-controls" aria-label={`Your rank for ${campsite.name}`}>
+                          <span>Your rank</span>
+                          {[1, 2, 3].map((rank) => (
+                            <button
+                              type="button"
+                              className={currentRank === rank ? "is-selected" : ""}
+                              aria-pressed={currentRank === rank}
+                              onClick={() => setCampsiteRank(campsite.id, rank)}
+                              key={rank}
+                            >
+                              {rank}
+                            </button>
+                          ))}
+                          <button
+                            type="button"
+                            className="clear-rank"
+                            disabled={!currentRank}
+                            onClick={() => setCampsiteRank(campsite.id, 0)}
+                          >
+                            Clear
+                          </button>
+                        </div>
                       </div>
 
                       {campsite.notes.length > 0 && (
@@ -1931,6 +2213,265 @@ function Basecamp() {
                   </a>
                 </article>
               </section>
+            </Motion.div>
+          )}
+
+          {activeView === "conditions" && (
+            <Motion.div
+              key="conditions"
+              className="basecamp-view conditions-view"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+            >
+              <section className="view-intro conditions-intro">
+                <div>
+                  <span className="section-kicker">
+                    Field conditions · {conditionsStatus}
+                  </span>
+                  <h1>Read the coast.</h1>
+                  <p>
+                    One board for the Durdle Door weather, sea state, modelled tide
+                    trend and the official checks that matter before a coastal day.
+                  </p>
+                </div>
+                <a
+                  href="https://weather.metoffice.gov.uk/forecast/gbyrupkxw"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Met Office forecast ↗
+                </a>
+              </section>
+
+              {conditionsError && (
+                <aside className="conditions-error" role="status">
+                  <strong>{isLocalPreview ? "Production-only live feed" : "Live feed unavailable"}</strong>
+                  <p>{conditionsError}</p>
+                </aside>
+              )}
+
+              {!conditions && !conditionsError && (
+                <section className="basecamp-card conditions-loading" aria-live="polite">
+                  <span className="conditions-pulse" aria-hidden="true" />
+                  <div>
+                    <strong>Pulling the Durdle Door model snapshot…</strong>
+                    <p>Weather, sea state and tide trend are refreshed every 30 minutes.</p>
+                  </div>
+                </section>
+              )}
+
+              {conditions && (
+                <>
+                  <section
+                    className={`conditions-signal is-${conditions.signal?.tone ?? "calm"}`}
+                    aria-label={`${conditions.signal?.level ?? "Monitor"} coastal planning signal`}
+                  >
+                    <div className="conditions-signal-copy">
+                      <span className="section-kicker">Planning signal · not a go/no-go decision</span>
+                      <strong>{conditions.signal?.level ?? "Monitor"}</strong>
+                      <p>{conditions.signal?.summary}</p>
+                      <small>
+                        Model snapshot {formatConditionsTime(conditions.current?.time)}
+                        {conditions.stale ? " · cached fallback" : ""}
+                      </small>
+                    </div>
+                    <div className="conditions-current-grid" aria-label="Current model values">
+                      <div>
+                        <span>Air</span>
+                        <strong>{displayMetric(conditions.current?.temperature, "°C", 1)}</strong>
+                        <small>{conditions.current?.weather ?? "—"}</small>
+                      </div>
+                      <div>
+                        <span>Wind</span>
+                        <strong>{displayMetric(conditions.current?.windSpeed, " mph")}</strong>
+                        <small>gust {displayMetric(conditions.current?.windGust, " mph")}</small>
+                      </div>
+                      <div>
+                        <span>Wave</span>
+                        <strong>{displayMetric(conditions.current?.waveHeight, " m", 1)}</strong>
+                        <small>{displayMetric(conditions.current?.wavePeriod, " sec", 1)} period</small>
+                      </div>
+                      <div>
+                        <span>Sea</span>
+                        <strong>{displayMetric(conditions.current?.seaTemperature, "°C", 1)}</strong>
+                        <small>
+                          current {displayMetric(conditions.current?.currentVelocity, " km/h", 1)}
+                        </small>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="forecast-window-banner">
+                    <div>
+                      <span className="section-kicker">Forecast horizon</span>
+                      <strong>
+                        {conditions.forecast?.mode === "trip"
+                          ? "The full weekend weather is now in range."
+                          : "The board is showing a near-term planning preview."}
+                      </strong>
+                    </div>
+                    <div className="forecast-window-milestones">
+                      <span className={conditions.forecast?.hasFullTripWeather ? "is-ready" : ""}>
+                        <b>{conditions.forecast?.hasFullTripWeather ? "Ready" : "08 Aug"}</b>
+                        full weekend weather
+                      </span>
+                      <span className={conditions.forecast?.hasFullTripMarine ? "is-ready" : ""}>
+                        <b>{conditions.forecast?.hasFullTripMarine ? "Ready" : "16 Aug"}</b>
+                        wave + tide window
+                      </span>
+                    </div>
+                  </section>
+
+                  <section className="conditions-forecast" aria-label={conditions.forecast?.label}>
+                    <div className="conditions-section-heading">
+                      <div>
+                        <span className="section-kicker">Outlook</span>
+                        <h2>{conditions.forecast?.label}</h2>
+                      </div>
+                      <small>Weather model · Europe/London</small>
+                    </div>
+                    <div className="conditions-forecast-grid">
+                      {(conditions.forecast?.days ?? []).map((day) => (
+                        <article className="basecamp-card conditions-day" key={day.date}>
+                          <header>
+                            <div>
+                              <span>{formatConditionsDate(day.date)}</span>
+                              <strong>{day.label}</strong>
+                            </div>
+                            <b aria-hidden="true">{weatherToken(day.label)}</b>
+                          </header>
+                          <div className="conditions-temperature">
+                            <strong>{displayMetric(day.temperatureMax, "°")}</strong>
+                            <span>{displayMetric(day.temperatureMin, "°")}</span>
+                          </div>
+                          <dl>
+                            <div>
+                              <dt>Rain</dt>
+                              <dd>{displayMetric(day.precipitationProbability, "%")}</dd>
+                            </div>
+                            <div>
+                              <dt>Gust</dt>
+                              <dd>{displayMetric(day.windGustMax, " mph")}</dd>
+                            </div>
+                            <div>
+                              <dt>Wave</dt>
+                              <dd>{displayMetric(day.waveHeightMax, " m", 1)}</dd>
+                            </div>
+                          </dl>
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section className="conditions-detail-grid">
+                    <article className="basecamp-card tide-card">
+                      <div className="conditions-section-heading">
+                        <div>
+                          <span className="section-kicker">Modelled tide trend</span>
+                          <h2>Next 24 hours</h2>
+                        </div>
+                        <small>Not chart datum</small>
+                      </div>
+                      <div className="tide-chart" aria-label="Modelled sea-level trend">
+                        {(conditions.tide?.series ?? []).slice(0, 25).map((point) => (
+                          <span
+                            key={point.time}
+                            style={{ height: `${12 + (point.position * 0.8)}%` }}
+                            title={`${formatConditionsTime(point.time)} · ${displayMetric(point.level, " m", 2)}`}
+                          />
+                        ))}
+                      </div>
+                      <div className="tide-chart-axis" aria-hidden="true">
+                        <span>Now</span>
+                        <span>+12 hr</span>
+                        <span>+24 hr</span>
+                      </div>
+                      <div className="tide-events">
+                        {(conditions.tide?.events ?? []).length ? (
+                          conditions.tide.events.slice(0, 4).map((event) => (
+                            <span key={`${event.type}-${event.time}`}>
+                              <b>{event.type}</b>
+                              {formatConditionsTime(event.time)} ·{" "}
+                              {displayMetric(event.level, " m", 2)}
+                            </span>
+                          ))
+                        ) : (
+                          <span>
+                            <b>No turning point in this slice</b>
+                            Use the official tide table before committing.
+                          </span>
+                        )}
+                      </div>
+                      <p>
+                        This sea-level model uses global mean sea level and has limited
+                        accuracy close to shore. It is useful for a trend, not coastal
+                        navigation or deciding whether a route is safe.
+                      </p>
+                    </article>
+
+                    <article className="basecamp-card safety-checklist">
+                      <div>
+                        <span className="section-kicker">Before beach or boat</span>
+                        <h2>Cross-check the signal.</h2>
+                      </div>
+                      <ol>
+                        <li>
+                          <b>Weather warning</b>
+                          <span>Check the Met Office on the morning you leave.</span>
+                        </li>
+                        <li>
+                          <b>Tide cut-off</b>
+                          <span>Use a trusted tide table and leave an escape margin.</span>
+                        </li>
+                        <li>
+                          <b>Boat operator</b>
+                          <span>Let the skipper make the final sea-state call.</span>
+                        </li>
+                        <li>
+                          <b>Cold water</b>
+                          <span>Assume the water is cold enough to shock.</span>
+                        </li>
+                      </ol>
+                      <div className="safety-links">
+                        <a href={conditions.sources?.rnliTides} target="_blank" rel="noreferrer">
+                          RNLI tide safety ↗
+                        </a>
+                        <a href={conditions.sources?.metOffice} target="_blank" rel="noreferrer">
+                          Met Office ↗
+                        </a>
+                        <a href={conditions.sources?.admiraltyTides} target="_blank" rel="noreferrer">
+                          Admiralty tides ↗
+                        </a>
+                      </div>
+                    </article>
+                  </section>
+
+                  <aside className="range-access-note">
+                    <span>Trip-specific access note</span>
+                    <strong>Lulworth’s 2026 summer range stand-down covers 21–23 August.</strong>
+                    <p>
+                      Published access runs from 25 July to 31 August, but red flags,
+                      barriers and on-site instructions always take priority.
+                    </p>
+                    <a href={conditions.sources?.lulworthRanges} target="_blank" rel="noreferrer">
+                      Check the official access notice ↗
+                    </a>
+                  </aside>
+
+                  <p className="conditions-attribution">
+                    Weather and marine model data: Open-Meteo, including DWD model
+                    inputs. Refreshed at most every 30 minutes.{" "}
+                    <a href={conditions.sources?.openMeteoWeather} target="_blank" rel="noreferrer">
+                      Weather methodology
+                    </a>
+                    {" · "}
+                    <a href={conditions.sources?.openMeteoMarine} target="_blank" rel="noreferrer">
+                      Marine methodology
+                    </a>
+                  </p>
+                </>
+              )}
             </Motion.div>
           )}
 
@@ -2866,31 +3407,240 @@ function Basecamp() {
               </section>
             </Motion.div>
           )}
+
+          {activeView === "docs" && (
+            <Motion.div
+              key="docs"
+              className="basecamp-view docs-view"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+            >
+              <section className="docs-hero">
+                <div>
+                  <span className="section-kicker">System README · July 2026</span>
+                  <h1>How Basecamp is built.</h1>
+                  <p>
+                    A plain-English architecture and security guide for the four
+                    people using this trip room—what protects it, where the data
+                    lives, and where the trust boundaries really are.
+                  </p>
+                </div>
+                <div className="docs-trust-stamp">
+                  <span>Access model</span>
+                  <strong>Invite-only</strong>
+                  <small>Netlify Identity + Basecamp role</small>
+                </div>
+              </section>
+
+              <section className="docs-summary" aria-label="Basecamp trust summary">
+                <span>Short version</span>
+                <p>
+                  The public portfolio and private Basecamp share one deployment,
+                  but Netlify checks the signed-in account before serving Basecamp.
+                  Every shared-data API checks the same role again. Passwords never
+                  enter the trip database, and uploaded photos are private to
+                  authorized accounts—not end-to-end encrypted from the site owner.
+                </p>
+              </section>
+
+              <section className="docs-flow" aria-label="System architecture">
+                <div>
+                  <span>01</span>
+                  <strong>Your browser</strong>
+                  <small>React mobile/desktop UI</small>
+                </div>
+                <i aria-hidden="true">→</i>
+                <div>
+                  <span>02</span>
+                  <strong>Netlify edge</strong>
+                  <small>Identity + role gate</small>
+                </div>
+                <i aria-hidden="true">→</i>
+                <div>
+                  <span>03</span>
+                  <strong>Functions</strong>
+                  <small>Authorization + validation</small>
+                </div>
+                <i aria-hidden="true">→</i>
+                <div>
+                  <span>04</span>
+                  <strong>Blob stores</strong>
+                  <small>Plans, chat and photos</small>
+                </div>
+              </section>
+
+              <section className="docs-card-grid">
+                <article className="basecamp-card docs-card">
+                  <span className="section-kicker">Passwords</span>
+                  <h2>Priitivi cannot read them.</h2>
+                  <p>
+                    Netlify Identity handles account creation and login. The
+                    application never receives or stores a plaintext password.
+                    Identity’s GoTrue service stores a one-way bcrypt hash, so the
+                    supported recovery route is a reset—not revealing the original.
+                  </p>
+                  <small>Stored by Netlify Identity · not in Git or Blobs</small>
+                </article>
+                <article className="basecamp-card docs-card">
+                  <span className="section-kicker">Photos</span>
+                  <h2>Private, but not end-to-end encrypted.</h2>
+                  <p>
+                    Basecamp uploads are resized in the browser, sent over HTTPS and
+                    stored in a dedicated Netlify Blob store. Only a signed-in
+                    Basecamp role can request them, but the Netlify project owner can
+                    administer stored files.
+                  </p>
+                  <small>Google Photos remains a separate optional external album</small>
+                </article>
+                <article className="basecamp-card docs-card">
+                  <span className="section-kicker">Shared planning</span>
+                  <h2>One source of truth.</h2>
+                  <p>
+                    Campsites, rankings, deadline, itinerary, Kit and spend are one
+                    JSON document in Netlify Blobs. Browsers poll for updates and keep
+                    a local offline cache. Chat and photos use separate records.
+                  </p>
+                  <small>Last write wins for most shared fields</small>
+                </article>
+                <article className="basecamp-card docs-card">
+                  <span className="section-kicker">Personal actions</span>
+                  <h2>Your tick and your ranking.</h2>
+                  <p>
+                    The server maps the signed-in email to a crew identity. It
+                    preserves everyone else’s individual Kit acknowledgements and
+                    campsite ranking even if a modified browser tries to submit
+                    changes for another person.
+                  </p>
+                  <small>Authorization is enforced by the function, not only the UI</small>
+                </article>
+                <article className="basecamp-card docs-card">
+                  <span className="section-kicker">Conditions board</span>
+                  <h2>Live data without browser secrets.</h2>
+                  <p>
+                    An authenticated function requests Open-Meteo weather and marine
+                    models, calculates a simple planning signal and caches the result
+                    for 30 minutes. The tide chart is a modelled trend—not an
+                    Admiralty tide table or permission to enter the water.
+                  </p>
+                  <small>Full weather window about 8 Aug · marine about 16 Aug</small>
+                </article>
+                <article className="basecamp-card docs-card docs-limit-card">
+                  <span className="section-kicker">Honest limitations</span>
+                  <h2>What this does not promise.</h2>
+                  <ul>
+                    <li>No end-to-end encryption from the Netlify project owner.</li>
+                    <li>No instant multi-user conflict merge for every shared field.</li>
+                    <li>No nautical-grade tide or sea-state decision.</li>
+                    <li>No access for someone until their exact account is invited.</li>
+                  </ul>
+                </article>
+              </section>
+
+              <section className="basecamp-card docs-data-map">
+                <div>
+                  <span className="section-kicker">Data map</span>
+                  <h2>What goes where.</h2>
+                </div>
+                <dl>
+                  <div>
+                    <dt>Identity account</dt>
+                    <dd>Netlify Identity · email, bcrypt password hash, role</dd>
+                  </div>
+                  <div>
+                    <dt>Trip state</dt>
+                    <dd>Netlify Blob · rankings, deadline, plan, Kit, spend, album link</dd>
+                  </div>
+                  <div>
+                    <dt>Chat</dt>
+                    <dd>Netlify Blob · author, message and timestamp</dd>
+                  </div>
+                  <div>
+                    <dt>Photos</dt>
+                    <dd>Netlify Blob · resized image, caption and uploader metadata</dd>
+                  </div>
+                  <div>
+                    <dt>Offline copy</dt>
+                    <dd>Your browser · latest trip document in localStorage</dd>
+                  </div>
+                  <div>
+                    <dt>Conditions cache</dt>
+                    <dd>Netlify Blob · public model response, cached for 30 minutes</dd>
+                  </div>
+                </dl>
+              </section>
+
+              <section className="docs-links">
+                <div>
+                  <span className="section-kicker">Further reading</span>
+                  <h2>Inspect the moving parts.</h2>
+                </div>
+                <div>
+                  <a
+                    href="https://docs.netlify.com/manage/security/secure-access-to-sites/identity/overview/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Netlify Identity ↗
+                  </a>
+                  <a
+                    href="https://docs.netlify.com/build/data-and-storage/netlify-blobs/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Netlify Blobs ↗
+                  </a>
+                  <a
+                    href="https://open-meteo.com/en/docs/marine-weather-api"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Marine model notes ↗
+                  </a>
+                  <a href="/basecamp">Return to the planner →</a>
+                </div>
+              </section>
+            </Motion.div>
+          )}
         </AnimatePresence>
       </main>
 
-      <div className="basecamp-page-controls" aria-label="Move between sections">
-        <button
-          type="button"
-          aria-label="Previous section"
-          disabled={activeViewIndex === 0}
-          onClick={() => moveBetweenViews(-1)}
-        >
-          <span aria-hidden="true">←</span>
-        </button>
-        <span aria-hidden="true">{activeViewIndex + 1} / {NAV_ITEMS.length}</span>
-        <button
-          type="button"
-          aria-label="Next section"
-          disabled={activeViewIndex === NAV_ITEMS.length - 1}
-          onClick={() => moveBetweenViews(1)}
-        >
-          <span aria-hidden="true">→</span>
-        </button>
-      </div>
-      <p className="sr-only" aria-live="polite">
-        {NAV_ITEMS[activeViewIndex]?.label} section
-      </p>
+      <footer className={`basecamp-footer ${activeView === "docs" ? "is-docs" : ""}`}>
+        <div>
+          <strong>Durdle Basecamp · 21–23 August 2026</strong>
+          <span>React · Netlify Identity · Functions · Blobs</span>
+        </div>
+        <a href={activeView === "docs" ? "/basecamp" : "/basecamp/docs"}>
+          {activeView === "docs" ? "Back to the planner →" : "Architecture & security guide →"}
+        </a>
+      </footer>
+
+      {activeView !== "docs" && (
+        <>
+          <div className="basecamp-page-controls" aria-label="Move between sections">
+            <button
+              type="button"
+              aria-label="Previous section"
+              disabled={activeViewIndex === 0}
+              onClick={() => moveBetweenViews(-1)}
+            >
+              <span aria-hidden="true">←</span>
+            </button>
+            <span aria-hidden="true">{activeViewIndex + 1} / {NAV_ITEMS.length}</span>
+            <button
+              type="button"
+              aria-label="Next section"
+              disabled={activeViewIndex === NAV_ITEMS.length - 1}
+              onClick={() => moveBetweenViews(1)}
+            >
+              <span aria-hidden="true">→</span>
+            </button>
+          </div>
+          <p className="sr-only" aria-live="polite">
+            {NAV_ITEMS[activeViewIndex]?.label} section
+          </p>
+        </>
+      )}
     </div>
   );
 }

@@ -46,7 +46,7 @@ function App() {
     .replace(/\/+$/, "")
     .toLowerCase();
   const isLabRoute = path === "/lab" || path.startsWith("/lab/");
-  const isBasecamp = path.endsWith("/basecamp");
+  const isBasecamp = path === "/basecamp" || path.startsWith("/basecamp/");
   const isBasecampAccess = path.endsWith("/basecamp-login")
     || AUTH_HASH_PATTERN.test(window.location.hash);
 
