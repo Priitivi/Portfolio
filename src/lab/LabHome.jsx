@@ -1,6 +1,6 @@
 import { experiments } from "./experiments";
 
-export default function LabHome({ navigate, onLogout }) {
+export default function LabHome({ navigate, onLogout, isAuthenticated = false }) {
   const reactToPointer = (event) => {
     const bounds = event.currentTarget.getBoundingClientRect();
     event.currentTarget.style.setProperty("--lab-pointer-x", `${event.clientX - bounds.left}px`);
@@ -16,7 +16,11 @@ export default function LabHome({ navigate, onLogout }) {
         <a href="/" className="lab-wordmark"><span>PL</span><strong>PRIIT LAB</strong><small>UNSTABLE BRANCH</small></a>
         <nav aria-label="Laboratory navigation">
           <a href="/">Main portfolio</a>
-          <button type="button" onClick={onLogout}>Revoke clearance</button>
+          {isAuthenticated ? (
+            <button type="button" onClick={onLogout}>Revoke clearance</button>
+          ) : (
+            <span className="lab-clearance-status"><i aria-hidden="true" /> Chambers locked</span>
+          )}
         </nav>
       </header>
 
@@ -30,7 +34,7 @@ export default function LabHome({ navigate, onLogout }) {
           <div><span>FACILITY</span><strong>ONLINE</strong></div>
           <div><span>BUILD INTEGRITY</span><strong className="lab-status-warning">71%</strong></div>
           <div><span>ACTIVE CHAMBERS</span><strong>{String(experiments.length).padStart(2, "0")}</strong></div>
-          <div><span>SAFETY LIMITER</span><strong>ARMED</strong></div>
+          <div><span>CHAMBER ACCESS</span><strong className={isAuthenticated ? "" : "lab-status-locked"}>{isAuthenticated ? "CLEARED" : "LOCKED"}</strong></div>
           <div className="lab-scope" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
         </aside>
       </section>
@@ -42,7 +46,7 @@ export default function LabHome({ navigate, onLogout }) {
       <section className="lab-experiments" aria-labelledby="lab-experiments-title">
         <div className="lab-section-heading">
           <div><span>TEST CHAMBERS</span><h2 id="lab-experiments-title">Active experiments</h2></div>
-          <p>Select a chamber to inspect the current build. Behaviour may change without notice.</p>
+          <p>You can browse the experiment roster freely. Opening a chamber requires the shared clearance password.</p>
         </div>
 
         <div className="lab-experiment-grid">
@@ -62,13 +66,15 @@ export default function LabHome({ navigate, onLogout }) {
               <h3>{experiment.title}</h3>
               <p>{experiment.description}</p>
               <ul>{experiment.signals.map((signal) => <li key={signal}>{signal}</li>)}</ul>
-              <button type="button" onClick={() => navigate(experiment.route)}>Enter test chamber <span aria-hidden="true">↗</span></button>
+              <button type="button" onClick={() => navigate(experiment.route)}>
+                {isAuthenticated ? "Enter test chamber" : "Unlock test chamber"} <span aria-hidden="true">{isAuthenticated ? "↗" : "◇"}</span>
+              </button>
             </article>
           ))}
         </div>
       </section>
 
-      <footer className="lab-footer"><span>PRIIT LAB © {new Date().getFullYear()}</span><strong>YOUR CLEARANCE EXPIRES AUTOMATICALLY</strong><a href="/">Exit facility →</a></footer>
+      <footer className="lab-footer"><span>PRIIT LAB © {new Date().getFullYear()}</span><strong>{isAuthenticated ? "YOUR CLEARANCE EXPIRES AUTOMATICALLY" : "TEST CHAMBERS REQUIRE CLEARANCE"}</strong><a href="/">Exit facility →</a></footer>
     </main>
   );
 }

@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import LabGate from "./LabGate";
 import LabHome from "./LabHome";
 import { clearLabSession, readLabSession, unlockLab } from "./auth/labSession";
+import { experiments } from "./experiments";
 import "./lab.css";
 
 const AudioReactor = lazy(() => import("./audio-reactor/AudioReactor"));
@@ -9,17 +10,24 @@ const PaintSurfer = lazy(() => import("./paint-surfer/PaintSurfer"));
 const FluidLab = lazy(() => import("./fluid-lab/FluidLab"));
 const ShortcutLab = lazy(() => import("./shortcut-lab/ShortcutLab"));
 const DeceptiveTrial = lazy(() => import("./deceptive-trial/DeceptiveTrial"));
+const chamberRoutes = new Set(experiments.map((experiment) => experiment.route));
+
+function normalizePath(pathname) {
+  return pathname.replace(/\/+$/, "").toLowerCase() || "/";
+}
 
 export default function LabApp() {
   const [authState, setAuthState] = useState("checking");
   const [serviceCode, setServiceCode] = useState(null);
-  const [pathname, setPathname] = useState(window.location.pathname);
+  const [pathname, setPathname] = useState(normalizePath(window.location.pathname));
 
   useEffect(() => {
     const originalTitle = document.title;
-    document.title = "Priit Lab // Restricted Development Zone";
+    document.title = pathname === "/lab"
+      ? "Priit Lab // Public Experiment Index"
+      : "Priit Lab // Restricted Test Chamber";
     return () => { document.title = originalTitle; };
-  }, []);
+  }, [pathname]);
 
   useEffect(() => {
     let active = true;
@@ -38,14 +46,14 @@ export default function LabApp() {
   }, []);
 
   useEffect(() => {
-    const onPopState = () => setPathname(window.location.pathname);
+    const onPopState = () => setPathname(normalizePath(window.location.pathname));
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
   const navigate = useCallback((route) => {
     window.history.pushState({}, "", route);
-    setPathname(route);
+    setPathname(normalizePath(route));
     window.scrollTo({ top: 0, behavior: "instant" });
   }, []);
 
@@ -69,6 +77,19 @@ export default function LabApp() {
     setAuthState("locked");
     navigate("/lab");
   };
+
+  const isLabHome = pathname === "/lab";
+  const isChamber = chamberRoutes.has(pathname);
+
+  if (isLabHome || !isChamber) {
+    return (
+      <LabHome
+        navigate={navigate}
+        onLogout={logout}
+        isAuthenticated={authState === "unlocked"}
+      />
+    );
+  }
 
   if (authState === "checking") {
     return <main className="lab-boot" role="status"><div className="lab-scanlines" aria-hidden="true" /><span>PRIIT LAB</span><strong>VERIFYING CLEARANCE…</strong><i /></main>;
@@ -118,5 +139,5 @@ export default function LabApp() {
     );
   }
 
-  return <LabHome navigate={navigate} onLogout={logout} />;
+  return <LabHome navigate={navigate} onLogout={logout} isAuthenticated />;
 }

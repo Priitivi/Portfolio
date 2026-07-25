@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 
 const terminalMessages = [
-  "SCANNING DEVELOPMENT PERIMETER…",
+  "SCANNING CHAMBER PERIMETER…",
   "UNSTABLE PROTOTYPES DETECTED",
   "CLEARANCE TOKEN REQUIRED",
-  "AUDIO CHAMBER STATUS: DORMANT",
+  "PUBLIC LAB INDEX REMAINS AVAILABLE",
 ];
 
 function messageForCode(code) {
@@ -52,7 +52,7 @@ export default function LabGate({ onUnlock, serviceCode }) {
     <main className={`lab-gate lab-gate-${phase}`}>
       <div className="lab-scanlines" aria-hidden="true" />
       <div className="lab-gate-grid" aria-hidden="true" />
-      <a className="lab-return-link" href="/">← Return to portfolio</a>
+      <a className="lab-return-link" href="/lab">← Return to Lab overview</a>
 
       <section className="lab-clearance" aria-labelledby="lab-gate-title">
         <div className="lab-clearance-top">
@@ -61,9 +61,9 @@ export default function LabGate({ onUnlock, serviceCode }) {
         </div>
 
         <div className="lab-warning-mark" aria-hidden="true">!</div>
-        <p className="lab-overline">PRIIT LAB // CLEARANCE REQUIRED</p>
-        <h1 id="lab-gate-title">The work behind<br />the <em>warning tape.</em></h1>
-        <p className="lab-gate-copy">Unfinished systems, unstable ideas, and creative technical experiments live beyond this checkpoint.</p>
+        <p className="lab-overline">TEST CHAMBER // CLEARANCE REQUIRED</p>
+        <h1 id="lab-gate-title">This chamber stays<br />behind the <em>warning tape.</em></h1>
+        <p className="lab-gate-copy">The Lab overview is public. This unfinished interactive build is still protected while it is being tested.</p>
 
         <div className="lab-terminal-feed" aria-live="polite">
           <span>&gt; {terminalMessages[messageIndex]}</span>
@@ -85,7 +85,7 @@ export default function LabGate({ onUnlock, serviceCode }) {
               autoFocus
             />
             <button type="submit" disabled={!password || phase === "checking" || phase === "unlocked"}>
-              {phase === "checking" ? "Checking…" : phase === "unlocked" ? "Unlocked" : "Enter lab"}
+              {phase === "checking" ? "Checking…" : phase === "unlocked" ? "Unlocked" : "Enter chamber"}
             </button>
           </div>
           <p id="lab-access-feedback" className={`lab-feedback lab-feedback-${phase}`} role="status">{feedback}</p>

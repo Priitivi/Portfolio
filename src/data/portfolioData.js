@@ -7,9 +7,9 @@ import pythonLogo from "../assets/python.svg";
 import tailwindLogo from "../assets/tailwind.svg";
 import dockerLogo from "../assets/docker.svg";
 import javaLogo from "../assets/java.svg";
-import csshieldImage from "../assets/csshield.png";
-import cs2squadImage from "../assets/cs2squad.png";
-import portfolioImage from "../assets/portfolio.png";
+import csshieldImage from "../assets/csshield-current.png";
+import cs2squadImage from "../assets/cs2squad-current.png";
+import portfolioImage from "../assets/portfolio-current.png";
 
 export const skills = [
   { name: "HTML", logo: htmlLogo, category: "Structure" },
@@ -40,6 +40,7 @@ export const projects = [
     github: "https://github.com/priitivi/cs2squad",
     image: cs2squadImage,
     imageAlt: "CS2Squad interface preview",
+    imagePosition: "center top",
     challenge: "Connecting Steam identity, relational team data, invitations, and player discovery without making the workflow feel heavy.",
     contribution: "Designed and built the full-stack application, authentication flow, database-backed team tools, and responsive interface.",
   },
@@ -52,6 +53,7 @@ export const projects = [
     github: "https://github.com/priitivi/csshield",
     image: csshieldImage,
     imageAlt: "CSShield desktop application preview",
+    imagePosition: "center center",
     challenge: "Applying reliable system-level protection while keeping setup, recovery, and day-to-day use understandable.",
     contribution: "Built the desktop interface, domain-blocking logic, startup behaviour, and self-healing protection mode.",
   },
@@ -65,6 +67,7 @@ export const projects = [
     live: "https://priitivi.com",
     image: portfolioImage,
     imageAlt: "Priitivi portfolio preview",
+    imagePosition: "center top",
     challenge: "Balancing game mechanics, accessibility, performance, and recruiter-friendly access to the underlying content.",
     contribution: "Created the visual direction, portfolio content, interaction concept, responsive experience, and playable narrative structure.",
   },

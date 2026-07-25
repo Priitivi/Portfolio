@@ -49,6 +49,8 @@
 .lab-header nav { display:flex; align-items:center; gap:.5rem; }
 .lab-header nav a,.lab-header nav button,.lab-back-button { border:1px solid #3f424c; background:#0c0e12; color:#d2d0c8; padding:.58rem .7rem; font:750 .62rem ui-monospace,monospace; text-decoration:none; cursor:pointer; }
 .lab-header nav a:hover,.lab-header nav button:hover,.lab-back-button:hover { border-color:var(--lab-yellow); color:var(--lab-yellow); }
+.lab-clearance-status { display:flex; align-items:center; gap:.45rem; border:1px solid #3f424c; background:#0c0e12; color:#9ca1ab; padding:.58rem .7rem; font:750 .62rem ui-monospace,monospace; }
+.lab-clearance-status i { width:.42rem; height:.42rem; border-radius:50%; background:var(--lab-red); box-shadow:0 0 .55rem rgba(255,75,62,.8); }
 
 /* Dashboard */
 .lab-home { --lab-pointer-x:65%; --lab-pointer-y:20%; position:relative; overflow:hidden; }
@@ -59,7 +61,7 @@
 .lab-home-hero>div>p:last-child { max-width:43rem; color:#adb0b9; font-size:1.02rem; line-height:1.75; }
 .lab-diagnostics { border:1px solid #393c47; background:rgba(12,14,18,.9); padding:1.1rem; box-shadow:.7rem .7rem 0 rgba(39,184,255,.06); }
 .lab-diagnostics>div:not(.lab-scope) { display:flex; justify-content:space-between; gap:1rem; border-bottom:1px solid #30333c; padding:.8rem .3rem; font:750 .64rem ui-monospace,monospace; }
-.lab-diagnostics span { color:#737884; }.lab-diagnostics strong { color:#7ce79a; }.lab-diagnostics .lab-status-warning { color:var(--lab-yellow); }
+.lab-diagnostics span { color:#737884; }.lab-diagnostics strong { color:#7ce79a; }.lab-diagnostics .lab-status-warning { color:var(--lab-yellow); }.lab-diagnostics .lab-status-locked { color:var(--lab-red); }
 .lab-scope { display:flex; align-items:center; gap:.25rem; height:6rem; padding:1rem .3rem 0; }
 .lab-scope i { flex:1; background:var(--lab-blue); box-shadow:0 0 .6rem rgba(39,184,255,.5); animation:lab-scope 1.4s ease-in-out infinite alternate; }
 .lab-scope i:nth-child(1) { height:18%; }.lab-scope i:nth-child(2) { height:58%; }.lab-scope i:nth-child(3) { height:92%; }.lab-scope i:nth-child(4) { height:38%; }.lab-scope i:nth-child(5) { height:70%; }.lab-scope i:nth-child(6) { height:25%; }

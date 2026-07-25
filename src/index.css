@@ -24,6 +24,7 @@ button,a,input,textarea { font:inherit; }
 .pf-nav-links .pf-nav-lab span { color:#9b5cff; }
 .pf-nav-game { justify-self:end; border:1px solid var(--yellow); background:transparent; color:var(--yellow); padding:.62rem .8rem; font:850 .68rem ui-monospace,monospace; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; }
 .pf-nav-game:hover { background:var(--yellow); color:#080808; }
+.pf-nav-basecamp-mobile,.pf-nav-menu-toggle,.pf-mobile-menu-shell { display:none; }
 
 /* Crashed UFO entrance to Priit's Lab */
 .pf-lab-ufo { position:fixed; z-index:45; top:52%; right:-11rem; display:flex; width:25rem; height:15rem; align-items:center; color:white; text-decoration:none; transform:translateY(-50%) rotate(-4deg); transition:right .42s cubic-bezier(.16,.8,.2,1),filter .35s ease; filter:drop-shadow(-1rem 1.1rem 1rem rgba(0,0,0,.55)); }
@@ -231,9 +232,31 @@ button,a,input,textarea { font:inherit; }
   .pf-contact { grid-template-columns:1fr; }
 }
 @media (max-width:760px) {
-  .pf-nav { grid-template-columns:auto 1fr; height:4.2rem; }
+  .pf-nav { grid-template-columns:auto 1fr auto auto; gap:.55rem; height:4.2rem; padding-inline:.75rem; backdrop-filter:none; }
   .pf-nav-links { display:none; }
-  .pf-nav-game { font-size:.6rem; }
+  .pf-nav-game { display:none; }
+  .pf-nav-basecamp-mobile { display:flex; grid-column:3; align-items:center; gap:.42rem; border:1px solid rgba(250,204,21,.48); color:#fff; padding:.55rem .62rem; font:850 .58rem ui-monospace,monospace; letter-spacing:.05em; text-decoration:none; text-transform:uppercase; }
+  .pf-nav-basecamp-mobile>span { width:.42rem; height:.42rem; border-radius:50%; background:#62dc88; box-shadow:0 0 .55rem #62dc88; }
+  .pf-nav-menu-toggle { position:relative; z-index:53; display:grid; grid-column:4; width:2.75rem; height:2.75rem; place-content:center; gap:.28rem; border:1px solid #41454f; background:#111319; cursor:pointer; }
+  .pf-nav-menu-toggle>span { display:block; width:1.2rem; height:2px; background:#fff; transition:transform .2s ease,opacity .2s ease; }
+  .pf-nav-menu-toggle.is-open>span:nth-child(1) { transform:translateY(.38rem) rotate(45deg); }
+  .pf-nav-menu-toggle.is-open>span:nth-child(2) { opacity:0; }
+  .pf-nav-menu-toggle.is-open>span:nth-child(3) { transform:translateY(-.38rem) rotate(-45deg); }
+  .pf-mobile-menu-shell { position:fixed; z-index:51; top:4.2rem; right:0; bottom:0; left:0; display:flex; justify-content:flex-end; }
+  .pf-mobile-menu-backdrop { position:absolute; inset:0; border:0; background:rgba(2,3,5,.72); backdrop-filter:blur(5px); cursor:pointer; }
+  .pf-mobile-menu { position:relative; display:flex; width:min(24rem,92vw); flex-direction:column; overflow:auto; border-left:1px solid #3b3e47; background:#0b0c10; padding:1.35rem; box-shadow:-2rem 0 5rem rgba(0,0,0,.5); }
+  .pf-mobile-menu-heading { border-bottom:1px solid #343740; padding:.45rem 0 1rem; }
+  .pf-mobile-menu-heading span { display:block; color:#747a84; font:800 .56rem ui-monospace,monospace; letter-spacing:.14em; }
+  .pf-mobile-menu-heading strong { display:block; margin-top:.3rem; font-size:1.55rem; }
+  .pf-mobile-menu-links { display:grid; }
+  .pf-mobile-menu-links a { display:grid; grid-template-columns:2.2rem 1fr; border-bottom:1px solid #2e3139; color:#f1f1f1; padding:1rem .25rem; text-decoration:none; }
+  .pf-mobile-menu-links a>span { grid-row:1/3; color:#6f7580; font:800 .6rem ui-monospace,monospace; }
+  .pf-mobile-menu-links a>strong { font-size:1.2rem; }
+  .pf-mobile-menu-links a>small { margin-top:.15rem; color:#7f848e; }
+  .pf-mobile-menu-links a.is-lab>strong { color:#c8ff36; }
+  .pf-mobile-menu-links a.is-basecamp { margin-top:.7rem; border:1px solid rgba(250,204,21,.5); background:linear-gradient(135deg,rgba(250,204,21,.12),transparent); padding:.95rem; }
+  .pf-mobile-menu-links a.is-basecamp>strong { color:var(--yellow); }
+  .pf-mobile-menu-game { display:flex; align-items:center; justify-content:space-between; border:0; background:var(--yellow); color:#080808; margin-top:auto; padding:1rem; font-weight:900; cursor:pointer; }
   .pf-lab-ufo { top:auto; right:-13rem; bottom:3.2rem; width:21rem; height:10rem; transform:rotate(-4deg); }
   .pf-lab-ufo:hover,.pf-lab-ufo:focus-visible { right:-2rem; }
   .pf-lab-ufo svg { flex-basis:13rem; }
@@ -265,6 +288,7 @@ button,a,input,textarea { font:inherit; }
 }
 @media (max-width:430px) {
   .pf-logo strong { display:none; }
+  .pf-nav-basecamp-mobile { padding-inline:.52rem; font-size:.54rem; }
   .pf-console-profile { padding:1rem; }
   .pf-avatar-mark { width:4rem; height:4rem; }
   .pf-console-output { min-height:9rem; }

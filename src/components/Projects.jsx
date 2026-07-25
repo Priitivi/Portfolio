@@ -16,7 +16,7 @@ function ProjectModal({ project, onClose }) {
     <Motion.div className="pf-modal-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} role="dialog" aria-modal="true" aria-labelledby="pf-project-title">
       <Motion.article className="pf-project-modal" initial={{ y: 35, opacity: 0, scale: 0.98 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: 25, opacity: 0 }}>
         <button ref={closeButton} type="button" className="pf-modal-close" onClick={onClose} aria-label="Close project details">×</button>
-        <div className="pf-modal-visual"><img src={project.image} alt={project.imageAlt} /><span>CASE FILE / {project.number}</span></div>
+        <div className="pf-modal-visual"><img src={project.image} alt={project.imageAlt} style={{ objectPosition: project.imagePosition }} /><span>CASE FILE / {project.number}</span></div>
         <div className="pf-modal-copy">
           <p className="pf-eyebrow"><span /> Project dossier</p>
           <h2 id="pf-project-title">{project.title}</h2>
@@ -51,7 +51,7 @@ function Projects() {
         {projects.map((project, index) => (
           <Motion.article key={project.title} className="pf-project-card" initial={{ opacity: 0, y: 36 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.2 }}>
             <div className="pf-project-number">{project.number}</div>
-            <div className="pf-project-image"><img src={project.image} alt={project.imageAlt} /><span>{project.strapline}</span></div>
+            <div className="pf-project-image"><img src={project.image} alt={project.imageAlt} style={{ objectPosition: project.imagePosition }} /><span>{project.strapline}</span></div>
             <div className="pf-project-info">
               <span className="pf-card-label">{index === 2 ? "EXPERIMENTAL BUILD" : "FEATURED BUILD"}</span>
               <h3>{project.title}</h3>
