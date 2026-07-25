@@ -1,12 +1,52 @@
 import { getStore } from "@netlify/blobs";
-import { isSameOrigin, json, requireBasecampUser } from "./_shared/basecamp-api.mjs";
+import {
+  getCrewId,
+  isSameOrigin,
+  json,
+  requireBasecampUser,
+} from "./_shared/basecamp-api.mjs";
 
 const STORE_NAME = "durdle-basecamp";
 const STATE_KEY = "trip-state";
 const MAX_BODY_BYTES = 250_000;
 
+export function enforcePackingAcknowledgements(nextState, previousState, activeCrewId) {
+  if (!Array.isArray(nextState?.packing)) return nextState;
+
+  const previousPacking = Array.isArray(previousState?.packing)
+    ? previousState.packing
+    : [];
+  const packing = nextState.packing.map((item) => {
+    if (item?.completionMode !== "individual") {
+      return { ...item, acknowledgements: [] };
+    }
+
+    const previousItem = previousPacking.find((candidate) => candidate?.id === item.id);
+    const previousAcknowledgements = Array.isArray(previousItem?.acknowledgements)
+      ? previousItem.acknowledgements
+      : [];
+    const requestedAcknowledgements = Array.isArray(item.acknowledgements)
+      ? item.acknowledgements
+      : [];
+    const protectedAcknowledgements = previousAcknowledgements.filter(
+      (memberId) => memberId !== activeCrewId,
+    );
+
+    if (requestedAcknowledgements.includes(activeCrewId)) {
+      protectedAcknowledgements.push(activeCrewId);
+    }
+
+    return {
+      ...item,
+      acknowledgements: [...new Set(protectedAcknowledgements)],
+    };
+  });
+
+  return { ...nextState, packing };
+}
+
 export default async function handler(request) {
-  const { error } = await requireBasecampUser();
+  const { user, error } = await requireBasecampUser();
   if (error) return error;
 
   const store = getStore({ name: STORE_NAME, consistency: "strong" });
@@ -40,8 +80,14 @@ export default async function handler(request) {
     return json({ code: "INVALID_STATE" }, 400);
   }
 
+  const previous = await store.get(STATE_KEY, { type: "json" });
+  const protectedState = enforcePackingAcknowledgements(
+    body.state,
+    previous?.state,
+    getCrewId(user),
+  );
   const updatedAt = new Date().toISOString();
-  const saved = { state: body.state, updatedAt };
+  const saved = { state: protectedState, updatedAt };
   const encoded = JSON.stringify(saved);
   if (Buffer.byteLength(encoded, "utf8") > MAX_BODY_BYTES) {
     return json({ code: "PAYLOAD_TOO_LARGE" }, 413);

@@ -6,6 +6,12 @@ const responseHeaders = {
   "X-Content-Type-Options": "nosniff",
 };
 
+const crewByEmail = new Map([
+  ["priitivi@gmail.com", { id: "priitivi", name: "Priitivi" }],
+  ["husainabedi@gmail.com", { id: "husain", name: "Husain" }],
+  ["dhaneshlian@gmail.com", { id: "dhanesh", name: "Dhanesh" }],
+]);
+
 export function json(body, status = 200, headers = {}) {
   return Response.json(body, {
     status,
@@ -38,15 +44,14 @@ export async function requireBasecampUser() {
 
 export function getCrewName(user) {
   const normalizedEmail = user.email?.toLowerCase() ?? "";
-  const knownCrew = [
-    ["priit", "Priitivi"],
-    ["husain", "Husain"],
-    ["dhanesh", "Dhanesh"],
-    ["oliver", "Oliver"],
-  ];
-  const matchedCrew = knownCrew.find(([fragment]) => normalizedEmail.includes(fragment));
-  if (matchedCrew) return matchedCrew[1];
+  const knownCrew = crewByEmail.get(normalizedEmail);
+  if (knownCrew) return knownCrew.name;
 
   const profileName = typeof user.name === "string" ? user.name.trim() : "";
   return profileName.slice(0, 40) || "Crewmate";
+}
+
+export function getCrewId(user) {
+  const normalizedEmail = user.email?.toLowerCase() ?? "";
+  return crewByEmail.get(normalizedEmail)?.id || `identity-${user.id || "crew"}`;
 }

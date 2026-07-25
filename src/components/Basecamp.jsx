@@ -364,17 +364,93 @@ const initialTrip = {
     },
   ],
   packing: [
-    { id: "tent", label: "Tent and pegs", category: "Camp", owner: "Group", done: false },
-    { id: "sleep", label: "Sleeping bags and mats", category: "Camp", owner: "Group", done: false },
-    { id: "torch", label: "Torches and spare batteries", category: "Camp", owner: "Group", done: false },
-    { id: "charter", label: "Fishing charter confirmation", category: "Bookings", owner: "Dhanesh", done: false },
-    { id: "campsite", label: "Campsite confirmation", category: "Bookings", owner: "Priitivi", done: false },
-    { id: "waterproof", label: "Waterproof layer", category: "Boat", owner: "Everyone", done: false },
-    { id: "sun", label: "Sun protection", category: "Boat", owner: "Everyone", done: false },
-    { id: "food", label: "Breakfast, snacks and water", category: "Food", owner: "Group", done: false },
+    {
+      id: "tent",
+      label: "Tent and pegs",
+      category: "Camp",
+      owner: "Group",
+      completionMode: "individual",
+      acknowledgements: [],
+      done: false,
+    },
+    {
+      id: "sleep",
+      label: "Sleeping bags and mats",
+      category: "Camp",
+      owner: "Group",
+      completionMode: "individual",
+      acknowledgements: [],
+      done: false,
+    },
+    {
+      id: "torch",
+      label: "Torches and spare batteries",
+      category: "Camp",
+      owner: "Group",
+      completionMode: "individual",
+      acknowledgements: [],
+      done: false,
+    },
+    {
+      id: "charter",
+      label: "Fishing charter confirmation",
+      category: "Bookings",
+      owner: "Dhanesh",
+      completionMode: "shared",
+      acknowledgements: [],
+      done: false,
+    },
+    {
+      id: "campsite",
+      label: "Campsite confirmation",
+      category: "Bookings",
+      owner: "Priitivi",
+      completionMode: "shared",
+      acknowledgements: [],
+      done: false,
+    },
+    {
+      id: "waterproof",
+      label: "Waterproof layer",
+      category: "Boat",
+      owner: "Everyone",
+      completionMode: "individual",
+      acknowledgements: [],
+      done: false,
+    },
+    {
+      id: "sun",
+      label: "Sun protection",
+      category: "Boat",
+      owner: "Everyone",
+      completionMode: "individual",
+      acknowledgements: [],
+      done: false,
+    },
+    {
+      id: "food",
+      label: "Breakfast, snacks and water",
+      category: "Food",
+      owner: "Group",
+      completionMode: "shared",
+      acknowledgements: [],
+      done: false,
+    },
   ],
   expenses: [],
 };
+
+function getPackingCompletionMode(item) {
+  return item?.completionMode === "individual" ? "individual" : "shared";
+}
+
+function isPackingItemComplete(item) {
+  if (getPackingCompletionMode(item) === "shared") return Boolean(item.done);
+  const acknowledgements = Array.isArray(item.acknowledgements)
+    ? item.acknowledgements
+    : [];
+  return crew.every((member) => acknowledgements.includes(member.id));
+}
 
 function mergeTripState(savedTrip) {
   try {
@@ -391,6 +467,33 @@ function mergeTripState(savedTrip) {
           }
         : campsite;
     });
+    const savedPacking = Array.isArray(savedTrip.packing) ? savedTrip.packing : [];
+    const knownPackingIds = new Set(initialTrip.packing.map((item) => item.id));
+    const normalizePackingItem = (item, defaults = {}) => {
+      const completionMode = item?.completionMode === "individual"
+        || (!item?.completionMode && defaults.completionMode === "individual")
+        ? "individual"
+        : "shared";
+      const acknowledgements = Array.isArray(item?.acknowledgements)
+        ? item.acknowledgements.filter((memberId) =>
+            crew.some((member) => member.id === memberId),
+          )
+        : completionMode === "individual" && item?.done
+          ? crew.map((member) => member.id)
+          : [];
+
+      return {
+        ...defaults,
+        ...item,
+        completionMode,
+        acknowledgements,
+        done: Boolean(item?.done),
+      };
+    };
+    const restoredPacking = initialTrip.packing.map((item) => {
+      const savedItem = savedPacking.find((candidate) => candidate.id === item.id);
+      return savedItem ? normalizePackingItem(savedItem, item) : item;
+    });
 
     return {
       ...initialTrip,
@@ -398,6 +501,12 @@ function mergeTripState(savedTrip) {
       campsites: [
         ...restoredCampsites,
         ...savedCampsites.filter((campsite) => !knownIds.has(campsite.id)),
+      ],
+      packing: [
+        ...restoredPacking,
+        ...savedPacking
+          .filter((item) => !knownPackingIds.has(item.id))
+          .map((item) => normalizePackingItem(item)),
       ],
     };
   } catch {
@@ -507,6 +616,7 @@ function Basecamp() {
     label: "",
     category: "Camp",
     owner: "Group",
+    completionMode: "shared",
   });
   const [editingItineraryId, setEditingItineraryId] = useState("");
   const [itineraryEditForm, setItineraryEditForm] = useState({
@@ -520,6 +630,7 @@ function Basecamp() {
     label: "",
     category: "Camp",
     owner: "Group",
+    completionMode: "shared",
   });
   const [expenseForm, setExpenseForm] = useState({
     description: "",
@@ -759,7 +870,7 @@ function Basecamp() {
   }, []);
 
   const activeMember = identityMember ?? crew[0];
-  const completedPacking = trip.packing.filter((item) => item.done).length;
+  const completedPacking = trip.packing.filter(isPackingItemComplete).length;
   const packingProgress = trip.packing.length
     ? Math.round((completedPacking / trip.packing.length) * 100)
     : 0;
@@ -901,6 +1012,28 @@ function Basecamp() {
     }));
   };
 
+  const moveItineraryItem = (itemId, direction) => {
+    updateTrip((current) => {
+      const selectedItem = current.itinerary.find((item) => item.id === itemId);
+      if (!selectedItem) return current;
+
+      const dayItems = current.itinerary.filter((item) => item.day === selectedItem.day);
+      const currentDayIndex = dayItems.findIndex((item) => item.id === itemId);
+      const targetItem = dayItems[currentDayIndex + direction];
+      if (!targetItem) return current;
+
+      const reordered = [...current.itinerary];
+      const currentIndex = reordered.findIndex((item) => item.id === itemId);
+      const targetIndex = reordered.findIndex((item) => item.id === targetItem.id);
+      [reordered[currentIndex], reordered[targetIndex]] = [
+        reordered[targetIndex],
+        reordered[currentIndex],
+      ];
+
+      return { ...current, itinerary: reordered };
+    });
+  };
+
   const startEditingItinerary = (item) => {
     setEditingItineraryId(item.id);
     setItineraryEditForm({
@@ -954,11 +1087,18 @@ function Basecamp() {
           label: packingForm.label.trim(),
           category: packingForm.category,
           owner: packingForm.owner,
+          completionMode: packingForm.completionMode,
+          acknowledgements: [],
           done: false,
         },
       ],
     }));
-    setPackingForm({ label: "", category: "Camp", owner: "Group" });
+    setPackingForm({
+      label: "",
+      category: "Camp",
+      owner: "Group",
+      completionMode: "shared",
+    });
   };
 
   const togglePackingItem = (itemId) => {
@@ -970,12 +1110,35 @@ function Basecamp() {
     }));
   };
 
+  const togglePackingAcknowledgement = (itemId) => {
+    updateTrip((current) => ({
+      ...current,
+      packing: current.packing.map((item) => {
+        if (item.id !== itemId || getPackingCompletionMode(item) !== "individual") {
+          return item;
+        }
+
+        const acknowledgements = Array.isArray(item.acknowledgements)
+          ? item.acknowledgements
+          : [];
+        const hasAcknowledged = acknowledgements.includes(activeMember.id);
+        return {
+          ...item,
+          acknowledgements: hasAcknowledged
+            ? acknowledgements.filter((memberId) => memberId !== activeMember.id)
+            : [...acknowledgements, activeMember.id],
+        };
+      }),
+    }));
+  };
+
   const startEditingPacking = (item) => {
     setEditingPackingId(item.id);
     setPackingEditForm({
       label: item.label,
       category: item.category,
       owner: item.owner,
+      completionMode: getPackingCompletionMode(item),
     });
   };
 
@@ -987,12 +1150,24 @@ function Basecamp() {
       ...current,
       packing: current.packing.map((item) =>
         item.id === itemId
-          ? {
-              ...item,
-              label: packingEditForm.label.trim(),
-              category: packingEditForm.category,
-              owner: packingEditForm.owner,
-            }
+          ? (() => {
+              const previousMode = getPackingCompletionMode(item);
+              const nextMode = packingEditForm.completionMode;
+              const modeChanged = previousMode !== nextMode;
+              const wasComplete = isPackingItemComplete(item);
+
+              return {
+                ...item,
+                label: packingEditForm.label.trim(),
+                category: packingEditForm.category,
+                owner: packingEditForm.owner,
+                completionMode: nextMode,
+                done: modeChanged && nextMode === "shared" ? wasComplete : item.done,
+                acknowledgements: modeChanged && nextMode === "individual"
+                  ? (wasComplete ? crew.map((member) => member.id) : [])
+                  : (item.acknowledgements ?? []),
+              };
+            })()
           : item,
       ),
     }));
@@ -1313,18 +1488,35 @@ function Basecamp() {
                     </div>
                     <span className="card-count">{trip.campsites.length} leads</span>
                   </div>
-                  <div className="ranked-list">
-                    {rankedCampsites.slice(0, 3).map((campsite, index) => (
+                  <div className="campsite-vote-chart">
+                    <div className="vote-chart-axis" aria-hidden="true">
+                      {Array.from({ length: crew.length + 1 }, (_, index) => (
+                        <span key={index}>{index}</span>
+                      ))}
+                    </div>
+                    <div className="vote-chart-bars">
+                      {rankedCampsites.slice(0, 4).map((campsite) => (
                       <button
                         type="button"
                         key={campsite.id}
                         onClick={() => changeView("campsites")}
+                        aria-label={`${campsite.name}: ${campsite.votes.length} of ${crew.length} crew votes. Open campsites.`}
                       >
-                        <span>0{index + 1}</span>
-                        <strong>{campsite.name}</strong>
-                        <small>{campsite.votes.length} votes</small>
+                          <span className="vote-chart-label">{campsite.name}</span>
+                          <span className="vote-chart-track" aria-hidden="true">
+                            <span
+                              style={{
+                                width: `${(campsite.votes.length / crew.length) * 100}%`,
+                              }}
+                            />
+                          </span>
+                          <strong>{campsite.votes.length}/{crew.length}</strong>
                       </button>
-                    ))}
+                      ))}
+                    </div>
+                    <small className="vote-chart-caption">
+                      Crew support · tap a bar to compare all sites
+                    </small>
                   </div>
                 </article>
 
@@ -1893,7 +2085,7 @@ function Basecamp() {
                     <div className="day-events">
                       {trip.itinerary
                         .filter((item) => item.day === day)
-                        .map((item) => (
+                        .map((item, itemIndex, dayItems) => (
                           <div className="basecamp-card itinerary-item" key={item.id}>
                             {editingItineraryId === item.id ? (
                               <form
@@ -1970,6 +2162,26 @@ function Basecamp() {
                                   <h2>{item.title}</h2>
                                   <p>{item.detail}</p>
                                   <div className="item-actions">
+                                    <div className="itinerary-order-actions">
+                                      <button
+                                        type="button"
+                                        disabled={itemIndex === 0}
+                                        onClick={() => moveItineraryItem(item.id, -1)}
+                                        aria-label={`Move ${item.title} earlier on ${day}`}
+                                        title="Move earlier"
+                                      >
+                                        ↑
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={itemIndex === dayItems.length - 1}
+                                        onClick={() => moveItineraryItem(item.id, 1)}
+                                        aria-label={`Move ${item.title} later on ${day}`}
+                                        title="Move later"
+                                      >
+                                        ↓
+                                      </button>
+                                    </div>
                                     <button
                                       type="button"
                                       className={item.status === "Confirmed" ? "is-confirmed" : ""}
@@ -2082,7 +2294,9 @@ function Basecamp() {
                     <header>
                       <h2>{category}</h2>
                       <span>
-                        {trip.packing.filter((item) => item.category === category && item.done).length}
+                        {trip.packing.filter(
+                          (item) => item.category === category && isPackingItemComplete(item),
+                        ).length}
                         /{trip.packing.filter((item) => item.category === category).length}
                       </span>
                     </header>
@@ -2091,7 +2305,9 @@ function Basecamp() {
                         .filter((item) => item.category === category)
                         .map((item) => (
                           <div
-                            className={`kit-item ${item.done ? "is-done" : ""}`}
+                            className={`kit-item ${
+                              isPackingItemComplete(item) ? "is-done" : ""
+                            }`}
                             key={item.id}
                           >
                             {editingPackingId === item.id ? (
@@ -2150,6 +2366,21 @@ function Basecamp() {
                                     </select>
                                   </label>
                                 </div>
+                                <label>
+                                  <span>How is it completed?</span>
+                                  <select
+                                    value={packingEditForm.completionMode}
+                                    onChange={(event) =>
+                                      setPackingEditForm((current) => ({
+                                        ...current,
+                                        completionMode: event.target.value,
+                                      }))
+                                    }
+                                  >
+                                    <option value="shared">One group tick</option>
+                                    <option value="individual">Everyone ticks their own</option>
+                                  </select>
+                                </label>
                                 <div className="item-actions">
                                   <button type="submit" className="primary-action">Save</button>
                                   <button type="button" onClick={() => setEditingPackingId("")}>
@@ -2159,17 +2390,67 @@ function Basecamp() {
                               </form>
                             ) : (
                               <>
-                                <label className="kit-check">
-                                  <input
-                                    type="checkbox"
-                                    checked={item.done}
-                                    onChange={() => togglePackingItem(item.id)}
-                                  />
-                                  <span>
-                                    <strong>{item.label}</strong>
-                                    <small>{item.owner}</small>
-                                  </span>
-                                </label>
+                                {getPackingCompletionMode(item) === "shared" ? (
+                                  <label className="kit-check">
+                                    <input
+                                      type="checkbox"
+                                      checked={item.done}
+                                      onChange={() => togglePackingItem(item.id)}
+                                    />
+                                    <span>
+                                      <strong>{item.label}</strong>
+                                      <small>{item.owner} · one group tick</small>
+                                    </span>
+                                  </label>
+                                ) : (
+                                  <div className="kit-individual">
+                                    <div className="kit-item-heading">
+                                      <strong>{item.label}</strong>
+                                      <small>
+                                        {item.owner} · everyone ticks their own
+                                      </small>
+                                    </div>
+                                    <div
+                                      className="kit-personal-checks"
+                                      aria-label={`${item.label} personal confirmations`}
+                                    >
+                                      {crew.map((member) => {
+                                        const isActiveMember = member.id === activeMember.id;
+                                        const hasAcknowledged = (
+                                          item.acknowledgements ?? []
+                                        ).includes(member.id);
+
+                                        return (
+                                          <label
+                                            className={`kit-member-check ${
+                                              isActiveMember ? "is-you" : ""
+                                            } ${hasAcknowledged ? "is-checked" : ""}`}
+                                            key={member.id}
+                                            title={
+                                              isActiveMember
+                                                ? `Tick for ${member.name}`
+                                                : `${member.name} must tick this themselves`
+                                            }
+                                          >
+                                            <input
+                                              type="checkbox"
+                                              checked={hasAcknowledged}
+                                              disabled={!isActiveMember}
+                                              onChange={() =>
+                                                togglePackingAcknowledgement(item.id)
+                                              }
+                                              aria-label={`${member.name} has packed ${item.label}`}
+                                            />
+                                            <span>{member.name.slice(0, 1)}</span>
+                                            <small>
+                                              {isActiveMember ? "You" : member.name}
+                                            </small>
+                                          </label>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
                                 <div className="item-actions kit-item-actions">
                                   <button type="button" onClick={() => startEditingPacking(item)}>
                                     Edit
@@ -2191,7 +2472,7 @@ function Basecamp() {
                 ))}
               </section>
 
-              <form className="basecamp-card add-form" onSubmit={addPackingItem}>
+              <form className="basecamp-card add-form kit-add-form" onSubmit={addPackingItem}>
                 <div>
                   <span className="section-kicker">New item</span>
                   <h2>Add to the kit list</h2>
@@ -2242,6 +2523,21 @@ function Basecamp() {
                     <option>Group</option>
                     <option>Everyone</option>
                     <option>{activeMember.name}</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Completion</span>
+                  <select
+                    value={packingForm.completionMode}
+                    onChange={(event) =>
+                      setPackingForm((current) => ({
+                        ...current,
+                        completionMode: event.target.value,
+                      }))
+                    }
+                  >
+                    <option value="shared">One group tick</option>
+                    <option value="individual">Everyone ticks their own</option>
                   </select>
                 </label>
                 <button type="submit">Add item</button>
