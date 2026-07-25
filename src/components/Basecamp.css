@@ -2613,6 +2613,24 @@
   font-size: 0.78rem;
 }
 
+.expense-row > .expense-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.expense-row button.expense-remove {
+  border-color: rgba(154, 61, 44, 0.3);
+  color: #9a3d2c;
+}
+
+.expense-row button.expense-remove:hover {
+  background: #9a3d2c;
+  border-color: #9a3d2c;
+  color: #fff;
+}
+
 .empty-state {
   display: grid;
   justify-items: center;
@@ -4310,8 +4328,12 @@
   }
 
   .expense-row button {
-    grid-column: 1 / -1;
     justify-self: start;
+  }
+
+  .expense-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
   }
 
   .inline-editor-pair {

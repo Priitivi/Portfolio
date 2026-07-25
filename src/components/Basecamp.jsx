@@ -1384,6 +1384,20 @@ function Basecamp() {
     }));
   };
 
+  const removeExpense = (expense) => {
+    const amount = Number.isFinite(expense.amount)
+      ? ` (£${expense.amount.toFixed(2)})`
+      : "";
+    if (!window.confirm(`Remove "${expense.description}"${amount} from the shared spend list?`)) {
+      return;
+    }
+
+    updateTrip((current) => ({
+      ...current,
+      expenses: current.expenses.filter((item) => item.id !== expense.id),
+    }));
+  };
+
   const changeView = (nextView) => {
     if (NAV_ITEMS.some((item) => item.id === nextView)) {
       setActiveView(nextView);
@@ -3145,13 +3159,23 @@ function Basecamp() {
                           <span>Paid by {expense.paidBy}</span>
                         </div>
                         <strong>£{expense.amount.toFixed(2)}</strong>
-                        <button
-                          type="button"
-                          className={expense.settled ? "is-settled" : ""}
-                          onClick={() => toggleExpenseSettled(expense.id)}
-                        >
-                          {expense.settled ? "Settled" : "Settle externally"}
-                        </button>
+                        <div className="expense-actions">
+                          <button
+                            type="button"
+                            className={expense.settled ? "is-settled" : ""}
+                            onClick={() => toggleExpenseSettled(expense.id)}
+                          >
+                            {expense.settled ? "Settled" : "Settle externally"}
+                          </button>
+                          <button
+                            type="button"
+                            className="expense-remove"
+                            aria-label={`Remove ${expense.description} from the spend list`}
+                            onClick={() => removeExpense(expense)}
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </div>
                     ))
                   )}
