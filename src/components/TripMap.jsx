@@ -7,14 +7,16 @@ const attractionPoints = [
     name: "Durdle Door",
     category: "attractions",
     coordinates: [50.6212, -2.2768],
-    detail: "The headline stop: limestone arch, beach and steep coastal views.",
+    detail: "The headline stop. Allow for the steep path and steps down to the beach.",
+    sourceUrl: "https://lulworth.com/visit/places-to-visit/durdle-door/",
   },
   {
     id: "man-o-war",
     name: "Man O’War Beach",
     category: "attractions",
     coordinates: [50.6215, -2.271],
-    detail: "Sheltered cove beside Durdle Door.",
+    detail: "Sheltered cove beside Durdle Door, reached by another steep beach path.",
+    sourceUrl: "https://lulworth.com/visit/places-to-visit/beaches/",
   },
   {
     id: "lulworth-cove",
@@ -22,6 +24,7 @@ const attractionPoints = [
     category: "attractions",
     coordinates: [50.6184, -2.2469],
     detail: "Cove, food stops and a useful starting point for a short wander.",
+    sourceUrl: "https://lulworth.com/visit/places-to-visit/lulworth-cove/",
   },
   {
     id: "stair-hole",
@@ -29,6 +32,46 @@ const attractionPoints = [
     category: "attractions",
     coordinates: [50.6206, -2.2504],
     detail: "Compact coastal viewpoint near Lulworth Cove.",
+    sourceUrl: "https://lulworth.com/visit/places-to-visit/",
+  },
+  {
+    id: "mupe-bay",
+    name: "Mupe Bay",
+    category: "attractions",
+    coordinates: [50.6191, -2.2225],
+    detail: "A remote range-side bay. Access depends on the Lulworth Ranges being open.",
+    sourceUrl: "https://www.gov.uk/government/publications/lulworth-firing-notice",
+  },
+  {
+    id: "white-nothe",
+    name: "White Nothe",
+    category: "attractions",
+    coordinates: [50.6259, -2.3262],
+    detail: "High chalk headland and a proper coast-path walk, not a quick beach stop.",
+    sourceUrl: "https://www.southwestcoastpath.org.uk/walksdb/665/",
+  },
+  {
+    id: "mottrams-beach",
+    name: "Mottram’s Beach",
+    category: "attractions",
+    coordinates: [50.6329, -2.3938],
+    detail: "A geological beach below Burning Cliff, best treated as a walking objective.",
+    sourceUrl: "https://en.wikipedia.org/wiki/Mottram%27s_Beach",
+  },
+  {
+    id: "bowleaze-cove",
+    name: "Bowleaze Cove",
+    category: "attractions",
+    coordinates: [50.6357, -2.4089],
+    detail: "Easy-to-reach Weymouth-side beach stop with facilities nearby.",
+  },
+  {
+    id: "ringstead-bay",
+    name: "Ringstead Bay",
+    category: "attractions",
+    coordinates: [50.6337, -2.3547],
+    detail: "National Trust beach and coastal viewpoint near two shortlist campsites.",
+    sourceUrl: "https://www.nationaltrust.org.uk/visit/dorset/ringstead-bay",
   },
   {
     id: "chesil-beach",
@@ -36,6 +79,7 @@ const attractionPoints = [
     category: "attractions",
     coordinates: [50.6206, -2.536],
     detail: "A dramatic shingle ridge beside the Fleet lagoon.",
+    sourceUrl: "https://www.visit-dorset.com/listing/chesil-beach/104422301/",
   },
   {
     id: "portland-bill",
@@ -43,13 +87,47 @@ const attractionPoints = [
     category: "attractions",
     coordinates: [50.5134, -2.4563],
     detail: "Big sea views at the southern tip of Portland.",
+    sourceUrl: "https://www.trinityhouse.co.uk/lighthouse-visitor-centres/portland-bill-lighthouse-visitor-centre",
   },
   {
-    id: "weymouth-harbour",
-    name: "Weymouth Harbour",
+    id: "butter-rock",
+    name: "Butter Rock",
     category: "attractions",
-    coordinates: [50.6091, -2.454],
-    detail: "Likely departure area for a beginner fishing charter.",
+    coordinates: [50.6216, -2.3024],
+    detail: "Chalk sea stack west of Durdle Door, seen from the coast path near Bat’s Head.",
+    sourceUrl: "https://www.uksouthwest.net/dorset/durdle-door-lulworth-cove/butter-rock.html",
+  },
+  {
+    id: "pondfield-cove",
+    name: "Pondfield Cove",
+    category: "attractions",
+    coordinates: [50.6144, -2.1823],
+    detail: "Secluded cove by Worbarrow; only visit when the Lulworth Ranges are open.",
+    sourceUrl: "https://www.gov.uk/government/publications/lulworth-firing-notice",
+  },
+  {
+    id: "abbotsbury-swannery",
+    name: "Abbotsbury Swannery",
+    category: "attractions",
+    coordinates: [50.6641, -2.5981],
+    detail: "A different final-day option beside the Fleet lagoon.",
+    sourceUrl: "https://abbotsbury-tourism.co.uk/swannery/",
+  },
+  {
+    id: "lulworth-castle",
+    name: "Lulworth Castle & Park",
+    category: "attractions",
+    coordinates: [50.6381, -2.2057],
+    detail: "Castle, parkland and woodland walks. Check the date-specific closure notice.",
+    sourceUrl: "https://lulworth.com/visit/places-to-visit/castle-and-park/",
+  },
+  {
+    id: "fossil-forest",
+    name: "Fossil Forest",
+    category: "attractions",
+    coordinates: [50.6157, -2.232],
+    detail: "Geology stop east of Lulworth Cove, subject to range access and coast conditions.",
+    sourceUrl: "https://lulworth.com/visit/places-to-visit/",
   },
 ];
 
@@ -60,6 +138,7 @@ const walkPoints = [
     category: "walks",
     coordinates: [50.6195, -2.249],
     detail: "Gentle five-minute approach from the main car park to the cove.",
+    sourceUrl: "https://lulworth.com/accessibility-lulworth-cove/",
   },
   {
     id: "stair-hole-viewpoint",
@@ -67,6 +146,7 @@ const walkPoints = [
     category: "walks",
     coordinates: [50.621, -2.251],
     detail: "Short accessible section; the longer 3.5 km coast route is moderate.",
+    sourceUrl: "https://www.durdledoor.co.uk/see-do/walks",
   },
   {
     id: "portland-flat-path",
@@ -74,13 +154,107 @@ const walkPoints = [
     category: "walks",
     coordinates: [50.5143, -2.4553],
     detail: "Wide, flat viewpoint path from the lighthouse car park.",
+    sourceUrl: "https://www.visit-dorset.com/visitor-information/accessibility/accessible-viewpoints/",
+  },
+  {
+    id: "durdle-to-lulworth",
+    name: "Durdle Door to Lulworth Cove",
+    category: "walks",
+    coordinates: [50.6228, -2.2621],
+    detail: "Iconic coast-path link with steep climbs; save it for good weather and fresh legs.",
+    sourceUrl: "https://www.durdledoor.co.uk/see-do/walks",
+  },
+];
+
+const foodPoints = [
+  {
+    id: "boat-shed-cafe",
+    name: "The Boat Shed Café",
+    category: "food",
+    coordinates: [50.6182, -2.246],
+    detail: "Cove-side breakfast, light lunch, cakes and coffee; currently listed 08:30–17:00.",
+    sourceUrl: "https://lulworth.com/visit/food-drink/boat-shed-cafe/",
+  },
+  {
+    id: "lulworth-cove-inn",
+    name: "Lulworth Cove Inn",
+    category: "food",
+    coordinates: [50.6202, -2.2484],
+    detail: "Pub food opposite the Heritage Centre, useful after a cove walk.",
+    sourceUrl: "https://www.lulworth-coveinn.co.uk/contact-us/",
+  },
+  {
+    id: "castle-inn",
+    name: "The Castle Inn",
+    category: "food",
+    coordinates: [50.62641, -2.24618],
+    detail: "Historic village pub on Main Road in West Lulworth.",
+    sourceUrl: "https://westlulworth.org.uk/castle-inn/",
+  },
+  {
+    id: "man-o-war-bar",
+    name: "Man O’War Bar & Restaurant",
+    category: "food",
+    coordinates: [50.6262, -2.2678],
+    detail: "On-site option at Durdle Door Holiday Park.",
+    sourceUrl: "https://www.durdledoor.co.uk/see-do/local-area",
+  },
+  {
+    id: "red-lion-pub",
+    name: "The Red Lion",
+    category: "food",
+    coordinates: [50.668327, -2.275631],
+    detail: "Pub beside its campsite; campers are currently offered a food-and-drink discount.",
+    sourceUrl: "https://redlionwinfrith.com/campsite/",
+  },
+  {
+    id: "fat-badger",
+    name: "The Fat Badger",
+    category: "food",
+    coordinates: [50.6038, -2.5009],
+    detail: "Dhanesh’s saved restaurant lead at Pebble Bank, west of Weymouth.",
+  },
+];
+
+const fishingPoints = [
+  {
+    id: "mackerel-fishing-weymouth",
+    name: "Mackerel Fishing Trips Weymouth",
+    category: "fishing",
+    coordinates: [50.6087, -2.4526],
+    detail: "Beginner-friendly four-hour rod-and-line and shorter handline options.",
+    sourceUrl: "https://fishingtripsweymouth.com/",
+  },
+  {
+    id: "weymouth-shellfish-charters",
+    name: "Weymouth Shellfish Charters",
+    category: "fishing",
+    coordinates: [50.6089, -2.4536],
+    detail: "One of the Weymouth Harbour operators saved in Dhanesh’s list.",
+  },
+  {
+    id: "snapper-charters",
+    name: "Snapper Charters",
+    category: "fishing",
+    coordinates: [50.6093, -2.4544],
+    detail: "Another saved charter lead departing around Weymouth Harbour.",
+  },
+  {
+    id: "amarisa-weymouth",
+    name: "Amarisa four-hour fishing",
+    category: "fishing",
+    coordinates: [50.6096, -2.453],
+    detail: "Researched four-hour harbour trip welcoming beginners and private groups.",
+    sourceUrl: "https://www.amarisaweymouth.co.uk/4hour/",
   },
 ];
 
 const categoryConfig = {
   campsites: { label: "Campsites", colour: "#e66b3c" },
   attractions: { label: "Attractions", colour: "#24483d" },
-  walks: { label: "Easy walk ideas", colour: "#e1aa3a" },
+  walks: { label: "Walks", colour: "#e1aa3a" },
+  food: { label: "Food", colour: "#9a4f68" },
+  fishing: { label: "Fishing", colour: "#287b8e" },
 };
 
 function buildPopup(point) {
@@ -99,13 +273,27 @@ function buildPopup(point) {
   detail.textContent = point.detail;
   wrapper.appendChild(detail);
 
+  const links = document.createElement("div");
+  links.className = "trip-map-popup-links";
+
   const link = document.createElement("a");
   const [latitude, longitude] = point.coordinates;
   link.href = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
   link.target = "_blank";
   link.rel = "noreferrer";
   link.textContent = "Open directions ↗";
-  wrapper.appendChild(link);
+  links.appendChild(link);
+
+  if (point.sourceUrl) {
+    const source = document.createElement("a");
+    source.href = point.sourceUrl;
+    source.target = "_blank";
+    source.rel = "noreferrer";
+    source.textContent = "Check source ↗";
+    links.appendChild(source);
+  }
+
+  wrapper.appendChild(links);
 
   return wrapper;
 }
@@ -127,9 +315,16 @@ function TripMap({ campsites }) {
         category: "campsites",
         coordinates: campsite.coordinates,
         detail: `${campsite.area}${campsite.rating ? ` · ${campsite.rating} on Google` : ""}`,
+        sourceUrl: campsite.sourceUrl,
       }));
 
-    return [...campsitePoints, ...attractionPoints, ...walkPoints];
+    return [
+      ...campsitePoints,
+      ...attractionPoints,
+      ...walkPoints,
+      ...foodPoints,
+      ...fishingPoints,
+    ];
   }, [campsites]);
 
   useEffect(() => {

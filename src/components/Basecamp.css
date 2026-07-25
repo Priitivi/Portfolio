@@ -109,14 +109,39 @@
   gap: 10px;
 }
 
-.member-picker {
+.signed-in-member {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: rgba(247, 242, 232, 0.62);
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
+  color: var(--camp-paper);
+}
+
+.signed-in-avatar {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--camp-forest);
+  border: 1px solid rgba(247, 242, 232, 0.2);
+  color: var(--camp-yellow);
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.signed-in-member > span:last-child {
+  display: grid;
+}
+
+.signed-in-member small {
+  color: rgba(247, 242, 232, 0.5);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.signed-in-member strong {
+  font-size: 0.78rem;
 }
 
 .basecamp-signout {
@@ -135,18 +160,6 @@
   color: var(--camp-paper);
 }
 
-.member-picker select {
-  min-width: 112px;
-  padding: 9px 30px 9px 12px;
-  color: var(--camp-paper);
-  background: var(--camp-forest);
-  border: 1px solid rgba(247, 242, 232, 0.18);
-  border-radius: 999px;
-  outline: none;
-  text-transform: none;
-}
-
-.member-picker select:focus-visible,
 .basecamp-shell button:focus-visible,
 .basecamp-shell a:focus-visible,
 .basecamp-shell input:focus-visible,
@@ -265,7 +278,7 @@
 
 .trip-hero {
   position: relative;
-  min-height: 620px;
+  min-height: 560px;
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.55fr);
   align-items: center;
@@ -797,12 +810,45 @@
   text-underline-offset: 3px;
 }
 
+.candidate-photo-placeholder {
+  display: grid;
+  align-content: end;
+  padding: 22px;
+  background:
+    radial-gradient(circle at 78% 18%, rgba(245, 193, 93, 0.34), transparent 25%),
+    linear-gradient(145deg, #315f51, #0c211c);
+}
+
+.candidate-photo-placeholder > span {
+  position: relative;
+  z-index: 1;
+  max-width: 85%;
+  color: var(--camp-paper);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.45rem;
+  line-height: 1.05;
+}
+
 .candidate-topline,
 .vote-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.candidate-topline > span:last-child {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.candidate-origin {
+  color: rgba(16, 33, 30, 0.5);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .candidate-index {
@@ -896,6 +942,31 @@
 .candidate-notes p {
   margin: 0;
   font-size: 0.82rem;
+}
+
+.candidate-notes > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(16, 33, 30, 0.08);
+}
+
+.candidate-notes > div:last-child {
+  border-bottom: 0;
+}
+
+.candidate-notes button {
+  padding: 2px 0;
+  background: transparent;
+  border: 0;
+  color: #9a3d2c;
+  cursor: pointer;
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .candidate-notes strong {
@@ -1052,6 +1123,12 @@
   color: var(--camp-forest);
   font-weight: 800;
   text-underline-offset: 3px;
+}
+
+.trip-map-popup-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
 }
 
 .map-insight-grid {
@@ -1392,6 +1469,26 @@
   margin: -5px 0 2px;
 }
 
+.expense-author {
+  display: grid;
+  gap: 7px;
+  padding: 10px 12px;
+  background: rgba(36, 72, 61, 0.08);
+  border: 1px solid var(--camp-line);
+}
+
+.expense-author > span {
+  color: rgba(16, 33, 30, 0.54);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.expense-author > strong {
+  font-size: 0.86rem;
+}
+
 .chat-room {
   width: min(920px, 100%);
   margin: 0 auto;
@@ -1587,12 +1684,7 @@
     justify-self: stretch;
   }
 
-  .member-picker {
-    flex: 1;
-    justify-content: space-between;
-  }
-
-  .member-picker select {
+  .signed-in-member {
     flex: 1;
   }
 
@@ -1674,6 +1766,10 @@
 
 @media (max-width: 620px) {
   .basecamp-header {
+    min-height: 58px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 9px;
+    padding-block: 8px;
     padding-inline: 14px;
   }
 
@@ -1685,62 +1781,269 @@
     font-size: 1.25rem;
   }
 
+  .basecamp-identity {
+    justify-self: start;
+    min-width: 0;
+  }
+
+  .basecamp-mark {
+    width: 31px;
+    height: 31px;
+    font-size: 0.65rem;
+  }
+
+  .basecamp-identity strong {
+    overflow: hidden;
+    font-size: 0.9rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .basecamp-identity span:last-child {
+    display: none;
+  }
+
+  .basecamp-user-actions {
+    grid-column: auto;
+    justify-self: end;
+    gap: 7px;
+  }
+
+  .signed-in-member {
+    flex: 0 0 auto;
+  }
+
+  .signed-in-member > span:last-child {
+    display: none;
+  }
+
+  .signed-in-avatar {
+    width: 31px;
+    height: 31px;
+  }
+
+  .basecamp-signout {
+    padding: 7px 8px;
+    font-size: 0.62rem;
+  }
+
+  .basecamp-tabs {
+    top: 58px;
+    padding-inline: 8px;
+  }
+
+  .basecamp-tabs button {
+    padding: 11px 9px 10px;
+    font-size: 0.66rem;
+  }
+
   .basecamp-main {
-    padding: 18px 14px 96px;
+    padding: 14px 12px 92px;
+  }
+
+  .basecamp-view {
+    gap: 18px;
   }
 
   .trip-hero {
-    min-height: 650px;
-    padding: 28px 22px;
+    min-height: 440px;
+    align-content: space-between;
+    gap: 20px;
+    padding: 24px 18px 18px;
+    border-radius: 0;
+  }
+
+  .trip-hero::before {
+    background:
+      linear-gradient(180deg, rgba(9, 26, 24, 0.9) 0%, rgba(9, 26, 24, 0.62) 54%, rgba(9, 26, 24, 0.92) 100%),
+      linear-gradient(90deg, rgba(9, 26, 24, 0.42), transparent);
+  }
+
+  .trip-hero-art img {
+    object-position: 58% center;
   }
 
   .trip-hero-copy h1 {
-    font-size: clamp(3.3rem, 18vw, 5.2rem);
+    max-width: 330px;
+    margin: 10px 0 12px;
+    font-size: clamp(2.75rem, 13vw, 3.85rem);
+    line-height: 0.9;
+  }
+
+  .trip-hero-copy p {
+    max-width: 300px;
+    font-size: 0.98rem;
+  }
+
+  .hero-actions {
+    gap: 12px;
+    margin-top: 18px;
+  }
+
+  .hero-actions button {
+    padding: 10px 12px;
+    font-size: 0.78rem;
+  }
+
+  .hero-actions a {
+    font-size: 0.76rem;
   }
 
   .trip-hero-stats {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-top: 1px solid rgba(247, 242, 232, 0.2);
   }
 
   .trip-hero-stats > div {
-    display: grid;
-    grid-template-columns: 0.7fr 1fr;
-    padding: 12px 0;
-    border-right: 0;
-    border-bottom: 1px solid rgba(247, 242, 232, 0.16);
-  }
-
-  .trip-hero-stats > div:last-child {
-    padding-left: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 12px 8px 0;
+    border-right: 1px solid rgba(247, 242, 232, 0.16);
     border-bottom: 0;
   }
 
-  .trip-hero-stats small {
-    grid-column: 2;
+  .trip-hero-stats > div:first-child {
+    padding-left: 0;
   }
 
-  .crew-list,
-  .candidate-grid {
-    grid-template-columns: 1fr;
+  .trip-hero-stats > div:last-child {
+    padding-left: 8px;
+    border-right: 0;
+  }
+
+  .trip-hero-stats strong {
+    font-size: clamp(1rem, 5vw, 1.32rem);
+  }
+
+  .trip-hero-stats span {
+    font-size: 0.53rem;
+  }
+
+  .trip-hero-stats small {
+    display: none;
+  }
+
+  .crew-strip {
+    gap: 12px;
+    padding: 14px 0;
+  }
+
+  .strip-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .strip-heading strong {
+    font-size: 0.76rem;
+  }
+
+  .crew-list {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  .crew-list::-webkit-scrollbar {
+    display: none;
   }
 
   .crew-member,
   .crew-member:nth-child(3) {
-    border-left: 0;
-    border-bottom: 1px solid var(--camp-line);
-    padding: 10px 0;
+    flex: 0 0 176px;
+    min-height: 54px;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.48);
+    border: 1px solid var(--camp-line);
+    scroll-snap-align: start;
   }
 
-  .crew-member:last-child {
-    border-bottom: 0;
+  .crew-avatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  .crew-member strong {
+    font-size: 0.82rem;
+  }
+
+  .crew-member small {
+    font-size: 0.66rem;
+  }
+
+  .crew-number {
+    display: none;
   }
 
   .overview-grid {
-    gap: 14px;
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(82vw, 1fr);
+    gap: 10px;
+    margin-inline: -12px;
+    padding-inline: 12px;
+    overflow-x: auto;
+    scroll-padding-inline: 12px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .overview-grid::-webkit-scrollbar,
+  .candidate-grid::-webkit-scrollbar,
+  .itinerary-board::-webkit-scrollbar,
+  .kit-board::-webkit-scrollbar,
+  .map-insight-grid::-webkit-scrollbar,
+  .trip-map-filters::-webkit-scrollbar {
+    display: none;
+  }
+
+  .decision-card,
+  .mission-card,
+  .progress-card,
+  .photo-card {
+    grid-column: auto;
+    min-height: 226px;
+    padding: 18px;
+    scroll-snap-align: start;
+  }
+
+  .basecamp-card h2 {
+    font-size: 1.42rem;
+  }
+
+  .mission-number {
+    margin-top: 12px;
+    font-size: 3.5rem;
+  }
+
+  .ranked-list {
+    margin-top: 12px;
+  }
+
+  .ranked-list button {
+    padding: 10px 0;
+  }
+
+  .progress-track {
+    margin-top: 18px;
+  }
+
+  .photo-card {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .photo-card p {
+    margin-block: 7px;
   }
 
   .basecamp-shell .add-form {
     grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 16px;
   }
 
   .add-form > div,
@@ -1753,39 +2056,272 @@
   }
 
   .prototype-notice {
-    grid-template-columns: 1fr;
-    gap: 6px;
+    display: flex;
+    align-items: center;
+    padding: 12px 14px;
+    font-size: 0.72rem;
   }
 
-  .trip-map-toolbar {
-    padding: 20px;
+  .prototype-notice p {
+    display: none;
   }
 
-  .trip-map-filters {
-    display: grid;
-    grid-template-columns: 1fr;
-    width: 100%;
-  }
-
-  .trip-map-filters button {
-    justify-content: flex-start;
-  }
-
-  .trip-map-canvas {
-    height: 62vh;
-    min-height: 410px;
-  }
-
-  .trip-map-note {
-    padding: 13px 20px;
+  .view-intro {
+    gap: 10px;
+    padding: 8px 0 0;
   }
 
   .view-intro h1 {
-    font-size: clamp(3rem, 15vw, 4.9rem);
+    margin: 8px 0 9px;
+    font-size: clamp(2.15rem, 10vw, 3rem);
+    line-height: 0.94;
+  }
+
+  .view-intro p {
+    font-size: 0.83rem;
+    line-height: 1.45;
+  }
+
+  .view-intro > a {
+    padding: 9px 11px;
+    font-size: 0.72rem;
+  }
+
+  .shortlist-ribbon {
+    margin-inline: -12px;
+    padding-inline: 12px;
+  }
+
+  .candidate-grid {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 86vw;
+    gap: 10px;
+    margin-inline: -12px;
+    padding-inline: 12px;
+    overflow-x: auto;
+    scroll-padding-inline: 12px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .candidate-card {
+    min-height: 0;
+    gap: 12px;
+    padding: 16px;
+    scroll-snap-align: start;
+  }
+
+  .candidate-photo {
+    margin: -16px -16px 0;
+  }
+
+  .candidate-photo-placeholder {
+    padding: 16px;
+  }
+
+  .candidate-topline > span:last-child {
+    align-items: flex-end;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .candidate-card > div > p {
+    font-size: 0.78rem;
+  }
+
+  .note-composer input {
+    min-height: 40px;
+  }
+
+  .trip-map-toolbar {
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .trip-map-toolbar h2 {
+    font-size: 1.75rem;
+  }
+
+  .trip-map-filters {
+    display: flex;
+    flex-wrap: nowrap;
+    width: 100%;
+    padding-bottom: 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .trip-map-filters button {
+    flex: 0 0 auto;
+    justify-content: flex-start;
+    padding: 8px 9px;
+    font-size: 0.66rem;
+  }
+
+  .trip-map-canvas {
+    height: 54vh;
+    min-height: 360px;
+  }
+
+  .trip-map-note {
+    padding: 11px 16px;
+    font-size: 0.7rem;
+  }
+
+  .map-insight-grid {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 82vw;
+    gap: 10px;
+    margin-inline: -12px;
+    padding-inline: 12px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .map-insight-grid article {
+    min-height: 190px;
+    padding: 16px;
+    scroll-snap-align: start;
+  }
+
+  .itinerary-board {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 86vw;
+    gap: 10px;
+    margin-inline: -12px;
+    padding-inline: 12px;
+    overflow-x: auto;
+    scroll-padding-inline: 12px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .day-column {
+    padding: 14px;
+    background: rgba(36, 72, 61, 0.055);
+    border: 1px solid var(--camp-line);
+    scroll-snap-align: start;
+  }
+
+  .day-column > header {
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+  }
+
+  .day-column > header > span {
+    font-size: 1.35rem;
+  }
+
+  .itinerary-item {
+    min-height: 0;
+    padding: 14px;
+  }
+
+  .itinerary-item h2 {
+    margin: 6px 0;
+    font-size: 1.2rem;
+  }
+
+  .itinerary-item p {
+    display: -webkit-box;
+    margin: 0 0 12px;
+    overflow: hidden;
+    font-size: 0.78rem;
+    line-height: 1.4;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .itinerary-item .item-actions button,
+  .kit-item .item-actions button,
+  .inline-editor .item-actions button {
+    padding: 7px 8px;
+    font-size: 0.66rem;
+  }
+
+  .kit-board {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 86vw;
+    gap: 10px;
+    margin-inline: -12px;
+    padding-inline: 12px;
+    overflow-x: auto;
+    scroll-padding-inline: 12px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .kit-category {
+    padding: 16px;
+    scroll-snap-align: start;
+  }
+
+  .kit-category > header {
+    padding-bottom: 8px;
+  }
+
+  .kit-category h2 {
+    font-size: 1.25rem;
+  }
+
+  .large-progress {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .large-progress strong {
+    font-size: 2.2rem;
+  }
+
+  .budget-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .budget-stat {
+    gap: 4px;
+    min-width: 0;
+    padding: 11px 9px;
+  }
+
+  .budget-stat > span {
+    font-size: 0.54rem;
+    letter-spacing: 0.04em;
+  }
+
+  .budget-stat > strong {
+    overflow: hidden;
+    font-size: clamp(1rem, 4.7vw, 1.3rem);
+    letter-spacing: -0.04em;
+  }
+
+  .budget-stat > small {
+    display: none;
+  }
+
+  .expense-layout {
+    gap: 10px;
+  }
+
+  .expense-list,
+  .expense-form {
+    padding: 16px;
+  }
+
+  .empty-state {
+    padding: 28px 12px;
   }
 
   .expense-row {
     grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 12px 0;
   }
 
   .expense-row button {
@@ -1800,7 +2336,8 @@
   .kit-item {
     grid-template-columns: 1fr;
     gap: 4px;
-    padding: 12px 0;
+    min-height: 50px;
+    padding: 9px 0;
   }
 
   .kit-item-actions {
@@ -1808,8 +2345,8 @@
   }
 
   .chat-feed {
-    min-height: 360px;
-    max-height: 56vh;
+    min-height: 320px;
+    max-height: 52vh;
     padding: 16px 12px;
   }
 

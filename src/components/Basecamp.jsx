@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion as Motion } from "framer-motion";
-import { logout as logoutIdentity } from "@netlify/identity";
+import { getUser, logout as logoutIdentity } from "@netlify/identity";
 import TripMap from "./TripMap";
 import "./Basecamp.css";
 
@@ -25,12 +25,19 @@ const crew = [
   { id: "oliver", name: "Oliver", home: "Ealing", role: "Crew" },
 ];
 
+const crewByEmail = {
+  "priitivi@gmail.com": "priitivi",
+  "husainabedi@gmail.com": "husain",
+  "dhaneshlian@gmail.com": "dhanesh",
+};
+
 const initialCampsites = [
   {
     id: "eweleaze",
     name: "Eweleaze Farm",
     area: "Osmington · Weymouth",
     status: "Research",
+    origin: "Dhanesh’s list",
     rating: "4.5 ★",
     coordinates: [50.6384621, -2.4031664],
     image: "/campsites/eweleaze.webp",
@@ -45,6 +52,7 @@ const initialCampsites = [
     name: "Portesham Dairy Farm Campsite",
     area: "Portesham · Weymouth",
     status: "Research",
+    origin: "Dhanesh’s list",
     rating: "4.7 ★",
     coordinates: [50.667977, -2.563157],
     image: "/campsites/portesham.webp",
@@ -59,6 +67,7 @@ const initialCampsites = [
     name: "East Field",
     area: "Eweleaze Farm · Osmington",
     status: "Research",
+    origin: "Dhanesh’s list",
     rating: "5.0 ★",
     coordinates: [50.6375746, -2.4014606],
     image: "/campsites/east-field.webp",
@@ -73,6 +82,7 @@ const initialCampsites = [
     name: "Sweet Hill Farm",
     area: "Southwell · Portland",
     status: "Research",
+    origin: "Dhanesh’s list",
     rating: "4.5 ★",
     coordinates: [50.5275055, -2.4488156],
     image: "/campsites/sweet-hill.webp",
@@ -87,6 +97,7 @@ const initialCampsites = [
     name: "Rosewall Camping",
     area: "Osmington Mills · Weymouth",
     status: "Research",
+    origin: "Dhanesh’s list",
     rating: "4.6 ★",
     coordinates: [50.641112, -2.378175],
     image: "/campsites/rosewall.webp",
@@ -101,6 +112,7 @@ const initialCampsites = [
     name: "Ringstead Bay Camping",
     area: "Ringstead · Dorchester",
     status: "Research",
+    origin: "Dhanesh’s list",
     rating: "5.0 ★",
     coordinates: [50.6341842, -2.3617009],
     image: "/campsites/ringstead.webp",
@@ -115,12 +127,49 @@ const initialCampsites = [
     name: "Sea Barn Farm Fleet",
     area: "Fleet · Weymouth",
     status: "Research",
+    origin: "Dhanesh’s list",
     rating: "3.9 ★",
     coordinates: [50.623753, -2.529066],
     image: "/campsites/sea-barn.webp",
     imageAlt: "Aerial view of Sea Barn Farm beside the Fleet lagoon",
     sourceUrl: "https://www.seabarnfarm.co.uk/",
     sourceLabel: "Sea Barn Farm",
+    votes: [],
+    notes: [],
+  },
+  {
+    id: "durdle-door-holiday-park",
+    name: "Durdle Door Holiday Park",
+    area: "West Lulworth · Wareham",
+    status: "Extra lead",
+    origin: "Nearby research",
+    coordinates: [50.62615, -2.27036],
+    sourceUrl: "https://www.durdledoor.co.uk/accommodation",
+    sourceLabel: "Durdle Door Holiday Park",
+    votes: [],
+    notes: [],
+  },
+  {
+    id: "red-lion-winfrith",
+    name: "The Red Lion Campsite",
+    area: "Winfrith Newburgh · Dorchester",
+    status: "Extra lead",
+    origin: "Nearby research",
+    coordinates: [50.668327, -2.275631],
+    sourceUrl: "https://redlionwinfrith.com/campsite/",
+    sourceLabel: "The Red Lion",
+    votes: [],
+    notes: [],
+  },
+  {
+    id: "longthorns-farm",
+    name: "Longthorns Farm",
+    area: "Wareham · Dorset",
+    status: "Extra lead",
+    origin: "Nearby research",
+    coordinates: [50.698462, -2.215858],
+    sourceUrl: "https://www.longthornsfarm.co.uk/camping",
+    sourceLabel: "Longthorns Farm",
     votes: [],
     notes: [],
   },
@@ -202,6 +251,7 @@ function mergeTripState(savedTrip) {
             imageAlt: campsite.imageAlt,
             sourceUrl: campsite.sourceUrl,
             sourceLabel: campsite.sourceLabel,
+            origin: campsite.origin,
           }
         : campsite;
     });
@@ -257,9 +307,28 @@ function getSafeExternalUrl(value) {
   }
 }
 
+function getCrewMemberForUser(user) {
+  const email = user?.email?.trim().toLowerCase();
+  const knownMember = crew.find((member) => member.id === crewByEmail[email]);
+  if (knownMember) return knownMember;
+
+  const fallbackName =
+    user?.name?.trim()
+    || email?.split("@")[0]?.replace(/[._-]+/g, " ")
+    || "Crew member";
+
+  return {
+    id: `identity-${user?.id || "crew"}`,
+    name: fallbackName.replace(/\b\w/g, (letter) => letter.toUpperCase()),
+    home: "Signed-in account",
+    role: "Crew",
+  };
+}
+
 function Basecamp() {
   const isLocalPreview = ["localhost", "127.0.0.1"].includes(window.location.hostname);
   const [trip, setTrip] = useState(getInitialTrip);
+  const [identityMember, setIdentityMember] = useState(isLocalPreview ? crew[0] : null);
   const [activeView, setActiveView] = useState("overview");
   const [candidateForm, setCandidateForm] = useState({ name: "", area: "", note: "" });
   const [itineraryForm, setItineraryForm] = useState({
@@ -288,7 +357,6 @@ function Basecamp() {
   const [expenseForm, setExpenseForm] = useState({
     description: "",
     amount: "",
-    paidBy: "Priitivi",
   });
   const [noteDrafts, setNoteDrafts] = useState({});
   const [syncStatus, setSyncStatus] = useState(isLocalPreview ? "Local preview" : "Connecting");
@@ -303,6 +371,31 @@ function Basecamp() {
   const touchStartRef = useRef(null);
   const tabRefs = useRef({});
   const chatEndRef = useRef(null);
+
+  useEffect(() => {
+    if (isLocalPreview) {
+      setIdentityMember(crew[0]);
+      return undefined;
+    }
+
+    let cancelled = false;
+    getUser()
+      .then((user) => {
+        if (cancelled) return;
+        if (!user || !user.roles?.includes("basecamp")) {
+          window.location.assign("/basecamp-login");
+          return;
+        }
+        setIdentityMember(getCrewMemberForUser(user));
+      })
+      .catch(() => {
+        if (!cancelled) window.location.assign("/basecamp-login");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLocalPreview]);
 
   useEffect(() => {
     tripRef.current = trip;
@@ -464,7 +557,7 @@ function Basecamp() {
     };
   }, []);
 
-  const activeMember = crew.find((member) => member.id === trip.activeMember) ?? crew[0];
+  const activeMember = identityMember ?? crew[0];
   const completedPacking = trip.packing.filter((item) => item.done).length;
   const packingProgress = trip.packing.length
     ? Math.round((completedPacking / trip.packing.length) * 100)
@@ -505,7 +598,12 @@ function Basecamp() {
 
     const candidateId = `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now()}`;
     const firstNote = candidateForm.note.trim()
-      ? [{ id: `${candidateId}-note`, author: activeMember.name, text: candidateForm.note.trim() }]
+      ? [{
+          id: `${candidateId}-note`,
+          authorId: activeMember.id,
+          author: activeMember.name,
+          text: candidateForm.note.trim(),
+        }]
       : [];
 
     updateTrip((current) => ({
@@ -537,13 +635,37 @@ function Basecamp() {
               ...campsite,
               notes: [
                 ...campsite.notes,
-                { id: `${campsiteId}-${Date.now()}`, author: activeMember.name, text },
+                {
+                  id: `${campsiteId}-${Date.now()}`,
+                  authorId: activeMember.id,
+                  author: activeMember.name,
+                  text,
+                },
               ],
             }
           : campsite,
       ),
     }));
     setNoteDrafts((current) => ({ ...current, [campsiteId]: "" }));
+  };
+
+  const removeNote = (campsiteId, note) => {
+    const isOwnNote =
+      note.authorId === activeMember.id
+      || (!note.authorId && note.author === activeMember.name);
+    if (!isOwnNote || !window.confirm("Remove your comment from this campsite?")) return;
+
+    updateTrip((current) => ({
+      ...current,
+      campsites: current.campsites.map((campsite) =>
+        campsite.id === campsiteId
+          ? {
+              ...campsite,
+              notes: campsite.notes.filter((candidate) => candidate.id !== note.id),
+            }
+          : campsite,
+      ),
+    }));
   };
 
   const addItineraryItem = (event) => {
@@ -698,12 +820,12 @@ function Basecamp() {
           id: `expense-${Date.now()}`,
           description: expenseForm.description.trim(),
           amount,
-          paidBy: expenseForm.paidBy,
+          paidBy: activeMember.name,
           settled: false,
         },
       ],
     }));
-    setExpenseForm({ description: "", amount: "", paidBy: activeMember.name });
+    setExpenseForm({ description: "", amount: "" });
   };
 
   const toggleExpenseSettled = (expenseId) => {
@@ -828,21 +950,15 @@ function Basecamp() {
         </div>
 
         <div className="basecamp-user-actions">
-          <label className="member-picker">
-            <span>You are</span>
-            <select
-              value={activeMember.id}
-              onChange={(event) =>
-                updateTrip((current) => ({ ...current, activeMember: event.target.value }))
-              }
-            >
-              {crew.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="signed-in-member" aria-label={`Signed in as ${activeMember.name}`}>
+            <span className="signed-in-avatar" aria-hidden="true">
+              {activeMember.name.charAt(0)}
+            </span>
+            <span>
+              <small>Signed in as</small>
+              <strong>{activeMember.name}</strong>
+            </span>
+          </div>
           <button type="button" className="basecamp-signout" onClick={signOut}>
             Sign out
           </button>
@@ -882,9 +998,9 @@ function Basecamp() {
             >
               <section className="trip-hero">
                 <div className="trip-hero-copy">
-                  <span className="section-kicker">Chapter one · Dorset coast</span>
-                  <h1>The road to<br />Durdle Door.</h1>
-                  <p>big bass irl w the boys</p>
+                  <span className="section-kicker">Durdle Door · 21–23 August 2026</span>
+                  <h1>Big bass IRL<br />with the boys.</h1>
+                  <p>Three days. One car. A very optimistic amount of fishing.</p>
                   <div className="hero-actions">
                     <button type="button" onClick={() => changeView("campsites")}>
                       Choose basecamp
@@ -1052,8 +1168,8 @@ function Basecamp() {
                   <span className="section-kicker">Field map · Decision board</span>
                   <h1>Choose our basecamp.</h1>
                   <p>
-                    Vote as {activeMember.name}, add discoveries and leave the useful
-                    details you want everyone to remember.
+                    All seven campsites from Dhanesh’s list are here, plus three
+                    nearby leads. Your votes and comments post as {activeMember.name}.
                   </p>
                 </div>
                 <a href={MAP_LIST_URL} target="_blank" rel="noreferrer">
@@ -1089,11 +1205,24 @@ function Basecamp() {
                           )}
                         </figure>
                       )}
+                      {!campsite.image && (
+                        <div className="candidate-photo candidate-photo-placeholder">
+                          <span>{campsite.name}</span>
+                          {campsite.sourceUrl && (
+                            <a href={campsite.sourceUrl} target="_blank" rel="noreferrer">
+                              Research source ↗
+                            </a>
+                          )}
+                        </div>
+                      )}
                       <div className="candidate-topline">
                         <span className="candidate-index">
                           {String(index + 1).padStart(2, "0")}
                         </span>
-                        <span className="status-pill">{campsite.status}</span>
+                        <span>
+                          <small className="candidate-origin">{campsite.origin || "Crew lead"}</small>
+                          <span className="status-pill">{campsite.status}</span>
+                        </span>
                       </div>
                       <div>
                         <h2>{campsite.name}</h2>
@@ -1128,11 +1257,27 @@ function Basecamp() {
 
                       {campsite.notes.length > 0 && (
                         <div className="candidate-notes">
-                          {campsite.notes.map((note) => (
-                            <p key={note.id}>
-                              <strong>{note.author}</strong> {note.text}
-                            </p>
-                          ))}
+                          {campsite.notes.map((note) => {
+                            const isOwnNote =
+                              note.authorId === activeMember.id
+                              || (!note.authorId && note.author === activeMember.name);
+                            return (
+                              <div key={note.id}>
+                                <p>
+                                  <strong>{note.author}</strong> {note.text}
+                                </p>
+                                {isOwnNote && (
+                                  <button
+                                    type="button"
+                                    aria-label={`Remove your comment: ${note.text}`}
+                                    onClick={() => removeNote(campsite.id, note)}
+                                  >
+                                    Remove
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
 
@@ -1228,8 +1373,8 @@ function Basecamp() {
                   <span className="section-kicker">Camps · coast · low-effort wanders</span>
                   <h1>Plot the weekend.</h1>
                   <p>
-                    Compare every campsite against Durdle Door, Weymouth’s fishing
-                    harbour and the coastal stops worth saving for the drive.
+                    Compare all campsite leads with beaches, walks, food stops and
+                    beginner fishing departures saved by the crew.
                   </p>
                 </div>
                 <a href={MAP_LIST_URL} target="_blank" rel="noreferrer">
@@ -1239,50 +1384,95 @@ function Basecamp() {
 
               <TripMap campsites={trip.campsites} />
 
-              <section className="map-insight-grid" aria-label="Easy walk notes">
+              <section className="map-insight-grid" aria-label="Local research notes">
                 <article className="basecamp-card">
-                  <span>01 · easiest start</span>
-                  <h2>Lulworth Cove shoreline</h2>
+                  <span>01 · easiest coastal start</span>
+                  <h2>Lulworth Cove</h2>
                   <p>
-                    A gentle, wide approach from the car park to the cove. Treat the
-                    cliff sections beyond it as a different, steeper walk.
+                    The cove and Visitor Centre are the low-effort option. The
+                    coast-path sections beyond them are a steeper commitment.
                   </p>
                   <a
-                    href="https://www.visit-dorset.com/listing/lulworth-cove/80726301/"
+                    href="https://lulworth.com/accessibility-lulworth-cove/"
                     target="_blank"
                     rel="noreferrer"
                   >
-                    Check visitor information ↗
+                    Check access information ↗
                   </a>
                 </article>
                 <article className="basecamp-card">
-                  <span>02 · short viewpoint</span>
-                  <h2>Stair Hole platforms</h2>
+                  <span>02 · bring proper shoes</span>
+                  <h2>Durdle Door is steep</h2>
                   <p>
-                    The opening section is accessible; the full 3.5 km Lulworth and
-                    Fossil Forest route is graded moderate.
+                    The beach is reached by a steep descent and steps. Treat Man
+                    O’War and the Durdle-to-Lulworth path as real walks, not lay-bys.
                   </p>
                   <a
-                    href="https://www.southwestcoastpath.org.uk/walksdb/478/printable/"
+                    href="https://lulworth.com/visit/places-to-visit/beaches/"
                     target="_blank"
                     rel="noreferrer"
                   >
-                    Read the route notes ↗
+                    Read the beach guidance ↗
                   </a>
                 </article>
                 <article className="basecamp-card">
-                  <span>03 · flat sea views</span>
-                  <h2>Portland Bill lighthouse</h2>
+                  <span>03 · breakfast or lunch</span>
+                  <h2>The Boat Shed Café</h2>
                   <p>
-                    A wide, flat path from the car park makes this a good low-energy
-                    final stop before the drive home.
+                    Right on Lulworth Cove. Its current listing says breakfast,
+                    light lunches and daily opening from 08:30 to 17:00.
                   </p>
                   <a
-                    href="https://www.visit-dorset.com/visitor-information/accessibility/accessible-viewpoints/"
+                    href="https://lulworth.com/visit/food-drink/boat-shed-cafe/"
                     target="_blank"
                     rel="noreferrer"
                   >
-                    Check accessible viewpoints ↗
+                    Check the current menu ↗
+                  </a>
+                </article>
+                <article className="basecamp-card">
+                  <span>04 · evening food</span>
+                  <h2>Two Lulworth pubs</h2>
+                  <p>
+                    Save The Castle Inn in the village and Lulworth Cove Inn by the
+                    Heritage Centre as flexible post-walk dinner options.
+                  </p>
+                  <a
+                    href="https://westlulworth.org.uk/places-to-eat-drink/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Compare local food stops ↗
+                  </a>
+                </article>
+                <article className="basecamp-card">
+                  <span>05 · beginner mission</span>
+                  <h2>Four hours from Weymouth</h2>
+                  <p>
+                    The researched operators explicitly welcome beginners. A
+                    four-hour trip matches the group’s preferred session length.
+                  </p>
+                  <a
+                    href="https://fishingtripsweymouth.com/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Check fishing trips ↗
+                  </a>
+                </article>
+                <article className="basecamp-card">
+                  <span>06 · date-specific note</span>
+                  <h2>Lulworth Castle</h2>
+                  <p>
+                    The current 2026 notice lists the Castle and grounds closed on
+                    Friday 21 August, so only consider it on Saturday or Sunday.
+                  </p>
+                  <a
+                    href="https://lulworth.com/visit/places-to-visit/castle-and-park/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Recheck before the trip ↗
                   </a>
                 </article>
               </section>
@@ -1569,9 +1759,10 @@ function Basecamp() {
                                     >
                                       <option>Group</option>
                                       <option>Everyone</option>
-                                      {crew.map((member) => (
-                                        <option key={member.id}>{member.name}</option>
-                                      ))}
+                                      {![activeMember.name, "Group", "Everyone"].includes(
+                                        packingEditForm.owner,
+                                      ) && <option>{packingEditForm.owner}</option>}
+                                      <option>{activeMember.name}</option>
                                     </select>
                                   </label>
                                 </div>
@@ -1666,9 +1857,7 @@ function Basecamp() {
                   >
                     <option>Group</option>
                     <option>Everyone</option>
-                    {crew.map((member) => (
-                      <option key={member.id}>{member.name}</option>
-                    ))}
+                    <option>{activeMember.name}</option>
                   </select>
                 </label>
                 <button type="submit">Add item</button>
@@ -1783,22 +1972,10 @@ function Basecamp() {
                       required
                     />
                   </label>
-                  <label>
+                  <div className="expense-author">
                     <span>Paid by</span>
-                    <select
-                      value={expenseForm.paidBy}
-                      onChange={(event) =>
-                        setExpenseForm((current) => ({
-                          ...current,
-                          paidBy: event.target.value,
-                        }))
-                      }
-                    >
-                      {crew.map((member) => (
-                        <option key={member.id}>{member.name}</option>
-                      ))}
-                    </select>
-                  </label>
+                    <strong>{activeMember.name} · you</strong>
+                  </div>
                   <button type="submit">Record expense</button>
                 </form>
               </section>
