@@ -49,6 +49,7 @@ export default function GameCanvas({ levelIndex, settings, paused, onPause, onEv
 
   const touch = (action, active) => (event) => {
     event.preventDefault();
+    if (active) event.currentTarget.setPointerCapture?.(event.pointerId);
     engineRef.current?.audio.resume();
     inputRef.current?.setTouch(action, active);
   };
@@ -56,6 +57,9 @@ export default function GameCanvas({ levelIndex, settings, paused, onPause, onEv
   const releaseTouch = (event) => {
     event.preventDefault();
     inputRef.current?.setTouch(event.currentTarget.dataset.action, false);
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
   };
 
   return (
@@ -92,14 +96,14 @@ export default function GameCanvas({ levelIndex, settings, paused, onPause, onEv
         </div>
       )}
 
-      <div className="trial-touch-controls" aria-label="Touch controls">
+      <div className="trial-touch-controls" aria-label="Touch controls" onContextMenu={(event) => event.preventDefault()}>
         <div>
-          <button type="button" data-action="left" aria-label="Move left" onPointerDown={touch("left", true)} onPointerUp={releaseTouch} onPointerCancel={releaseTouch}>←</button>
-          <button type="button" data-action="right" aria-label="Move right" onPointerDown={touch("right", true)} onPointerUp={releaseTouch} onPointerCancel={releaseTouch}>→</button>
+          <button type="button" data-action="left" aria-label="Move left" onPointerDown={touch("left", true)} onPointerUp={releaseTouch} onPointerCancel={releaseTouch} onLostPointerCapture={releaseTouch}>←</button>
+          <button type="button" data-action="right" aria-label="Move right" onPointerDown={touch("right", true)} onPointerUp={releaseTouch} onPointerCancel={releaseTouch} onLostPointerCapture={releaseTouch}>→</button>
         </div>
         <div>
-          <button type="button" data-action="run" aria-label="Run" onPointerDown={touch("run", true)} onPointerUp={releaseTouch} onPointerCancel={releaseTouch}>RUN</button>
-          <button type="button" data-action="jump" className="trial-touch-jump" aria-label="Jump" onPointerDown={touch("jump", true)} onPointerUp={releaseTouch} onPointerCancel={releaseTouch}>↑</button>
+          <button type="button" data-action="run" aria-label="Run" onPointerDown={touch("run", true)} onPointerUp={releaseTouch} onPointerCancel={releaseTouch} onLostPointerCapture={releaseTouch}>RUN</button>
+          <button type="button" data-action="jump" className="trial-touch-jump" aria-label="Jump" onPointerDown={touch("jump", true)} onPointerUp={releaseTouch} onPointerCancel={releaseTouch} onLostPointerCapture={releaseTouch}>↑</button>
         </div>
       </div>
     </section>

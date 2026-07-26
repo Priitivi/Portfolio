@@ -11,8 +11,11 @@ export default class InputManager {
     this.enabled = true;
     this.onKeyDown = this.onKeyDown.bind(this);
     this.onKeyUp = this.onKeyUp.bind(this);
+    this.clearWhenHidden = this.clearWhenHidden.bind(this);
     window.addEventListener("keydown", this.onKeyDown);
     window.addEventListener("keyup", this.onKeyUp);
+    window.addEventListener("blur", this.clearWhenHidden);
+    document.addEventListener("visibilitychange", this.clearWhenHidden);
   }
 
   setBindings(bindings) { this.bindings = { ...DEFAULT_BINDINGS, ...bindings }; }
@@ -37,6 +40,10 @@ export default class InputManager {
     event.preventDefault();
   }
 
+  clearWhenHidden() {
+    this.clear();
+  }
+
   setTouch(action, active) {
     if (active) {
       if (!this.touch.has(action)) this.pressed.add(action);
@@ -57,6 +64,8 @@ export default class InputManager {
   destroy() {
     window.removeEventListener("keydown", this.onKeyDown);
     window.removeEventListener("keyup", this.onKeyUp);
+    window.removeEventListener("blur", this.clearWhenHidden);
+    document.removeEventListener("visibilitychange", this.clearWhenHidden);
     this.clear();
   }
 }

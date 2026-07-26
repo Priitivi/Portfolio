@@ -8,17 +8,22 @@ import "./paint-surfer.css";
 function MobilePaintControls({ controlsRef, disabled }) {
   const press = (code) => (event) => {
     event.preventDefault();
-    if (!disabled) controlsRef.current.add(code);
+    if (disabled) return;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    controlsRef.current.add(code);
   };
   const release = (code) => (event) => {
     event.preventDefault();
     controlsRef.current.delete(code);
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
   };
   const control = (code) => ({
     onPointerDown: press(code),
     onPointerUp: release(code),
     onPointerCancel: release(code),
-    onPointerLeave: release(code),
+    onLostPointerCapture: release(code),
   });
 
   return (
@@ -145,6 +150,7 @@ export default function PaintSurfer({ navigate, onLogout }) {
         <nav aria-label="Paper Drifter controls">
           <button type="button" onClick={() => setShowHelp(true)}>How to draw</button>
           <button type="button" onClick={() => setPaused((current) => !current)} disabled={!started}>{paused ? "Resume" : "Pause"}</button>
+          <button type="button" className="paper-mobile-music" onClick={toggleMusic} aria-pressed={musicOn}>{musicOn ? "Mute" : "Music"}</button>
           <button type="button" onClick={onLogout}>Revoke clearance</button>
         </nav>
       </header>
@@ -194,19 +200,23 @@ export default function PaintSurfer({ navigate, onLogout }) {
             <p>PRIIT LAB // INTERACTIVE PAPER UNIVERSE</p>
             <h1 id="paper-intro-title">The world went blank.<br /><em>Draw it back.</em></h1>
             <p>Run through five thousand pixels of unfinished paper. Draw bridges where the level forgot them, sketch ramps into the sky, and colour four strange landmarks in whichever order feels right.</p>
-            <button type="button" onClick={start} disabled={!ready}>{ready ? "Tear open the page" : "Sharpening the pencil…"}<span aria-hidden="true">→</span></button>
-            <small>Your mouse or finger is the brush. Anything you draw becomes a surface the character can land on.</small>
           </div>
-          <div className="paper-intro-manual" aria-label="Game controls">
-            <span>FIELD NOTES / 002</span>
-            <dl>
-              <div><dt>Move</dt><dd>A / D or arrows</dd></div>
-              <div><dt>Jump</dt><dd>W / Space</dd></div>
-              <div><dt>Run</dt><dd>Hold Shift</dd></div>
-              <div><dt>Draw</dt><dd>Click + drag</dd></div>
-              <div><dt>Paint dash</dt><dd>Press J</dd></div>
-            </dl>
-            <p>There is no correct route. If the world blocks you, draw a better world.</p>
+          <div className="paper-intro-side">
+            <div className="paper-intro-action">
+              <button type="button" onClick={start} disabled={!ready}>{ready ? "Tear open the page" : "Sharpening the pencil…"}<span aria-hidden="true">→</span></button>
+              <small>Your mouse or finger is the brush. Anything you draw becomes a surface the character can land on.</small>
+            </div>
+            <div className="paper-intro-manual" aria-label="Game controls">
+              <span>FIELD NOTES / 002</span>
+              <dl>
+                <div><dt>Move</dt><dd>A / D or arrows</dd></div>
+                <div><dt>Jump</dt><dd>W / Space</dd></div>
+                <div><dt>Run</dt><dd>Hold Shift</dd></div>
+                <div><dt>Draw</dt><dd>Click + drag</dd></div>
+                <div><dt>Paint dash</dt><dd>Press J</dd></div>
+              </dl>
+              <p>There is no correct route. If the world blocks you, draw a better world.</p>
+            </div>
           </div>
         </section>
       )}

@@ -45,10 +45,6 @@ export default class Renderer {
     const palette = palettes[world.level.mood] || palettes.dawn;
     this.drawSky(world, palette);
     ctx.save();
-    const shake = this.settings.reducedShake || this.prefersReducedMotion ? 0 : world.shake;
-    const shakeX = (Math.sin(world.time * 53) * .72 + Math.sin(world.time * 31) * .28) * shake;
-    const shakeY = (Math.cos(world.time * 47) * .68 + Math.cos(world.time * 29) * .22) * shake * .58;
-    ctx.translate(shakeX, shakeY);
     ctx.translate(-world.camera.x, -world.camera.y);
     this.drawBackDecor(world, palette);
     this.drawPlatforms(world, palette);
@@ -114,12 +110,11 @@ export default class Renderer {
     const { ctx } = this;
     const cameraX = world.camera.x;
     for (let x = Math.floor(cameraX / 190) * 190 - 220; x < cameraX + VIEW_WIDTH + 220; x += 190) {
-      const sway = Math.sin(world.time * 1.2 + x) * 4;
       ctx.strokeStyle = `${palette[3]}70`;
       ctx.lineWidth = 5;
-      ctx.beginPath(); ctx.moveTo(x, 640); ctx.quadraticCurveTo(x + sway, 575, x + 12 + sway, 535 - seeded(x) * 40); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x, 640); ctx.quadraticCurveTo(x, 575, x + 12, 535 - seeded(x) * 40); ctx.stroke();
       ctx.fillStyle = `${palette[2]}aa`;
-      ctx.beginPath(); ctx.ellipse(x + 3 + sway, 550, 18, 8, -.5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(x + 3, 550, 18, 8, -.5, 0, Math.PI * 2); ctx.fill();
     }
     world.level.decorations.forEach((decoration, index) => {
       const x = decoration.x;

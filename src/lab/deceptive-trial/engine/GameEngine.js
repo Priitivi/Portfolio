@@ -244,7 +244,7 @@ export default class GameEngine {
       }
       if (hazard.type === "boulder") {
         hazard.x += (hazard.vx || -360) * dt;
-        hazard.y = (hazard.rollY ?? 548) + Math.sin(this.time * 7) * 5;
+        hazard.y = hazard.rollY ?? 548;
       }
     }
   }

@@ -57,7 +57,7 @@ export const levels = [
   {
     id: "blind-corner", number: 5, name: "The Blind Corner", subtitle: "The camera would never keep a secret from you.",
     width: 2600, start: { x: 100, y: 570 }, mood: "blue", weather: "rain",
-    platforms: [ground(0, 650), ground(790, 360), ground(1270, 520), ground(1900, 700), p(610, 516, 110), p(1180, 535, 90), p(1640, 516, 150)],
+    platforms: [ground(0, 650), ground(790, 360), ground(1270, 520), ground(1900, 700), p(610, 516, 110), p(1180, 535, 90), p(1600, 535, 190)],
     hazards: [spike(650, 612, 140), spike(1150, 612, 120), spike(1790, 612, 110), { id: "rolling-ruin", type: "boulder", x: 1530, y: 300, rollY: 548, w: 92, h: 92, active: true, dormant: true, activationDelay: .28, vx: -430 }],
     signs: [sign("corner-sign", 220, "The path ahead is fully visible.\nPlease ignore the decorative moon."), sign("look-sign", 1340, "Sometimes the background is just waiting its turn.", false)],
     collectibles: [mote("blind-1", 665, 465), mote("blind-2", 1695, 445)], checkpoints: [checkpoint("blind-cp", 1320)], goal: goal(2490),
@@ -67,18 +67,18 @@ export const levels = [
   {
     id: "matter-of-weight", number: 6, name: "A Matter of Weight", subtitle: "The wind has revised the laws of motion.",
     width: 2700, start: { x: 100, y: 570 }, mood: "blue", weather: "wind",
-    platforms: [ground(0, 470), ground(920, 360), ground(1760, 420), ground(2360, 340), p(530, 570, 130, 24, { type: "jumpPad", power: 1 }), p(760, 480, 130), p(1320, 530, 150), p(1540, 445, 130), p(2200, 520, 120)],
+    platforms: [ground(0, 470), ground(920, 360), ground(1760, 420), ground(2360, 340), p(530, 570, 130, 24, { type: "jumpPad", power: 1 }), p(760, 510, 130), p(1320, 530, 150), p(1540, 445, 130), p(2200, 520, 120)],
     hazards: [spike(470, 612, 450), spike(1280, 612, 480), spike(2180, 612, 180)],
     signs: [sign("weight-sign", 190, "Blue grass means a helpful tailwind.\nIt has never changed its mind mid-jump.", false)],
     collectibles: [mote("weight-1", 815, 430), mote("weight-2", 1600, 400), mote("weight-3", 2250, 470)], checkpoints: [checkpoint("weight-cp", 1000)], goal: goal(2590),
     secrets: [secret("weight-secret", 1815, 595, "Wind complaint form. Reason: changed without notice.")],
-    triggers: [trigger("wind-on", 500, 300, 360, 340, "wind", { value: 520 }), trigger("wind-flip", 705, 300, 180, 340, "wind", { value: -620 }), trigger("wind-off", 905, 300, 80, 340, "wind", { value: 0 }), trigger("late-wind", 1440, 300, 280, 340, "wind", { value: 440 }), trigger("late-flip", 1600, 300, 150, 340, "wind", { value: -500 })], decorations: [{ type: "windmill", x: 720 }],
+    triggers: [trigger("wind-on", 500, 300, 360, 340, "wind", { value: 40 }), trigger("wind-flip", 705, 300, 180, 340, "wind", { value: -40 }), trigger("wind-off", 905, 300, 80, 340, "wind", { value: 0 }), trigger("late-wind", 1440, 300, 280, 340, "wind", { value: 35 }), trigger("late-flip", 1600, 300, 150, 340, "wind", { value: -35 })], decorations: [{ type: "windmill", x: 720 }],
   },
   {
     id: "polite-architecture", number: 7, name: "Polite Architecture", subtitle: "The room moves only when you are not looking.",
     width: 2550, start: { x: 110, y: 570 }, mood: "violet", weather: "ash",
     platforms: [ground(0, 450), ground(1050, 410), ground(2050, 500), p(500, 560, 150, 24, { type: "shy", shyOffset: -130 }), p(760, 485, 150, 24, { type: "shy", shyOffset: 160 }), p(1510, 540, 150, 24, { type: "shy", shyOffset: -160 }), p(1800, 465, 150, 24, { type: "shy", shyOffset: 130 })],
-    hazards: [spike(450, 612, 600), spike(1460, 612, 590)], enemies: [{ id: "sleeper", type: "sleeper", x: 1240, y: 592, w: 44, h: 48, active: true }],
+    hazards: [spike(450, 612, 600), spike(1460, 612, 590)], enemies: [{ id: "sleeper", type: "sleeper", x: 1320, y: 592, w: 44, h: 48, active: true }],
     signs: [sign("polite-sign", 180, "Please face the furniture while it is moving.\nIt gets self-conscious.")],
     collectibles: [mote("polite-1", 820, 440), mote("polite-2", 1860, 420)], checkpoints: [checkpoint("polite-cp", 1110)], goal: goal(2440),
     secrets: [secret("polite-secret", 2090, 595, "You found the room while it was looking away.")], triggers: [], decorations: [{ type: "eyes", x: 860 }, { type: "eyes", x: 1750 }],
@@ -96,7 +96,7 @@ export const levels = [
   {
     id: "helpful-guide", number: 9, name: "The Helpful Guide", subtitle: "He has definitely tested this.",
     width: 2600, start: { x: 100, y: 570 }, mood: "green", weather: "mist",
-    platforms: [ground(0, 720), ground(860, 480), ground(1460, 460), ground(2060, 540), p(730, 525, 100), p(1350, 490, 95), p(1940, 520, 95)],
+    platforms: [ground(0, 720), ground(860, 480), ground(1460, 460), ground(2060, 540), p(730, 525, 100), p(1350, 520, 95), p(1940, 520, 95)],
     hazards: [spike(720, 612, 140), spike(1340, 612, 120), spike(1920, 612, 140)], npcs: [{ id: "guide", x: 335, y: 574, w: 38, h: 66, text: "I have definitely tested this.\nThe emerald lantern is a checkpoint.\nProbably." }],
     signs: [sign("guide-sign", 170, "TRUSTED GUIDE →", false)], collectibles: [mote("guide-1", 775, 480), mote("guide-2", 1990, 475)],
     checkpoints: [checkpoint("fake-cp", 1030, 560, true), checkpoint("guide-real", 1540)], goal: goal(2490),
@@ -106,7 +106,7 @@ export const levels = [
   {
     id: "other-you", number: 10, name: "The Other You", subtitle: "The mirror is accurate. Your controls are not.",
     width: 2700, start: { x: 100, y: 570 }, mood: "silver", weather: "rain",
-    platforms: [ground(0, 620), ground(780, 460), ground(1380, 440), ground(1980, 720), p(640, 525, 100), p(1260, 480, 100), p(1840, 520, 100)],
+    platforms: [ground(0, 620), ground(780, 460), ground(1380, 440), ground(1980, 720), p(640, 525, 100), p(1260, 520, 100), p(1840, 520, 100)],
     hazards: [spike(620, 612, 160), spike(1240, 612, 140), spike(1820, 612, 160)],
     signs: [sign("mirror-sign", 190, "Mirrors reverse images, not intentions.\nContinue right as normal.", false)], collectibles: [mote("mirror-1", 685, 480), mote("mirror-2", 1890, 475)],
     checkpoints: [checkpoint("mirror-cp", 1440)], goal: goal(2590), secrets: [secret("mirror-secret", 1440, 595, "Your reflection writes with the correct hand.")],
@@ -115,7 +115,7 @@ export const levels = [
   {
     id: "exit-interview", number: 11, name: "Exit Interview", subtitle: "Congratulations. Please disregard the next congratulations.",
     width: 2800, start: { x: 100, y: 570 }, mood: "red", weather: "ash",
-    platforms: [ground(0, 760), ground(910, 450), ground(1500, 500), ground(2160, 640), p(790, 520, 90), p(1390, 470, 95), p(2040, 520, 95), p(2510, 470, 120)],
+    platforms: [ground(0, 760), ground(910, 450), ground(1500, 500), ground(2160, 640), p(790, 520, 90), p(1390, 520, 95), p(2040, 520, 95), p(2510, 470, 120)],
     hazards: [spike(760, 612, 150), spike(1360, 612, 140), spike(2000, 612, 160)], signs: [sign("exit-sign", 190, "FINAL EXIT: 35 metres.\nCeremonial confetti has been armed.", false)],
     collectibles: [mote("exit-1", 835, 475), mote("exit-2", 2090, 475)], checkpoints: [checkpoint("exit-cp", 1550)],
     goal: goal(2680, 548, { id: "real-goal", active: false }), fakeGoals: [goal(650, 548, { id: "fake-goal", fake: true })],
@@ -130,7 +130,7 @@ export const levels = [
     signs: [sign("final-sign", 180, "Everything you learned applies.\nEvery exception has been removed for fairness.", false), sign("final-small", 2770, "No more tricks.\nWe ran out of budget.", false)],
     collectibles: [mote("final-1", 720, 545), mote("final-2", 1600, 430), mote("final-3", 2390, 150), mote("final-4", 3120, 500)], checkpoints: [checkpoint("final-cp-1", 980), checkpoint("final-cp-2", 2700)],
     goal: goal(3490), secrets: [secret("final-secret", 3340, 595, "The hidden ending: trust is not the absence of doubt. It is proceeding anyway.")],
-    triggers: [trigger("final-bridge-break", 520, 480, 400, 160, "breakBridgeIfRunning", { target: "final-bridge", once: false }), trigger("final-drop-cue", 960, 390, 180, 250, "activateHazard", { target: "final-drop" }), trigger("final-wind", 1320, 300, 390, 340, "wind", { value: -430 }), trigger("final-gravity", 2120, 0, 90, 640, "gravity", { value: -1 }), trigger("final-gravity-end", 2580, 0, 90, 640, "gravity", { value: 1 }), trigger("final-reverse", 2860, 300, 300, 340, "reverseControls", { value: true }), trigger("final-normal", 3180, 300, 80, 340, "reverseControls", { value: false })], decorations: [{ type: "all", x: 1750 }, { type: "banners", x: 3370 }],
+    triggers: [trigger("final-bridge-break", 520, 480, 400, 160, "breakBridgeIfRunning", { target: "final-bridge", once: false }), trigger("final-drop-cue", 960, 390, 180, 250, "activateHazard", { target: "final-drop" }), trigger("final-wind", 1320, 300, 390, 340, "wind", { value: -40 }), trigger("final-gravity", 2120, 0, 90, 640, "gravity", { value: -1 }), trigger("final-gravity-end", 2580, 0, 90, 640, "gravity", { value: 1 }), trigger("final-reverse", 2860, 300, 300, 340, "reverseControls", { value: true }), trigger("final-normal", 3180, 300, 80, 340, "reverseControls", { value: false })], decorations: [{ type: "all", x: 1750 }, { type: "banners", x: 3370 }],
   },
 ];
 

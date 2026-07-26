@@ -6,6 +6,7 @@ import { levels, loadLevel, parseLevel } from "../src/lab/deceptive-trial/engine
 import { PHYSICS, SHAKE_MAX } from "../src/lab/deceptive-trial/engine/constants.js";
 import { activateCheckpoint, armHazard, canFireTrigger, getJumpApexHeight, getJumpAscentTime, getJumpRange, isVictory, mergeShakeImpact, nextUnlockedLevel, shouldBreakBridge } from "../src/lab/deceptive-trial/engine/rules.js";
 import { getMusicProfile } from "../src/lab/deceptive-trial/engine/AudioEngine.js";
+import GameEngine from "../src/lab/deceptive-trial/engine/GameEngine.js";
 
 test("campaign ships twelve valid, unique, data-driven levels", () => {
   assert.equal(levels.length, 12);
@@ -100,6 +101,162 @@ test("Level 5 has a physically reachable route, readable boulder tell, checkpoin
   assert.equal(level.platforms.some((platform) => platform.type === "moving"), false, "Level 5 has no moving-platform dependency");
   assert.ok(finalGround, "the exit sits on a continuous final ground segment");
   assert.ok(level.goal.x > level.hazards.at(-1).x + level.hazards.at(-1).w, "the exit remains reachable beyond the final hazard");
+});
+
+test("opposing wind always leaves enough authority to walk toward the exit", () => {
+  const opposingWinds = levels
+    .flatMap((level) => level.triggers)
+    .filter((trigger) => trigger.action === "wind" && trigger.value < 0);
+
+  assert.ok(opposingWinds.length > 0);
+  opposingWinds.forEach((trigger) => {
+    assert.ok(Math.abs(trigger.value) < PHYSICS.walkSpeed, `${trigger.id} should not overpower rightward walking`);
+  });
+});
+
+test("a deterministic fixed-step playthrough can complete every campaign level", () => {
+  const originalWindow = globalThis.window;
+  const originalDocument = globalThis.document;
+  globalThis.window = {
+    AudioContext: undefined,
+    webkitAudioContext: undefined,
+    matchMedia: () => ({ matches: true }),
+    setInterval: () => 0,
+    clearInterval: () => {},
+  };
+  globalThis.document = {
+    hidden: false,
+    visibilityState: "visible",
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  };
+
+  class SimulationInput {
+    constructor() {
+      this.down = new Set();
+      this.pressed = new Set();
+      this.enabled = true;
+    }
+
+    set(action, active) {
+      if (active) {
+        if (!this.down.has(action)) this.pressed.add(action);
+        this.down.add(action);
+      } else {
+        this.down.delete(action);
+      }
+    }
+
+    isDown(action) { return this.down.has(action); }
+    consumePressed(action) {
+      const value = this.pressed.has(action);
+      this.pressed.delete(action);
+      return value;
+    }
+    endFrame() { this.pressed.clear(); }
+    clear() { this.down.clear(); this.pressed.clear(); }
+  }
+
+  const settings = {
+    reducedShake: true,
+    reducedFlashing: true,
+    colourblind: false,
+    masterVolume: 0,
+    musicVolume: 0,
+    effectsVolume: 0,
+  };
+  const canvas = { getContext: () => ({}) };
+  const results = [];
+
+  try {
+    levels.forEach((level, levelIndex) => {
+      const input = new SimulationInput();
+      const engine = new GameEngine({ canvas, input, settings, levelIndex });
+      let jumpHold = 0;
+      const deathPositions = [];
+      const jumpPositions = [];
+      const recentStates = [];
+      let previousDeaths = 0;
+
+      for (let frame = 0; frame < 120 * 120 && !engine.completed; frame += 1) {
+        const dt = 1 / 120;
+        const fragileBridge = (levelIndex === 3 && engine.player.x < 1050)
+          || (levelIndex === 11 && engine.player.x < 930);
+        input.set("run", !fragileBridge);
+        input.set("right", !engine.controlsReversed);
+        input.set("left", engine.controlsReversed);
+
+        const boulderThreat = engine.hazards.some((hazard) => {
+          if (!hazard.active || hazard.dormant || hazard.type !== "boulder") return false;
+          const distance = hazard.x - (engine.player.x + engine.player.w);
+          return distance > -40 && distance < 180 && hazard.warningTimer < .2;
+        });
+        const hazardThreat = boulderThreat || engine.hazards.some((hazard) => {
+          if (!hazard.active || hazard.dormant) return false;
+          const distance = hazard.x - (engine.player.x + engine.player.w);
+          if (hazard.type === "boulder") return false;
+          if (hazard.type === "fallingSpike") return false;
+          const onElevatedSurface = engine.player.y + engine.player.h < 600;
+          if (onElevatedSurface && hazard.w > 200) return false;
+          const approachDistance = onElevatedSurface ? 140 : hazard.w > 200 ? 100 : 50;
+          const remainingHazard = hazard.x + hazard.w - engine.player.x;
+          return remainingHazard > engine.player.w && distance < approachDistance;
+        });
+        const platformStepThreat = engine.platforms.some((platform) => {
+          if (!platform.active || !platform.solid) return false;
+          const distance = platform.x - (engine.player.x + engine.player.w);
+          const rise = engine.player.y + engine.player.h - platform.y;
+          const approachDistance = (fragileBridge ? PHYSICS.walkSpeed : PHYSICS.runSpeed) * getJumpAscentTime(rise) + 24;
+          return distance >= 0 && distance < approachDistance && rise > 10 && rise < getJumpApexHeight();
+        });
+        const enemyThreat = engine.enemies.some((enemy) => (
+          enemy.active
+          && enemy.x - (engine.player.x + engine.player.w) > -20
+          && enemy.x - (engine.player.x + engine.player.w) < 90
+        ));
+        const platformEdgeThreat = engine.platforms.some((platform) => {
+          const playerBottom = engine.player.y + engine.player.h;
+          const remainingPlatform = platform.x + platform.w - (engine.player.x + engine.player.w);
+          return platform.active
+            && platform.solid
+            && platform.y < 600
+            && Math.abs(playerBottom - platform.y) < 2
+            && engine.player.x + engine.player.w > platform.x
+            && remainingPlatform > 0
+            && remainingPlatform < 45;
+        });
+        const jumpThreat = hazardThreat || platformStepThreat || enemyThreat || platformEdgeThreat;
+
+        if (jumpHold > 0) {
+          jumpHold -= dt;
+          if (jumpHold <= 0) input.set("jump", false);
+        } else if (engine.player.onGround && engine.dying <= 0 && jumpThreat) {
+          input.set("jump", true);
+          jumpPositions.push(Math.round(engine.player.x));
+          jumpHold = .5;
+        }
+
+        engine.update(dt);
+        input.endFrame();
+        if (engine.deathsThisLevel === 0 && frame % 8 === 0) {
+          recentStates.push(`${Math.round(engine.player.x)}/${Math.round(engine.player.y)}/${Math.round(engine.player.vy)}/${engine.wind}`);
+          if (recentStates.length > 16) recentStates.shift();
+        }
+        if (engine.deathsThisLevel > previousDeaths) {
+          deathPositions.push(`${Math.round(engine.player.x)}:${Math.round(engine.player.y)}`);
+          previousDeaths = engine.deathsThisLevel;
+        }
+      }
+
+      results.push({ level: level.number, completed: engine.completed, deaths: engine.deathsThisLevel, x: Math.round(engine.player.x) });
+      assert.equal(engine.completed, true, `Level ${level.number} stalled near x=${Math.round(engine.player.x)} after ${engine.deathsThisLevel} deaths; jumps ${jumpPositions.slice(0, 12).join(", ")}; deaths ${deathPositions.slice(0, 8).join(", ")}; trace ${recentStates.join(", ")}`);
+    });
+  } finally {
+    globalThis.window = originalWindow;
+    globalThis.document = originalDocument;
+  }
+
+  assert.equal(results.length, 12);
 });
 
 test("shake impacts are differentiated and repeated events remain clamped", () => {
