@@ -4,7 +4,6 @@ import { getUser, logout as logoutIdentity } from "@netlify/identity";
 import { getBasecampProfile } from "../utils/basecampIdentity";
 import TripMap from "./TripMap";
 import {
-  canSetCampsiteRank,
   createVoteSubmissionGuard,
   getCampsiteRank,
   getCampsiteRankingStats,
@@ -36,6 +35,11 @@ const PRIMARY_NAV_ITEMS = NAV_ITEMS.filter((item) =>
 const SECONDARY_NAV_ITEMS = NAV_ITEMS.filter((item) =>
   !PRIMARY_NAV_ITEMS.some((primaryItem) => primaryItem.id === item.id),
 );
+const RANK_SLOTS = [
+  { rank: 1, label: "1st", points: 3 },
+  { rank: 2, label: "2nd", points: 2 },
+  { rank: 3, label: "3rd", points: 1 },
+];
 
 const crew = [
   { id: "priitivi", name: "Priitivi", home: "Ealing", role: "Crew" },
@@ -742,6 +746,8 @@ function Basecamp() {
     requiresSignIn: false,
   });
   const [identityConfirmed, setIdentityConfirmed] = useState(isLocalPreview);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [moreMenuLeft, setMoreMenuLeft] = useState(null);
   const tripRef = useRef(trip);
   const remoteReadyRef = useRef(false);
   const applyingRemoteRef = useRef(false);
@@ -749,7 +755,9 @@ function Basecamp() {
   const lastRemoteUpdateRef = useRef("");
   const voteSubmissionRef = useRef(createVoteSubmissionGuard());
   const tabRefs = useRef({});
-  const moreNavRef = useRef(null);
+  const moreButtonRef = useRef(null);
+  const moreMenuRef = useRef(null);
+  const rankingSelectRefs = useRef([]);
   const chatEndRef = useRef(null);
   const photoFileRef = useRef(null);
 
@@ -994,7 +1002,7 @@ function Basecamp() {
   useEffect(() => {
     const activeTab = tabRefs.current[activeView]
       ?? (SECONDARY_NAV_ITEMS.some((item) => item.id === activeView)
-        ? moreNavRef.current
+        ? moreButtonRef.current
         : null);
     activeTab?.scrollIntoView({
       behavior: "smooth",
@@ -1002,6 +1010,47 @@ function Basecamp() {
       inline: "center",
     });
   }, [activeView]);
+
+  useEffect(() => {
+    if (!moreMenuOpen) return undefined;
+
+    const closeMenu = () => setMoreMenuOpen(false);
+    const triggerBounds = moreButtonRef.current?.getBoundingClientRect();
+    if (triggerBounds) {
+      const menuWidth = Math.min(260, window.innerWidth - 24);
+      setMoreMenuLeft(
+        window.innerWidth <= 620
+          ? 8
+          : Math.max(12, Math.min(triggerBounds.right - menuWidth, window.innerWidth - menuWidth - 12)),
+      );
+    }
+    const handlePointerDown = (event) => {
+      if (
+        moreButtonRef.current?.contains(event.target)
+        || moreMenuRef.current?.contains(event.target)
+      ) {
+        return;
+      }
+      closeMenu();
+    };
+    const handleKeyDown = (event) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      closeMenu();
+      moreButtonRef.current?.focus();
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("resize", closeMenu);
+    window.addEventListener("scroll", closeMenu, { passive: true });
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("resize", closeMenu);
+      window.removeEventListener("scroll", closeMenu);
+    };
+  }, [moreMenuOpen]);
 
   useEffect(() => {
     if (activeView === "chat") {
@@ -1089,6 +1138,13 @@ function Basecamp() {
     ? getCampsiteRankingStats(trip.campsiteRankings, leadingCampsite.id, votingMembers)
     : null;
   const maximumRankingScore = votingMembers.length * 3;
+  const activeRanking = Array.isArray(trip.campsiteRankings?.[activeMember.id])
+    ? trip.campsiteRankings[activeMember.id]
+    : [];
+  const activeRankingCount = activeRanking.length;
+  const hasCrewVotes = Boolean(leadingCampsiteStats?.score);
+  const isVoteSaving = voteStatus.phase === "saving";
+  const votingAvailable = isLocalPreview || identityConfirmed;
   const rankingChartTicks = [
     0,
     Math.round(maximumRankingScore * 0.25),
@@ -1537,9 +1593,59 @@ function Basecamp() {
 
   const changeView = (nextView) => {
     if (NAV_ITEMS.some((item) => item.id === nextView)) {
+      setMoreMenuOpen(false);
       setActiveView(nextView);
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
+  };
+
+  const focusMoreMenuItem = (index) => {
+    window.requestAnimationFrame(() => {
+      const items = moreMenuRef.current?.querySelectorAll('[role="menuitem"]');
+      items?.[index]?.focus();
+    });
+  };
+
+  const openMoreMenu = (focusIndex) => {
+    setMoreMenuOpen(true);
+    if (Number.isInteger(focusIndex)) focusMoreMenuItem(focusIndex);
+  };
+
+  const handleMoreTriggerKeyDown = (event) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      openMoreMenu(0);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      openMoreMenu(SECONDARY_NAV_ITEMS.length - 1);
+    }
+  };
+
+  const handleMoreMenuKeyDown = (event) => {
+    const items = [...(moreMenuRef.current?.querySelectorAll('[role="menuitem"]') ?? [])];
+    const currentIndex = items.indexOf(document.activeElement);
+
+    if (event.key === "Tab") {
+      setMoreMenuOpen(false);
+      return;
+    }
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+
+    event.preventDefault();
+    const nextIndex = event.key === "Home"
+      ? 0
+      : event.key === "End"
+        ? items.length - 1
+        : event.key === "ArrowDown"
+          ? (currentIndex + 1 + items.length) % items.length
+          : (currentIndex - 1 + items.length) % items.length;
+    items[nextIndex]?.focus();
+  };
+
+  const focusRankingBoard = (rank = 1) => {
+    const select = rankingSelectRefs.current[rank - 1];
+    select?.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.requestAnimationFrame(() => select?.focus());
   };
 
   const moveBetweenViews = (direction) => {
@@ -1734,31 +1840,55 @@ function Basecamp() {
               {item.label}
             </button>
           ))}
-          <details className="basecamp-more-nav" ref={moreNavRef}>
-            <summary className={isSecondaryView ? "is-active" : ""}>
-              {isSecondaryView
-                ? NAV_ITEMS.find((item) => item.id === activeView)?.label
-                : "More"}
-              <span aria-hidden="true">⌄</span>
-            </summary>
-            <div>
-              {SECONDARY_NAV_ITEMS.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={activeView === item.id ? "is-active" : ""}
-                  aria-current={activeView === item.id ? "page" : undefined}
-                  onClick={() => {
-                    changeView(item.id);
-                    moreNavRef.current?.removeAttribute("open");
-                  }}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          </details>
+          <button
+            ref={moreButtonRef}
+            type="button"
+            className={`basecamp-more-trigger ${
+              isSecondaryView || moreMenuOpen ? "is-active" : ""
+            }`}
+            aria-haspopup="menu"
+            aria-expanded={moreMenuOpen}
+            aria-controls="basecamp-more-menu"
+            aria-label={
+              isSecondaryView
+                ? `More sections. Current section: ${
+                  NAV_ITEMS.find((item) => item.id === activeView)?.label
+                }`
+                : "More sections"
+            }
+            onClick={() => setMoreMenuOpen((open) => !open)}
+            onKeyDown={handleMoreTriggerKeyDown}
+          >
+            More
+            <span aria-hidden="true">⌄</span>
+          </button>
         </nav>
+      )}
+
+      {activeView !== "docs" && moreMenuOpen && (
+        <div
+          ref={moreMenuRef}
+          id="basecamp-more-menu"
+          className="basecamp-more-menu"
+          role="menu"
+          aria-label="More Basecamp sections"
+          style={moreMenuLeft === null ? undefined : { left: `${moreMenuLeft}px` }}
+          onKeyDown={handleMoreMenuKeyDown}
+        >
+          {SECONDARY_NAV_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="menuitem"
+              className={activeView === item.id ? "is-active" : ""}
+              aria-current={activeView === item.id ? "page" : undefined}
+              onClick={() => changeView(item.id)}
+            >
+              <span>{item.label}</span>
+              {activeView === item.id && <span aria-hidden="true">✓</span>}
+            </button>
+          ))}
+        </div>
       )}
 
       <main className="basecamp-main">
@@ -2035,21 +2165,198 @@ function Basecamp() {
                 </label>
               </section>
 
-              <div className="shortlist-ribbon" aria-label="Campsite shortlist">
-                {rankedCampsites.map((campsite, index) => (
-                  <span key={campsite.id}>
-                    <b>{String(index + 1).padStart(2, "0")}</b>
-                    {campsite.name} ·{" "}
-                    {getCampsiteRankingStats(
+              <section className="crew-results-board" aria-labelledby="crew-results-title">
+                <header>
+                  <div>
+                    <span className="section-kicker">Live crew result</span>
+                    <h2 id="crew-results-title">
+                      {hasCrewVotes ? "The current top three." : "Results begin with the first vote."}
+                    </h2>
+                  </div>
+                  <p>
+                    Each crew member contributes up to six points. Your ranking is
+                    included in these totals as soon as it saves.
+                  </p>
+                </header>
+                <div className="crew-result-grid">
+                  {rankedCampsites.slice(0, 3).map((campsite, index) => {
+                    const result = getCampsiteRankingStats(
                       trip.campsiteRankings,
                       campsite.id,
                       votingMembers,
-                    ).score} pts
-                  </span>
-                ))}
-              </div>
+                    );
+                    return (
+                      <article
+                        className={index === 0 && hasCrewVotes ? "is-leading" : ""}
+                        key={campsite.id}
+                      >
+                        <div className="crew-result-place">
+                          <span>{hasCrewVotes ? String(index + 1).padStart(2, "0") : "–"}</span>
+                          <small>{hasCrewVotes ? `${index + 1}${index === 0 ? "st" : index === 1 ? "nd" : "rd"}` : "Waiting"}</small>
+                        </div>
+                        <div className="crew-result-copy">
+                          <strong>{campsite.name}</strong>
+                          <span>
+                            {result.firstChoices} first-choice
+                            {result.firstChoices === 1 ? " vote" : " votes"}
+                          </span>
+                          <div aria-hidden="true">
+                            <i
+                              style={{
+                                width: `${maximumRankingScore
+                                  ? (result.score / maximumRankingScore) * 100
+                                  : 0}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <strong className="crew-result-score">
+                          {result.score}<small>/{maximumRankingScore}</small>
+                        </strong>
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
 
-              <section className="candidate-grid">
+              <div className="campsite-decision-layout">
+                <aside
+                  className={`ranking-board is-${isVoteSaving ? "saving" : voteStatus.phase}`}
+                  aria-labelledby="your-ranking-title"
+                  aria-busy={isVoteSaving}
+                >
+                  <header>
+                    <div>
+                      <span className="section-kicker">Your ballot</span>
+                      <h2 id="your-ranking-title">Your top three</h2>
+                    </div>
+                    <span className="ranking-progress">{activeRankingCount}/3</span>
+                  </header>
+                  <p className="ranking-board-intro">
+                    Pick in order. Moving a campsite up shifts lower choices down;
+                    when all slots are full, a new choice replaces the old third.
+                  </p>
+
+                  <div className="ranking-slots">
+                    {RANK_SLOTS.map(({ rank, label, points }) => {
+                      const selectedId = activeRanking[rank - 1] ?? "";
+                      const selectedCampsite = trip.campsites.find(
+                        (campsite) => campsite.id === selectedId,
+                      );
+                      const slotUnlocked = Boolean(selectedCampsite)
+                        || rank <= activeRankingCount + 1;
+                      return (
+                        <div
+                          className={`ranking-slot ${
+                            selectedCampsite ? "is-filled" : "is-empty"
+                          }`}
+                          key={rank}
+                        >
+                          <div className="ranking-slot-label" aria-hidden="true">
+                            <strong>{label}</strong>
+                            <span>{points} {points === 1 ? "pt" : "pts"}</span>
+                          </div>
+                          <label>
+                            <span className="sr-only">
+                              {label} choice, worth {points} {points === 1 ? "point" : "points"}
+                            </span>
+                            <select
+                              ref={(element) => {
+                                rankingSelectRefs.current[rank - 1] = element;
+                              }}
+                              value={selectedId}
+                              disabled={!slotUnlocked || isVoteSaving || !votingAvailable}
+                              onChange={(event) => {
+                                if (event.target.value) {
+                                  setCampsiteRank(event.target.value, rank);
+                                }
+                              }}
+                            >
+                              <option value="">
+                                {slotUnlocked ? "Choose a campsite" : "Complete the previous slot first"}
+                              </option>
+                              {trip.campsites.map((campsite) => {
+                                const existingRank = getCampsiteRank(
+                                  trip.campsiteRankings,
+                                  activeMember.id,
+                                  campsite.id,
+                                );
+                                return (
+                                  <option value={campsite.id} key={campsite.id}>
+                                    {campsite.name}
+                                    {existingRank && existingRank !== rank
+                                      ? ` · currently ${RANK_SLOTS[existingRank - 1].label}`
+                                      : ""}
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          </label>
+                          <div className="ranking-slot-actions">
+                            <button
+                              type="button"
+                              aria-label={`Move ${selectedCampsite?.name ?? `${label} choice`} up`}
+                              disabled={
+                                !selectedCampsite
+                                || rank === 1
+                                || isVoteSaving
+                                || !votingAvailable
+                              }
+                              onClick={() => setCampsiteRank(selectedId, rank - 1)}
+                            >
+                              ↑
+                            </button>
+                            <button
+                              type="button"
+                              aria-label={`Move ${selectedCampsite?.name ?? `${label} choice`} down`}
+                              disabled={
+                                !selectedCampsite
+                                || rank >= activeRankingCount
+                                || rank === 3
+                                || isVoteSaving
+                                || !votingAvailable
+                              }
+                              onClick={() => setCampsiteRank(selectedId, rank + 1)}
+                            >
+                              ↓
+                            </button>
+                            <button
+                              type="button"
+                              className="ranking-remove"
+                              aria-label={`Remove ${selectedCampsite?.name ?? `${label} choice`} from your ranking`}
+                              disabled={!selectedCampsite || isVoteSaving || !votingAvailable}
+                              onClick={() => setCampsiteRank(selectedId, 0)}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <p
+                    className={`ranking-save-status ${
+                      !votingAvailable ? "is-unavailable" : `is-${voteStatus.phase}`
+                    }`}
+                    role={voteStatus.phase === "error" ? "alert" : "status"}
+                    aria-live="polite"
+                  >
+                    {!votingAvailable
+                      ? "Confirming your Basecamp access…"
+                      : voteStatus.message
+                        || (activeRankingCount === 3
+                          ? "Ranking complete. You can still reorder or remove a choice."
+                          : activeRankingCount
+                            ? `${activeRankingCount} of 3 ranked. Choose your next campsite.`
+                            : "Start with your 1st choice. It is worth 3 points.")}
+                    {voteStatus.requiresSignIn && (
+                      <> <a href="/basecamp-login">Sign in again</a></>
+                    )}
+                  </p>
+                </aside>
+
+                <section className="candidate-grid" aria-label="Compare campsite options">
                 {rankedCampsites.map((campsite, index) => {
                   const ranking = getCampsiteRankingStats(
                     trip.campsiteRankings,
@@ -2061,16 +2368,15 @@ function Basecamp() {
                     activeMember.id,
                     campsite.id,
                   );
-                  const activeRankingCount =
-                    (trip.campsiteRankings?.[activeMember.id] ?? []).length;
                   const isThisVoteSaving =
                     voteStatus.phase === "saving" && voteStatus.campsiteId === campsite.id;
-                  const isAnyVoteSaving = voteStatus.phase === "saving";
-                  const cardVoteStatus = voteStatus.campsiteId === campsite.id
-                    ? voteStatus
-                    : null;
                   return (
-                    <article className="basecamp-card candidate-card" key={campsite.id}>
+                    <article
+                      className={`basecamp-card candidate-card ${
+                        currentRank ? "is-ranked" : ""
+                      }`}
+                      key={campsite.id}
+                    >
                       {campsite.image && (
                         <figure className="candidate-photo">
                           <img
@@ -2141,108 +2447,81 @@ function Basecamp() {
                         </div>
                       )}
                       <div
-                        className={`ranked-vote-panel ${isThisVoteSaving ? "is-saving" : ""}`}
+                        className={`candidate-vote-summary ${
+                          currentRank ? "is-ranked" : ""
+                        } ${isThisVoteSaving ? "is-saving" : ""}`}
                         aria-busy={isThisVoteSaving}
                       >
-                        <div className="rank-score-summary">
-                          <span className="ranked-score">{ranking.score}</span>
-                          <small>crew points</small>
-                        </div>
-                        <div
-                          className="vote-stack ranked-choice-stack"
-                          aria-label={`${campsite.name} crew rankings`}
-                        >
-                          {ranking.memberRanks.map(({ member, rank }) => (
-                            <span
-                              key={member.id}
-                              className={rank ? "has-voted" : ""}
-                              title={`${member.name}: ${rank ? `choice ${rank}` : "not ranked"}`}
-                            >
-                              <b>{member.name.charAt(0)}</b>
-                              <small>{rank || "–"}</small>
-                            </span>
-                          ))}
-                        </div>
-                        <div className="rank-action">
-                          <div className="rank-action-heading">
-                            <strong>Cast your vote</strong>
-                            <span>Pick this campsite’s place in your top three</span>
+                        <div className="candidate-vote-result">
+                          <div className="candidate-score">
+                            <strong>{ranking.score}</strong>
+                            <span>crew points</span>
                           </div>
                           <div
-                            className="rank-controls"
-                            role="group"
-                            aria-label={`Choose your rank for ${campsite.name}`}
+                            className="vote-stack candidate-voter-stack"
+                            aria-label={`${campsite.name} crew rankings`}
                           >
-                            {[1, 2, 3].map((rank) => {
-                              const canChooseRank = canSetCampsiteRank(
-                                trip.campsiteRankings,
-                                activeMember.id,
-                                campsite.id,
-                                rank,
-                              );
-                              const points = 4 - rank;
-                              return (
-                                <button
-                                  type="button"
-                                  className={currentRank === rank ? "is-selected" : ""}
-                                  aria-label={`${rank === 1 ? "First" : rank === 2 ? "Second" : "Third"} choice, ${points} ${points === 1 ? "point" : "points"}`}
-                                  aria-pressed={currentRank === rank}
-                                  disabled={
-                                    !canChooseRank
-                                    || isAnyVoteSaving
-                                    || (!isLocalPreview && !identityConfirmed)
-                                  }
-                                  title={
-                                    canChooseRank
-                                      ? undefined
-                                      : currentRank
-                                        ? "Rank another campsite above this one before moving it here."
-                                        : `Choose a ${rank === 2 ? "first" : "first and second"} choice before this one.`
-                                  }
-                                  onClick={() => setCampsiteRank(campsite.id, rank)}
-                                  key={rank}
-                                >
-                                  <strong>
-                                    {rank === 1 ? "1st" : rank === 2 ? "2nd" : "3rd"}
-                                  </strong>
-                                  <small>{points} {points === 1 ? "pt" : "pts"}</small>
-                                </button>
-                              );
-                            })}
-                            <button
-                              type="button"
-                              className="clear-rank"
-                              disabled={
-                                !currentRank
-                                || isAnyVoteSaving
-                                || (!isLocalPreview && !identityConfirmed)
-                              }
-                              onClick={() => setCampsiteRank(campsite.id, 0)}
-                            >
-                              Remove
-                            </button>
+                            {ranking.memberRanks.map(({ member, rank }) => (
+                              <span
+                                key={member.id}
+                                className={rank ? "has-voted" : ""}
+                                title={`${member.name}: ${rank ? `choice ${rank}` : "not ranked"}`}
+                              >
+                                <b>{member.name.charAt(0)}</b>
+                                <small>{rank || "–"}</small>
+                              </span>
+                            ))}
                           </div>
-                          <p
-                            className={`vote-feedback ${
-                              cardVoteStatus
-                                ? `is-${cardVoteStatus.phase}`
-                                : !isLocalPreview && !identityConfirmed
-                                  ? "is-unavailable"
-                                  : ""
-                            }`}
-                            role={cardVoteStatus?.phase === "error" ? "alert" : "status"}
-                            aria-live="polite"
-                          >
-                            {cardVoteStatus?.message
-                              || (!isLocalPreview && !identityConfirmed
-                                ? "Confirming your Basecamp profile…"
-                                : currentRank
-                                  ? `Your ${currentRank === 1 ? "first" : currentRank === 2 ? "second" : "third"} choice · ${4 - currentRank} ${4 - currentRank === 1 ? "point" : "points"}.${activeRankingCount < 3 ? " Add another campsite to build your top three." : ""}`
-                                  : "No vote yet. Start with your 1st choice.")}
-                            {cardVoteStatus?.requiresSignIn && (
-                              <> <a href="/basecamp-login">Sign in again</a></>
-                            )}
-                          </p>
+                        </div>
+
+                        <div className="candidate-vote-action">
+                          {currentRank ? (
+                            <>
+                              <span>
+                                Your <strong>{RANK_SLOTS[currentRank - 1].label}</strong> choice
+                                {" · "}
+                                {RANK_SLOTS[currentRank - 1].points}
+                                {RANK_SLOTS[currentRank - 1].points === 1 ? " point" : " points"}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => focusRankingBoard(currentRank)}
+                              >
+                                Manage ranking
+                              </button>
+                            </>
+                          ) : activeRankingCount < 3 ? (
+                            <>
+                              <span>
+                                Next: <strong>{RANK_SLOTS[activeRankingCount].label}</strong>
+                                {" · "}
+                                {RANK_SLOTS[activeRankingCount].points}
+                                {RANK_SLOTS[activeRankingCount].points === 1 ? " point" : " points"}
+                              </span>
+                              <button
+                                type="button"
+                                disabled={isVoteSaving || !votingAvailable}
+                                onClick={() => setCampsiteRank(campsite.id, activeRankingCount + 1)}
+                              >
+                                Add to my ranking
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <span>Your top three is full</span>
+                              <button
+                                type="button"
+                                onClick={() => focusRankingBoard(1)}
+                              >
+                                Review top three
+                              </button>
+                            </>
+                          )}
+                          {isThisVoteSaving && (
+                            <span className="candidate-saving" role="status">
+                              Saving…
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -2296,6 +2575,7 @@ function Basecamp() {
                   );
                 })}
               </section>
+              </div>
 
               <form className="basecamp-card add-form" onSubmit={addCandidate}>
                 <div>

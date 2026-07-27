@@ -35,6 +35,19 @@ test("changing a vote reorders the top three predictably", () => {
   assert.deepEqual(result.priitivi, ["three", "one", "two"]);
 });
 
+test("choosing a new campsite for a full ballot replaces third without changing the requested rank", () => {
+  const result = setMemberCampsiteRank(
+    { priitivi: ["one", "two", "three"] },
+    "priitivi",
+    "four",
+    2,
+  );
+
+  assert.deepEqual(result.priitivi, ["one", "four", "two"]);
+  assert.equal(getCampsiteRank(result, "priitivi", "four"), 2);
+  assert.equal(getCampsiteRank(result, "priitivi", "three"), 0);
+});
+
 test("unreachable rank positions are disabled instead of silently becoming first", () => {
   const rankings = {};
   assert.equal(canSetCampsiteRank(rankings, "priitivi", "one", 1), true);

@@ -189,8 +189,7 @@
   display: none;
 }
 
-.basecamp-tabs > button,
-.basecamp-more-nav > summary {
+.basecamp-tabs > button {
   position: relative;
   flex: 0 0 auto;
   padding: 15px 10px 13px;
@@ -204,47 +203,44 @@
   text-transform: uppercase;
 }
 
-.basecamp-more-nav {
-  flex: 0 0 auto;
-}
-
-.basecamp-more-nav > summary {
+.basecamp-more-trigger {
   display: flex;
   align-items: center;
   gap: 5px;
-  list-style: none;
 }
 
-.basecamp-more-nav > summary::-webkit-details-marker {
-  display: none;
-}
-
-.basecamp-more-nav > summary span {
+.basecamp-more-trigger > span {
   transition: transform 180ms ease;
 }
 
-.basecamp-more-nav[open] > summary span {
+.basecamp-more-trigger[aria-expanded="true"] > span {
   transform: rotate(180deg);
 }
 
-.basecamp-more-nav > div {
+.basecamp-more-menu {
   position: fixed;
   top: 125px;
-  right: clamp(16px, 5vw, 72px);
-  z-index: 60;
-  width: min(220px, calc(100vw - 24px));
+  left: max(12px, calc(100vw - 332px));
+  z-index: 80;
+  width: min(260px, calc(100vw - 24px));
   display: grid;
   gap: 4px;
   padding: 8px;
   background: rgba(9, 20, 17, 0.98);
   border: 1px solid rgba(247, 242, 232, 0.18);
-  border-radius: 12px;
+  border-radius: 14px;
   box-shadow: 0 18px 46px rgba(9, 20, 17, 0.3);
+  overscroll-behavior: contain;
+  animation: basecamp-menu-enter 150ms ease-out;
 }
 
-.basecamp-more-nav > div button {
-  min-height: 42px;
-  padding: 9px 12px;
+.basecamp-more-menu button {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
   background: transparent;
   border: 0;
   border-radius: 8px;
@@ -257,14 +253,30 @@
   text-transform: uppercase;
 }
 
-.basecamp-more-nav > div button:hover,
-.basecamp-more-nav > div button.is-active {
+.basecamp-more-menu button:hover,
+.basecamp-more-menu button:focus-visible,
+.basecamp-more-menu button.is-active {
   background: var(--camp-forest);
   color: var(--camp-paper);
 }
 
-.basecamp-tabs > button::after,
-.basecamp-more-nav > summary::after {
+.basecamp-more-menu button > span:last-child {
+  color: var(--camp-yellow);
+}
+
+@keyframes basecamp-menu-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.basecamp-tabs > button::after {
   content: "";
   position: absolute;
   right: 9px;
@@ -277,15 +289,11 @@
 }
 
 .basecamp-tabs > button:hover,
-.basecamp-tabs > button.is-active,
-.basecamp-more-nav > summary:hover,
-.basecamp-more-nav > summary.is-active,
-.basecamp-more-nav[open] > summary {
+.basecamp-tabs > button.is-active {
   color: var(--camp-ink);
 }
 
-.basecamp-tabs > button.is-active::after,
-.basecamp-more-nav > summary.is-active::after {
+.basecamp-tabs > button.is-active::after {
   transform: scaleX(1);
 }
 
@@ -917,29 +925,335 @@
   color: var(--camp-paper);
 }
 
-.shortlist-ribbon {
-  display: flex;
+.crew-results-board {
+  display: grid;
+  gap: 22px;
+  padding: clamp(22px, 4vw, 40px);
+  background:
+    radial-gradient(circle at 92% 8%, rgba(245, 193, 93, 0.18), transparent 30%),
+    var(--camp-deep);
+  color: var(--camp-paper);
+}
+
+.crew-results-board > header {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.65fr);
+  gap: 30px;
+  align-items: end;
+}
+
+.crew-results-board h2 {
+  max-width: 720px;
+  margin: 8px 0 0;
+  color: var(--camp-paper);
+  font-size: clamp(2rem, 4vw, 3.6rem);
+}
+
+.crew-results-board > header p {
+  margin: 0;
+  color: rgba(247, 242, 232, 0.62);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.crew-result-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  padding: 2px 0 14px;
-  overflow-x: auto;
-  scrollbar-width: thin;
 }
 
-.shortlist-ribbon span {
-  flex: 0 0 auto;
-  display: flex;
+.crew-result-grid article {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 14px;
   align-items: center;
-  gap: 8px;
-  padding: 9px 12px;
-  background: rgba(36, 72, 61, 0.08);
-  border: 1px solid var(--camp-line);
-  border-radius: 999px;
-  font-size: 0.75rem;
+  padding: 16px;
+  background: rgba(247, 242, 232, 0.07);
+  border: 1px solid rgba(247, 242, 232, 0.13);
 }
 
-.shortlist-ribbon b {
+.crew-result-grid article.is-leading {
+  background: rgba(245, 193, 93, 0.12);
+  border-color: rgba(245, 193, 93, 0.46);
+}
+
+.crew-result-place {
+  display: grid;
+  justify-items: center;
+}
+
+.crew-result-place > span {
+  color: var(--camp-yellow);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.65rem;
+  line-height: 0.9;
+}
+
+.crew-result-place > small,
+.crew-result-copy > span {
+  color: rgba(247, 242, 232, 0.5);
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.crew-result-copy {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.crew-result-copy > strong {
+  overflow: hidden;
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crew-result-copy > div {
+  height: 3px;
+  margin-top: 4px;
+  overflow: hidden;
+  background: rgba(247, 242, 232, 0.12);
+}
+
+.crew-result-copy > div i {
+  height: 100%;
+  display: block;
+  background: var(--camp-orange);
+  transition: width 280ms ease;
+}
+
+.crew-result-score {
+  display: flex;
+  align-items: baseline;
+  color: var(--camp-paper);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.65rem;
+  font-weight: 400;
+}
+
+.crew-result-score small {
+  color: rgba(247, 242, 232, 0.38);
+  font-family: inherit;
+  font-size: 0.7rem;
+}
+
+.campsite-decision-layout {
+  display: grid;
+  grid-template-columns: minmax(310px, 360px) minmax(0, 1fr);
+  gap: clamp(18px, 3vw, 30px);
+  align-items: start;
+}
+
+.ranking-board {
+  position: sticky;
+  top: 145px;
+  z-index: 2;
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(143, 200, 193, 0.12), transparent 52%),
+    rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(36, 72, 61, 0.22);
+  box-shadow: 0 18px 44px rgba(16, 33, 30, 0.1);
+  backdrop-filter: blur(12px);
+}
+
+.ranking-board::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 3px;
+  background: var(--camp-orange);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 180ms ease;
+}
+
+.ranking-board.is-saving::before {
+  transform: scaleX(1);
+  animation: basecamp-saving-line 900ms ease-in-out infinite alternate;
+}
+
+.ranking-board > header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ranking-board h2 {
+  margin: 6px 0 0;
+  font-size: 2rem;
+}
+
+.ranking-progress {
   color: var(--camp-orange);
   font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.4rem;
+}
+
+.ranking-board-intro {
+  margin: 0;
+  color: rgba(16, 33, 30, 0.62);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.ranking-slots {
+  display: grid;
+  gap: 8px;
+}
+
+.ranking-slot {
+  display: grid;
+  grid-template-columns: 50px minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px;
+  background: rgba(247, 242, 232, 0.64);
+  border: 1px solid rgba(16, 33, 30, 0.12);
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.ranking-slot.is-filled {
+  background: rgba(255, 255, 255, 0.84);
+  border-color: rgba(36, 72, 61, 0.28);
+}
+
+.ranking-slot-label {
+  grid-row: 1 / span 2;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  background: var(--camp-ink);
+  color: var(--camp-paper);
+}
+
+.ranking-slot.is-filled .ranking-slot-label {
+  background: var(--camp-orange);
+}
+
+.ranking-slot-label strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.05rem;
+}
+
+.ranking-slot-label span {
+  color: rgba(247, 242, 232, 0.66);
+  font-size: 0.54rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.ranking-slot label,
+.ranking-slot select {
+  min-width: 0;
+  width: 100%;
+}
+
+.ranking-slot select {
+  min-height: 44px;
+  padding: 9px 34px 9px 10px;
+  background: #fff;
+  border: 1px solid rgba(16, 33, 30, 0.2);
+  color: var(--camp-ink);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+}
+
+.ranking-slot select:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.ranking-slot-actions {
+  display: grid;
+  grid-template-columns: 38px 38px minmax(72px, 1fr);
+  gap: 6px;
+}
+
+.ranking-slot-actions button {
+  min-height: 44px;
+  padding: 6px;
+  background: transparent;
+  border: 1px solid rgba(16, 33, 30, 0.16);
+  color: var(--camp-ink);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.ranking-slot-actions button:hover:not(:disabled) {
+  background: var(--camp-forest);
+  border-color: var(--camp-forest);
+  color: var(--camp-paper);
+}
+
+.ranking-slot-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.3;
+}
+
+.ranking-slot-actions .ranking-remove {
+  color: #8d3828;
+  font-size: 0.62rem;
+}
+
+.ranking-save-status {
+  min-height: 36px;
+  margin: 0;
+  padding: 10px 12px;
+  background: rgba(36, 72, 61, 0.07);
+  border-left: 3px solid rgba(36, 72, 61, 0.38);
+  color: rgba(16, 33, 30, 0.68);
+  font-size: 0.68rem;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
+.ranking-save-status.is-saving {
+  border-left-color: var(--camp-orange);
+}
+
+.ranking-save-status.is-saved {
+  background: rgba(36, 72, 61, 0.1);
+  border-left-color: var(--camp-forest);
+  color: var(--camp-forest);
+}
+
+.ranking-save-status.is-error {
+  background: rgba(159, 53, 31, 0.08);
+  border-left-color: #9f351f;
+  color: #8d2e1b;
+}
+
+.ranking-save-status.is-unavailable {
+  border-left-color: rgba(16, 33, 30, 0.24);
+  color: rgba(16, 33, 30, 0.52);
+}
+
+.ranking-save-status a {
+  color: inherit;
+  font-weight: 900;
+  text-underline-offset: 2px;
+}
+
+@keyframes basecamp-saving-line {
+  from {
+    opacity: 0.35;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .decision-console {
@@ -1035,7 +1349,7 @@
 
 .candidate-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
 }
 
@@ -1046,6 +1360,12 @@
   min-height: 330px;
   padding: 24px;
   overflow: hidden;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.candidate-card.is-ranked {
+  border-color: rgba(239, 108, 62, 0.48);
+  box-shadow: 0 16px 34px rgba(16, 33, 30, 0.09);
 }
 
 .candidate-photo {
@@ -1255,42 +1575,54 @@
   color: var(--camp-paper);
 }
 
-.ranked-vote-panel {
+.candidate-vote-summary {
   display: grid;
-  grid-template-columns: auto auto minmax(260px, 1fr);
-  align-items: center;
-  gap: 14px;
-  padding: 16px;
-  background: rgba(234, 223, 202, 0.35);
+  gap: 12px;
+  padding: 14px;
+  background: rgba(234, 223, 202, 0.32);
   border: 1px solid rgba(16, 33, 30, 0.12);
-  border-radius: 14px;
-  transition: border-color 180ms ease, box-shadow 180ms ease;
+  transition: background 160ms ease, border-color 160ms ease;
 }
 
-.ranked-vote-panel.is-saving {
-  border-color: rgba(239, 108, 62, 0.5);
-  box-shadow: 0 0 0 3px rgba(239, 108, 62, 0.08);
+.candidate-vote-summary.is-ranked {
+  background: rgba(239, 108, 62, 0.07);
+  border-color: rgba(239, 108, 62, 0.32);
 }
 
-.rank-score-summary {
-  display: grid;
-  justify-items: center;
+.candidate-vote-summary.is-saving {
+  border-color: var(--camp-orange);
+}
+
+.candidate-vote-result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.candidate-score {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.candidate-score strong {
+  color: var(--camp-orange);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.7rem;
+  font-weight: 400;
   line-height: 1;
 }
 
-.rank-score-summary small {
-  color: rgba(16, 33, 30, 0.44);
-  font-size: 0.56rem;
+.candidate-score span {
+  color: rgba(16, 33, 30, 0.48);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-.ranked-score {
-  color: var(--camp-orange);
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 2rem;
-}
-
-.ranked-choice-stack span {
+.candidate-voter-stack span {
   width: 34px;
   height: 34px;
   display: flex;
@@ -1300,112 +1632,57 @@
   line-height: 0.85;
 }
 
-.ranked-choice-stack span.has-voted {
+.candidate-voter-stack span.has-voted {
   background: var(--camp-forest);
   border-color: var(--camp-forest);
 }
 
-.ranked-choice-stack span small {
+.candidate-voter-stack span small {
   font-size: 0.52rem;
 }
 
-.rank-controls {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(58px, 1fr)) auto;
-  align-items: center;
-  gap: 7px;
-}
-
-.rank-action {
+.candidate-vote-action {
   min-width: 0;
   display: grid;
-  gap: 9px;
-}
-
-.rank-action-heading {
-  display: grid;
-  gap: 2px;
-}
-
-.rank-action-heading strong {
-  font-size: 0.76rem;
-}
-
-.rank-action-heading span {
-  color: rgba(16, 33, 30, 0.58);
-  font-size: 0.64rem;
-}
-
-.rank-controls button {
-  min-width: 0;
-  min-height: 46px;
-  display: flex;
-  flex-direction: column;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
   align-items: center;
-  justify-content: center;
-  padding: 6px 9px;
-  background: rgba(247, 242, 232, 0.85);
-  border: 1px solid rgba(16, 33, 30, 0.24);
-  border-radius: 8px;
-  color: var(--camp-ink);
+}
+
+.candidate-vote-action > span:first-child {
+  color: rgba(16, 33, 30, 0.62);
+  font-size: 0.67rem;
+}
+
+.candidate-vote-action button {
+  min-height: 44px;
+  padding: 9px 12px;
+  background: var(--camp-forest);
+  border: 1px solid var(--camp-forest);
+  color: var(--camp-paper);
   cursor: pointer;
-  font-size: 0.72rem;
-  font-weight: 800;
-  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+  font-size: 0.65rem;
+  font-weight: 850;
 }
 
-.rank-controls button strong {
-  font-size: 0.76rem;
-}
-
-.rank-controls button small {
-  color: currentColor;
-  font-size: 0.56rem;
-  font-weight: 700;
-  opacity: 0.68;
-}
-
-.rank-controls button:hover,
-.rank-controls button.is-selected {
+.candidate-vote-action button:hover:not(:disabled) {
   background: var(--camp-orange);
   border-color: var(--camp-orange);
-  color: #fff;
 }
 
-.rank-controls button:hover:not(:disabled) {
-  transform: translateY(-1px);
-}
-
-.rank-controls button:active:not(:disabled) {
-  transform: translateY(1px);
-}
-
-.rank-controls button.clear-rank {
-  width: auto;
-  min-width: 66px;
-  flex-direction: row;
-  padding-inline: 10px;
-  color: rgba(16, 33, 30, 0.54);
-}
-
-.rank-controls button.clear-rank:hover:not(:disabled) {
-  color: #fff;
-}
-
-.rank-controls button:disabled {
+.candidate-vote-action button:disabled {
   cursor: not-allowed;
   opacity: 0.46;
 }
 
-.vote-feedback {
-  min-height: 1.2em;
-  margin: 0;
-  color: rgba(16, 33, 30, 0.62);
-  font-size: 0.64rem;
-  font-weight: 700;
+.candidate-saving {
+  grid-column: 1 / -1;
+  color: var(--camp-orange);
+  font-size: 0.62rem;
+  font-weight: 800;
 }
 
-.vote-feedback.is-saving::before {
+.candidate-saving::before {
   content: "";
   width: 9px;
   height: 9px;
@@ -1415,29 +1692,6 @@
   border-top-color: var(--camp-orange);
   border-radius: 50%;
   animation: basecamp-vote-spin 700ms linear infinite;
-}
-
-.vote-feedback.is-saved {
-  color: var(--camp-forest);
-}
-
-.vote-feedback.is-saved::before {
-  content: "✓";
-  margin-right: 5px;
-}
-
-.vote-feedback.is-error {
-  color: #9f351f;
-}
-
-.vote-feedback.is-unavailable {
-  color: rgba(16, 33, 30, 0.5);
-}
-
-.vote-feedback a {
-  color: inherit;
-  font-weight: 900;
-  text-underline-offset: 2px;
 }
 
 @keyframes basecamp-vote-spin {
@@ -3467,6 +3721,10 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .campsite-decision-layout .candidate-grid {
+    grid-template-columns: 1fr;
+  }
+
   .fishing-grid {
     grid-template-columns: 1fr;
   }
@@ -3563,8 +3821,26 @@
     justify-content: flex-start;
   }
 
-  .basecamp-more-nav > div {
+  .basecamp-more-menu {
     top: 167px;
+  }
+
+  .crew-results-board > header {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .crew-result-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .campsite-decision-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .ranking-board {
+    position: relative;
+    top: auto;
   }
 
   .trip-hero {
@@ -3682,8 +3958,7 @@
     display: none;
   }
 
-  .basecamp-tabs > button,
-  .basecamp-more-nav > summary {
+  .basecamp-tabs > button {
     min-height: 44px;
   }
 
@@ -3754,15 +4029,24 @@
     padding-inline: 8px;
   }
 
-  .basecamp-tabs > button,
-  .basecamp-more-nav > summary {
+  .basecamp-tabs > button {
     padding: 11px 9px 10px;
     font-size: 0.66rem;
   }
 
-  .basecamp-more-nav > div {
-    top: 103px;
+  .basecamp-more-menu {
+    top: 111px;
     right: 8px;
+    left: 8px;
+    width: auto;
+    max-height: calc(100dvh - 124px);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow-y: auto;
+    padding: 10px;
+  }
+
+  .basecamp-more-menu button {
+    min-height: 50px;
   }
 
   .basecamp-main {
@@ -4003,6 +4287,63 @@
     padding: 16px;
   }
 
+  .crew-results-board {
+    gap: 16px;
+    padding: 18px 16px;
+  }
+
+  .crew-results-board h2 {
+    font-size: 1.9rem;
+    line-height: 1;
+  }
+
+  .crew-results-board > header p {
+    font-size: 0.74rem;
+  }
+
+  .crew-result-grid {
+    gap: 7px;
+  }
+
+  .crew-result-grid article {
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .ranking-board {
+    gap: 14px;
+    padding: 16px;
+    box-shadow: 0 12px 30px rgba(16, 33, 30, 0.08);
+    backdrop-filter: none;
+  }
+
+  .ranking-board h2 {
+    font-size: 1.7rem;
+  }
+
+  .ranking-board-intro {
+    font-size: 0.7rem;
+  }
+
+  .ranking-slot {
+    grid-template-columns: 46px minmax(0, 1fr);
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .ranking-slot select {
+    min-height: 48px;
+    font-size: 0.72rem;
+  }
+
+  .ranking-slot-actions {
+    grid-template-columns: 44px 44px minmax(72px, 1fr);
+  }
+
+  .ranking-slot-actions button {
+    min-height: 44px;
+  }
+
   .decision-console-copy > p {
     margin-block: 7px;
     font-size: 0.78rem;
@@ -4037,20 +4378,6 @@
   .deadline-control > strong {
     align-self: center;
     font-size: 1.1rem;
-  }
-
-  .ranked-vote-panel {
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 8px 12px;
-    padding: 14px;
-  }
-
-  .rank-action {
-    grid-column: 1 / -1;
-  }
-
-  .rank-controls {
-    grid-template-columns: repeat(3, minmax(52px, 1fr)) auto;
   }
 
   .basecamp-shell .add-form {
@@ -4100,29 +4427,33 @@
     font-size: 0.72rem;
   }
 
-  .shortlist-ribbon {
-    margin-inline: -12px;
-    padding-inline: 12px;
-  }
-
   .candidate-grid {
-    grid-template-columns: none;
-    grid-auto-flow: column;
-    grid-auto-columns: 86vw;
+    grid-template-columns: 1fr;
+    grid-auto-flow: row;
     gap: 10px;
-    margin-inline: -12px;
-    padding-inline: 12px;
-    overflow-x: auto;
-    scroll-padding-inline: 12px;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
+    margin-inline: 0;
+    padding-inline: 0;
+    overflow: visible;
   }
 
   .candidate-card {
     min-height: 0;
     gap: 12px;
     padding: 16px;
-    scroll-snap-align: start;
+  }
+
+  .candidate-vote-summary {
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .candidate-vote-action {
+    grid-template-columns: 1fr;
+  }
+
+  .candidate-vote-action button {
+    width: 100%;
+    min-height: 48px;
   }
 
   .candidate-photo {
