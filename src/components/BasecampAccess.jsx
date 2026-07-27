@@ -9,6 +9,7 @@ import {
   requestPasswordRecovery,
   updateUser,
 } from "@netlify/identity";
+import { hasBasecampDisplayName } from "../utils/basecampIdentity";
 import "./BasecampAccess.css";
 
 function hasBasecampRole(user) {
@@ -27,6 +28,7 @@ function BasecampAccess() {
   const [mode, setMode] = useState("loading");
   const [inviteToken, setInviteToken] = useState("");
   const [email, setEmail] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -56,6 +58,10 @@ function BasecampAccess() {
         if (!isMounted) return;
 
         if (hasBasecampRole(user)) {
+          if (!hasBasecampDisplayName(user)) {
+            setMode("profile");
+            return;
+          }
           window.location.replace("/basecamp");
           return;
         }
@@ -92,6 +98,11 @@ function BasecampAccess() {
         await logout();
         throw new Error("This account is not on the Basecamp guest list.");
       }
+      if (!hasBasecampDisplayName(user)) {
+        setMode("profile");
+        setSubmitting(false);
+        return;
+      }
       window.location.assign("/basecamp");
     } catch (loginError) {
       setError(getErrorMessage(loginError));
@@ -103,6 +114,11 @@ function BasecampAccess() {
     event.preventDefault();
     setError("");
     setMessage("");
+
+    if (!displayName.trim()) {
+      setError("Enter the name the crew should see.");
+      return;
+    }
 
     if (password.length < 10) {
       setError("Choose a password with at least 10 characters.");
@@ -117,10 +133,32 @@ function BasecampAccess() {
     setSubmitting(true);
     try {
       await acceptInvite(inviteToken, password);
+      await updateUser({ data: { full_name: displayName.trim() } });
       await refreshSession();
       window.location.assign("/basecamp");
     } catch (inviteError) {
       setError(getErrorMessage(inviteError));
+      setSubmitting(false);
+    }
+  };
+
+  const handleProfile = async (event) => {
+    event.preventDefault();
+    setError("");
+    setMessage("");
+
+    if (!displayName.trim()) {
+      setError("Enter the name the crew should see.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await updateUser({ data: { full_name: displayName.trim() } });
+      await refreshSession();
+      window.location.assign("/basecamp");
+    } catch (profileError) {
+      setError(getErrorMessage(profileError));
       setSubmitting(false);
     }
   };
@@ -170,6 +208,8 @@ function BasecampAccess() {
 
   const title = mode === "invite"
     ? "Join the crew."
+    : mode === "profile"
+      ? "Complete your crew profile."
     : mode === "recovery"
       ? "Set a new password."
       : "Crew access only.";
@@ -198,8 +238,9 @@ function BasecampAccess() {
         ) : (
           <>
             <p className="basecamp-access-intro">
-              This planning room is reserved for the Durdle Basecamp crew.
-              Use the exact email address that received an invitation.
+              {mode === "profile"
+                ? "Add the name your crew should see in voting, chat and shared plans."
+                : "This planning room is reserved for the Durdle Basecamp crew. Use the exact email address that received an invitation."}
             </p>
 
             {error && <p className="basecamp-access-alert is-error" role="alert">{error}</p>}
@@ -246,6 +287,19 @@ function BasecampAccess() {
                 className="basecamp-access-form"
                 onSubmit={mode === "invite" ? handleInvite : handleRecovery}
               >
+                {mode === "invite" && (
+                  <label>
+                    <span>Your name</span>
+                    <input
+                      type="text"
+                      autoComplete="name"
+                      maxLength="40"
+                      value={displayName}
+                      onChange={(event) => setDisplayName(event.target.value)}
+                      required
+                    />
+                  </label>
+                )}
                 <label>
                   <span>New password</span>
                   <input
@@ -274,6 +328,26 @@ function BasecampAccess() {
                     : mode === "invite"
                       ? "Accept invitation"
                       : "Save new password"}
+                </button>
+              </form>
+            )}
+
+            {mode === "profile" && (
+              <form className="basecamp-access-form" onSubmit={handleProfile}>
+                <label>
+                  <span>Your name</span>
+                  <input
+                    type="text"
+                    autoComplete="name"
+                    maxLength="40"
+                    value={displayName}
+                    onChange={(event) => setDisplayName(event.target.value)}
+                    required
+                    autoFocus
+                  />
+                </label>
+                <button type="submit" disabled={submitting}>
+                  {submitting ? "Saving your profile…" : "Continue to Basecamp"}
                 </button>
               </form>
             )}

@@ -112,7 +112,7 @@ sequenceDiagram
     participant API as Basecamp function
 
     Friend->>Login: Open an invitation link
-    Login->>Identity: Accept token and choose a password
+    Login->>Identity: Accept token, add display name, choose password
     Identity-->>Friend: Create signed session
     Friend->>Edge: Request /basecamp
     Edge->>Edge: Verify basecamp role
@@ -131,8 +131,9 @@ sequenceDiagram
 
 1. Priitivi sends a Netlify Identity invitation to one exact email address.
 2. The recipient follows the signed invitation link.
-3. The recipient creates their own password.
-4. The account is assigned the `basecamp` role.
+3. The recipient adds the display name the crew should see and creates a password.
+4. The account is assigned the `basecamp` role and, when configured, a canonical
+   server-managed Basecamp ID and name.
 5. A successful login creates a signed session.
 6. Netlify's edge and every Basecamp function check that role.
 7. Access can later be removed by removing the user or the role.
@@ -176,12 +177,14 @@ The shared helper is
 3. returns `403 FORBIDDEN` if the role is missing;
 4. returns the user to the function only after both checks pass.
 
-Known crew emails map to stable IDs. Other authorized `basecamp` accounts use a
-stable Identity-derived ID, and the server stores their trusted display name in
-`campsiteVoters` so their ranking is visible in crew totals. This mapping
-supports actions that belong to one person, such as individual Kit
-acknowledgements and campsite rankings. The interface never offers a "post as
-someone else" selector.
+Identity is resolved in one shared helper. A valid `BASECAMP_MEMBER_PROFILES`
+entry or Identity `appMetadata` supplies the canonical server-managed ID and
+name. The original three email mappings remain only as backwards-compatible
+fallbacks. Other authorized `basecamp` accounts use a stable Identity-derived
+ID and the display name captured during invitation acceptance. The server
+stores that resolved profile in `campsiteVoters`, so the same identity appears
+in crew totals and chat. The interface never offers a "post as someone else"
+selector, and mutation endpoints reject an incomplete profile.
 
 | Capability | Anonymous visitor | Signed in without role | Basecamp crew | Project owner |
 |---|---:|---:|---:|---:|
@@ -244,7 +247,7 @@ rest of the shared trip document.
 | Store | Key pattern | Contents | Typical limit |
 |---|---|---|---:|
 | `durdle-basecamp` | `trip-state` | Campsites, rankings, deadline, itinerary, Kit, spend, album link | 250 KB request/document guard |
-| `durdle-basecamp` | chat keys/index | Message text, author, timestamp | Function-enforced message limits |
+| `durdle-basecamp` | chat keys/index | Message text, stable author ID, display name, timestamp | Function-enforced message limits |
 | `durdle-basecamp` | `conditions-cache-v1` | Public model result and fetch time | One cached snapshot |
 | `durdle-basecamp-photos` | `photos/*` | Resized image bytes and uploader metadata | 2 MB/image, 60 listed |
 | Browser local storage | `durdle-basecamp-mvp-v1` | Latest trip document for offline continuity | Browser-specific |
@@ -418,6 +421,8 @@ collaboration engine.
 Chat has a separate endpoint and storage path. The server:
 
 - derives the author from the signed-in account;
+- stores the stable author ID as well as the display name;
+- resolves stable IDs through the server-owned voter profile when reading;
 - does not accept an arbitrary author from the browser;
 - rejects cross-origin writes;
 - limits message size and count;
@@ -425,6 +430,13 @@ Chat has a separate endpoint and storage path. The server:
 
 Messages are private to the Basecamp role, but they are not end-to-end
 encrypted and can be administered by the project owner.
+
+Older message records did not contain `authorId`. Their stored author remains
+visible for backwards compatibility, but a historical `"Crewmate"` cannot be
+safely reassigned from application data alone. After independently confirming
+authorship, the project owner may update only the affected Blob record by adding
+the correct stable `authorId` and author name. No bulk or name-based migration
+should be run.
 
 ## 10. Photo architecture and privacy
 
@@ -583,11 +595,18 @@ Do not add an email to the code mapping alone. The intended process is:
 
 1. finish and verify the production experience;
 2. send a Netlify Identity invitation to the exact address;
-3. assign the `basecamp` role;
-4. add a stable crew mapping if the account needs a named personal ranking and
-   Kit identity;
-5. ask the friend to create a unique password;
-6. confirm the account can reach Basecamp and only alter its own personal state.
+3. add an entry to the server-only `BASECAMP_MEMBER_PROFILES` JSON object when
+   the person corresponds to a predefined crew slot, using the normalized email
+   as the key and `{ "id": "stable-id", "name": "Display Name" }` as the value;
+4. ask the friend to accept the invite, enter their display name, and create a
+   unique password;
+5. confirm the account has the `basecamp` role, resolves to the intended profile,
+   can reach Basecamp, and can only alter its own personal state.
+
+`BASECAMP_MEMBER_PROFILES` must remain a Netlify environment variable. Do not
+commit its production value. Existing users pick up a configured profile
+server-side immediately; completing or updating their profile also persists the
+canonical values into Identity `appMetadata`.
 
 Invitations are an operational action, separate from a code deployment. No
 invitation should be sent during ordinary feature work unless Priitivi
@@ -629,6 +648,9 @@ Current Basecamp-focused tests cover:
 - ranking deduplication, valid-ID filtering, and three-choice limit;
 - ranked-choice add, reorder, removal, reachable-position, and duplicate-submit behavior;
 - trusted voter profiles for newly authorized Identity accounts;
+- invitation display-name capture and incomplete-profile recovery;
+- stable chat author IDs, read-time profile resolution, and legacy fallback;
+- canonical profile assignment by the Identity event hook;
 - friendly authentication and request-failure messages;
 - Conditions trip-window selection;
 - Conditions planning signal calculation;
@@ -655,6 +677,7 @@ Future high-value tests:
 | `src/components/Basecamp.jsx` | Planner UI, state merge, ranking, Conditions, and readable docs |
 | `src/components/Basecamp.css` | Desktop and mobile Basecamp design |
 | `src/components/BasecampAccess.jsx` | Invitation, login, recovery, and session UI |
+| `src/utils/basecampIdentity.js` | Shared profile normalization and identity precedence |
 | `src/components/TripMap.jsx` | Interactive campsite and attraction map |
 | `netlify/functions/_shared/basecamp-api.mjs` | Shared authorization, identity mapping, response controls |
 | `netlify/functions/basecamp-state.mjs` | Trip-state read/write and personal-field enforcement |
@@ -664,6 +687,9 @@ Future high-value tests:
 | `public/_redirects` | Role-gated pages, assets, and function rewrites |
 | `public/_headers` | CSP, anti-framing, permissions, and referrer controls |
 | `tests/basecamp-state.test.mjs` | State integrity tests |
+| `tests/basecamp-api.test.mjs` | Access and stable identity resolution tests |
+| `tests/basecamp-chat.test.mjs` | Trusted author and historical message tests |
+| `tests/basecamp-identity-hook.test.mjs` | Invitation profile configuration tests |
 | `tests/basecamp-conditions.test.mjs` | Conditions normalization tests |
 
 ## 17. Known limitations and sensible next steps

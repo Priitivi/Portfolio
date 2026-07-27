@@ -90,5 +90,6 @@ test("a second submission is ignored while a vote request is in flight", async (
 test("authentication and request failures produce concise user-facing messages", () => {
   assert.match(getVoteFailureMessage(401), /session has expired/i);
   assert.match(getVoteFailureMessage(403), /sign in again/i);
+  assert.match(getVoteFailureMessage(409, "PROFILE_REQUIRED"), /complete your.*profile/i);
   assert.doesNotMatch(getVoteFailureMessage(500), /500|request|server/i);
 });

@@ -1,19 +1,52 @@
 import { randomUUID } from "node:crypto";
 import { getStore } from "@netlify/blobs";
 import {
+  getCrewId,
   getCrewName,
   isSameOrigin,
   json,
   requireBasecampUser,
 } from "./_shared/basecamp-api.mjs";
+import { getKnownBasecampNameById } from "../../src/utils/basecampIdentity.js";
 
 const STORE_NAME = "durdle-basecamp";
 const MESSAGE_PREFIX = "messages/";
 const MAX_MESSAGE_LENGTH = 500;
 const MAX_MESSAGES = 100;
 
+function cleanStoredName(value) {
+  return typeof value === "string" ? value.trim().slice(0, 40) : "";
+}
+
+export function resolveChatMessage(message, profiles = {}) {
+  if (!message || typeof message !== "object") return message;
+  const authorId = typeof message.authorId === "string" ? message.authorId : "";
+  const profileName = cleanStoredName(profiles?.[authorId]?.name);
+  const knownName = getKnownBasecampNameById(authorId);
+
+  return {
+    ...message,
+    author: profileName || knownName || cleanStoredName(message.author) || "Crewmate",
+  };
+}
+
+export function createChatMessage(user, text, {
+  id = randomUUID(),
+  createdAt = new Date().toISOString(),
+} = {}) {
+  return {
+    id,
+    authorId: getCrewId(user),
+    author: getCrewName(user),
+    text,
+    createdAt,
+  };
+}
+
 export default async function handler(request) {
-  const { user, error } = await requireBasecampUser();
+  const { user, error } = await requireBasecampUser({
+    requireProfile: request.method === "POST",
+  });
   if (error) return error;
 
   const store = getStore({ name: STORE_NAME, consistency: "strong" });
@@ -29,8 +62,12 @@ export default async function handler(request) {
     ))
       .filter(Boolean)
       .sort((left, right) => left.createdAt.localeCompare(right.createdAt));
+    const savedState = await store.get("trip-state", { type: "json" });
+    const profiles = savedState?.state?.campsiteVoters ?? {};
 
-    return json({ messages });
+    return json({
+      messages: messages.map((message) => resolveChatMessage(message, profiles)),
+    });
   }
 
   if (request.method !== "POST") {
@@ -53,15 +90,11 @@ export default async function handler(request) {
     return json({ code: "INVALID_MESSAGE" }, 400);
   }
 
-  const createdAt = new Date().toISOString();
-  const id = randomUUID();
-  const message = {
-    id,
-    author: getCrewName(user),
-    text,
-    createdAt,
-  };
+  const message = createChatMessage(user, text);
 
-  await store.setJSON(`${MESSAGE_PREFIX}${createdAt}-${id}`, message);
+  await store.setJSON(
+    `${MESSAGE_PREFIX}${message.createdAt}-${message.id}`,
+    message,
+  );
   return json({ message }, 201);
 }

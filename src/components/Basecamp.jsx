@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion as Motion } from "framer-motion";
 import { getUser, logout as logoutIdentity } from "@netlify/identity";
+import { getBasecampProfile } from "../utils/basecampIdentity";
 import TripMap from "./TripMap";
 import {
   canSetCampsiteRank,
@@ -42,12 +43,6 @@ const crew = [
   { id: "dhanesh", name: "Dhanesh", home: "Rayners Lane", role: "Crew" },
   { id: "oliver", name: "Oliver", home: "Ealing", role: "Crew" },
 ];
-
-const crewByEmail = {
-  "priitivi@gmail.com": "priitivi",
-  "husainabedi@gmail.com": "husain",
-  "dhaneshlian@gmail.com": "dhanesh",
-};
 
 const initialCampsites = [
   {
@@ -673,18 +668,13 @@ async function preparePhotoUpload(file) {
 }
 
 function getCrewMemberForUser(user) {
-  const email = user?.email?.trim().toLowerCase();
-  const knownMember = crew.find((member) => member.id === crewByEmail[email]);
+  const profile = getBasecampProfile(user);
+  const knownMember = crew.find((member) => member.id === profile.id);
   if (knownMember) return knownMember;
 
-  const fallbackName =
-    user?.name?.trim()
-    || email?.split("@")[0]?.replace(/[._-]+/g, " ")
-    || "Crew member";
-
   return {
-    id: `identity-${user?.id || "crew"}`,
-    name: fallbackName.replace(/\b\w/g, (letter) => letter.toUpperCase()),
+    id: profile.id,
+    name: profile.name,
     home: "Signed-in account",
     role: "Crew",
   };
@@ -751,6 +741,7 @@ function Basecamp() {
     message: "",
     requiresSignIn: false,
   });
+  const [identityConfirmed, setIdentityConfirmed] = useState(isLocalPreview);
   const tripRef = useRef(trip);
   const remoteReadyRef = useRef(false);
   const applyingRemoteRef = useRef(false);
@@ -809,9 +800,29 @@ function Basecamp() {
           credentials: "same-origin",
           headers: { Accept: "application/json" },
         });
+        if (response.status === 401 || response.status === 403) {
+          window.location.assign("/basecamp-login?session=expired");
+          return;
+        }
         if (!response.ok) throw new Error(`State request failed: ${response.status}`);
         const payload = await response.json();
         if (cancelled) return;
+        if (payload.activeProfile?.hasDisplayName === false) {
+          window.location.assign("/basecamp-login?profile=1");
+          return;
+        }
+        if (payload.activeProfile?.id && payload.activeProfile?.name) {
+          const knownMember = crew.find(
+            (member) => member.id === payload.activeProfile.id,
+          );
+          setIdentityMember(knownMember ?? {
+            id: payload.activeProfile.id,
+            name: payload.activeProfile.name,
+            home: "Signed-in account",
+            role: "Crew",
+          });
+          setIdentityConfirmed(true);
+        }
 
         if (
           payload.state
@@ -1091,12 +1102,14 @@ function Basecamp() {
   };
 
   const setCampsiteRank = async (campsiteId, rank) => {
-    if (!isLocalPreview && !identityMember) {
+    if (!isLocalPreview && (!identityMember || !identityConfirmed)) {
       setVoteStatus({
-        phase: "error",
+        phase: "unavailable",
         campsiteId,
-        message: "Sign in to Basecamp before casting a vote.",
-        requiresSignIn: true,
+        message: identityMember
+          ? "Confirming your Basecamp profile. Try again in a moment."
+          : "Sign in to Basecamp before casting a vote.",
+        requiresSignIn: !identityMember,
       });
       return;
     }
@@ -1149,6 +1162,7 @@ function Basecamp() {
         if (!response.ok) {
           const voteError = new Error("Vote save failed");
           voteError.status = response.status;
+          voteError.code = payload.code;
           throw voteError;
         }
 
@@ -1186,8 +1200,10 @@ function Basecamp() {
         setVoteStatus({
           phase: "error",
           campsiteId,
-          message: getVoteFailureMessage(error?.status),
-          requiresSignIn: error?.status === 401 || error?.status === 403,
+          message: getVoteFailureMessage(error?.status, error?.code),
+          requiresSignIn: error?.status === 401
+            || error?.status === 403
+            || error?.code === "PROFILE_REQUIRED",
         });
       }
     });
@@ -1627,6 +1643,7 @@ function Basecamp() {
         ...current,
         {
           id: `preview-${Date.now()}`,
+          authorId: activeMember.id,
           author: activeMember.name,
           text,
           createdAt: new Date().toISOString(),
@@ -2173,7 +2190,7 @@ function Basecamp() {
                                   disabled={
                                     !canChooseRank
                                     || isAnyVoteSaving
-                                    || (!isLocalPreview && !identityMember)
+                                    || (!isLocalPreview && !identityConfirmed)
                                   }
                                   title={
                                     canChooseRank
@@ -2198,7 +2215,7 @@ function Basecamp() {
                               disabled={
                                 !currentRank
                                 || isAnyVoteSaving
-                                || (!isLocalPreview && !identityMember)
+                                || (!isLocalPreview && !identityConfirmed)
                               }
                               onClick={() => setCampsiteRank(campsite.id, 0)}
                             >
@@ -2206,14 +2223,22 @@ function Basecamp() {
                             </button>
                           </div>
                           <p
-                            className={`vote-feedback ${cardVoteStatus ? `is-${cardVoteStatus.phase}` : ""}`}
+                            className={`vote-feedback ${
+                              cardVoteStatus
+                                ? `is-${cardVoteStatus.phase}`
+                                : !isLocalPreview && !identityConfirmed
+                                  ? "is-unavailable"
+                                  : ""
+                            }`}
                             role={cardVoteStatus?.phase === "error" ? "alert" : "status"}
                             aria-live="polite"
                           >
                             {cardVoteStatus?.message
-                              || (currentRank
-                                ? `Your ${currentRank === 1 ? "first" : currentRank === 2 ? "second" : "third"} choice · ${4 - currentRank} ${4 - currentRank === 1 ? "point" : "points"}.${activeRankingCount < 3 ? " Add another campsite to build your top three." : ""}`
-                                : "No vote yet. Start with your 1st choice.")}
+                              || (!isLocalPreview && !identityConfirmed
+                                ? "Confirming your Basecamp profile…"
+                                : currentRank
+                                  ? `Your ${currentRank === 1 ? "first" : currentRank === 2 ? "second" : "third"} choice · ${4 - currentRank} ${4 - currentRank === 1 ? "point" : "points"}.${activeRankingCount < 3 ? " Add another campsite to build your top three." : ""}`
+                                  : "No vote yet. Start with your 1st choice.")}
                             {cardVoteStatus?.requiresSignIn && (
                               <> <a href="/basecamp-login">Sign in again</a></>
                             )}
@@ -3611,7 +3636,11 @@ function Basecamp() {
                     chatMessages.map((message) => (
                       <article
                         className={`chat-message ${
-                          message.author === activeMember.name ? "is-self" : ""
+                          (message.authorId
+                            ? message.authorId === activeMember.id
+                            : message.author === activeMember.name)
+                            ? "is-self"
+                            : ""
                         }`}
                         key={message.id}
                       >
@@ -3801,7 +3830,7 @@ function Basecamp() {
                   </div>
                   <div>
                     <dt>Chat</dt>
-                    <dd>Netlify Blob · author, message and timestamp</dd>
+                    <dd>Netlify Blob · stable author ID, display name, message and timestamp</dd>
                   </div>
                   <div>
                     <dt>Photos</dt>

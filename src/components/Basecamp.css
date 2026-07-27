@@ -1430,6 +1430,10 @@
   color: #9f351f;
 }
 
+.vote-feedback.is-unavailable {
+  color: rgba(16, 33, 30, 0.5);
+}
+
 .vote-feedback a {
   color: inherit;
   font-weight: 900;
@@ -3676,6 +3680,11 @@
 @media (max-width: 620px) {
   .basecamp-page-controls {
     display: none;
+  }
+
+  .basecamp-tabs > button,
+  .basecamp-more-nav > summary {
+    min-height: 44px;
   }
 
   .basecamp-header {

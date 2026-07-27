@@ -2,6 +2,7 @@ import { getStore } from "@netlify/blobs";
 import {
   getCrewId,
   getCrewName,
+  getCrewProfile,
   isSameOrigin,
   json,
   requireBasecampUser,
@@ -158,14 +159,19 @@ async function saveTripState(store, state) {
 }
 
 export default async function handler(request) {
-  const { user, error } = await requireBasecampUser();
+  const { user, error } = await requireBasecampUser({
+    requireProfile: request.method !== "GET",
+  });
   if (error) return error;
 
   const store = getStore({ name: STORE_NAME, consistency: "strong" });
 
   if (request.method === "GET") {
     const saved = await store.get(STATE_KEY, { type: "json" });
-    return json(saved ?? { state: null, updatedAt: null });
+    return json({
+      ...(saved ?? { state: null, updatedAt: null }),
+      activeProfile: getCrewProfile(user),
+    });
   }
 
   if (!["PUT", "PATCH"].includes(request.method)) {

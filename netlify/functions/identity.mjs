@@ -1,5 +1,8 @@
+import { getConfiguredBasecampProfile } from "../../src/utils/basecampIdentity.js";
+
 const BASECAMP_ROLE = "basecamp";
 const ALLOWLIST_KEY = "BASECAMP_ALLOWED_EMAILS";
+const MEMBER_PROFILES_KEY = "BASECAMP_MEMBER_PROFILES";
 
 function normaliseEmail(value) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
@@ -20,6 +23,34 @@ function isAllowedUser(user) {
   return Boolean(email) && getAllowedEmails().has(email);
 }
 
+export function getConfiguredMemberProfile(email, configuredProfiles = "") {
+  return getConfiguredBasecampProfile(email, configuredProfiles);
+}
+
+function withBasecampMetadata(user) {
+  const existingRoles = Array.isArray(user.appMetadata?.roles)
+    ? user.appMetadata.roles
+    : [];
+  const configuredProfile = getConfiguredMemberProfile(
+    user.email,
+    Netlify.env.get(MEMBER_PROFILES_KEY) ?? "",
+  );
+
+  return {
+    ...user,
+    appMetadata: {
+      ...user.appMetadata,
+      roles: [...new Set([...existingRoles, BASECAMP_ROLE])],
+      ...(configuredProfile
+        ? {
+          basecampId: configuredProfile.id,
+          basecampName: configuredProfile.name,
+        }
+        : {}),
+    },
+  };
+}
+
 function denyUnknownUser(event) {
   if (!isAllowedUser(event.user)) {
     return event.deny();
@@ -31,25 +62,19 @@ function denyUnknownUser(event) {
 export default {
   userValidate: denyUnknownUser,
   userLogin: denyUnknownUser,
-  userModified: denyUnknownUser,
+  userModified(event) {
+    if (!isAllowedUser(event.user)) {
+      return event.deny();
+    }
+
+    return { user: withBasecampMetadata(event.user) };
+  },
 
   userSignup(event) {
     if (!isAllowedUser(event.user)) {
       return event.deny();
     }
 
-    const existingRoles = Array.isArray(event.user.appMetadata?.roles)
-      ? event.user.appMetadata.roles
-      : [];
-
-    return {
-      user: {
-        ...event.user,
-        appMetadata: {
-          ...event.user.appMetadata,
-          roles: [...new Set([...existingRoles, BASECAMP_ROLE])],
-        },
-      },
-    };
+    return { user: withBasecampMetadata(event.user) };
   },
 };

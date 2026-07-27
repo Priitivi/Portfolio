@@ -74,9 +74,12 @@ export function createVoteSubmissionGuard() {
   };
 }
 
-export function getVoteFailureMessage(status) {
+export function getVoteFailureMessage(status, code = "") {
   if (status === 401 || status === 403) {
     return "Your session has expired. Sign in again to vote.";
+  }
+  if (status === 409 && code === "PROFILE_REQUIRED") {
+    return "Complete your Basecamp profile before voting.";
   }
   if (status === 409) {
     return "Voting is still being prepared. Refresh the page and try again.";

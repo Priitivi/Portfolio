@@ -1,16 +1,14 @@
 import { getUser } from "@netlify/identity";
+import {
+  getConfiguredBasecampProfile,
+  getBasecampProfile,
+} from "../../../src/utils/basecampIdentity.js";
 
 const responseHeaders = {
   "Cache-Control": "no-store",
   "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
   "X-Content-Type-Options": "nosniff",
 };
-
-const crewByEmail = new Map([
-  ["priitivi@gmail.com", { id: "priitivi", name: "Priitivi" }],
-  ["husainabedi@gmail.com", { id: "husain", name: "Husain" }],
-  ["dhaneshlian@gmail.com", { id: "dhanesh", name: "Dhanesh" }],
-]);
 
 export function json(body, status = 200, headers = {}) {
   return Response.json(body, {
@@ -27,16 +25,40 @@ export function isSameOrigin(request) {
   return origin === new URL(request.url).origin;
 }
 
-export function getBasecampAccessError(user) {
+function getConfiguredProfiles() {
+  return globalThis.Netlify?.env?.get?.("BASECAMP_MEMBER_PROFILES")
+    ?? process.env.BASECAMP_MEMBER_PROFILES
+    ?? "";
+}
+
+export function getCrewProfile(user) {
+  const configuredProfile = getConfiguredBasecampProfile(
+    user?.email,
+    getConfiguredProfiles(),
+  );
+  if (configuredProfile) {
+    return {
+      ...configuredProfile,
+      hasDisplayName: true,
+      source: "configured",
+    };
+  }
+  return getBasecampProfile(user);
+}
+
+export function getBasecampAccessError(user, { requireProfile = false } = {}) {
   if (!user) return { code: "UNAUTHENTICATED", status: 401 };
   const roles = Array.isArray(user.roles) ? user.roles : [];
   if (!roles.includes("basecamp")) return { code: "FORBIDDEN", status: 403 };
+  if (requireProfile && !getCrewProfile(user).hasDisplayName) {
+    return { code: "PROFILE_REQUIRED", status: 409 };
+  }
   return null;
 }
 
-export async function requireBasecampUser() {
+export async function requireBasecampUser(options) {
   const user = await getUser();
-  const accessError = getBasecampAccessError(user);
+  const accessError = getBasecampAccessError(user, options);
   if (accessError) {
     return { error: json({ code: accessError.code }, accessError.status) };
   }
@@ -45,15 +67,9 @@ export async function requireBasecampUser() {
 }
 
 export function getCrewName(user) {
-  const normalizedEmail = user.email?.toLowerCase() ?? "";
-  const knownCrew = crewByEmail.get(normalizedEmail);
-  if (knownCrew) return knownCrew.name;
-
-  const profileName = typeof user.name === "string" ? user.name.trim() : "";
-  return profileName.slice(0, 40) || "Crewmate";
+  return getCrewProfile(user).name;
 }
 
 export function getCrewId(user) {
-  const normalizedEmail = user.email?.toLowerCase() ?? "";
-  return crewByEmail.get(normalizedEmail)?.id || `identity-${user.id || "crew"}`;
+  return getCrewProfile(user).id;
 }
