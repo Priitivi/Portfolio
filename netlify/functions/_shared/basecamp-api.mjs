@@ -27,16 +27,18 @@ export function isSameOrigin(request) {
   return origin === new URL(request.url).origin;
 }
 
+export function getBasecampAccessError(user) {
+  if (!user) return { code: "UNAUTHENTICATED", status: 401 };
+  const roles = Array.isArray(user.roles) ? user.roles : [];
+  if (!roles.includes("basecamp")) return { code: "FORBIDDEN", status: 403 };
+  return null;
+}
+
 export async function requireBasecampUser() {
   const user = await getUser();
-  const roles = Array.isArray(user?.roles) ? user.roles : [];
-
-  if (!user) {
-    return { error: json({ code: "UNAUTHENTICATED" }, 401) };
-  }
-
-  if (!roles.includes("basecamp")) {
-    return { error: json({ code: "FORBIDDEN" }, 403) };
+  const accessError = getBasecampAccessError(user);
+  if (accessError) {
+    return { error: json({ code: accessError.code }, accessError.status) };
   }
 
   return { user };

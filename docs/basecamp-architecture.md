@@ -176,9 +176,12 @@ The shared helper is
 3. returns `403 FORBIDDEN` if the role is missing;
 4. returns the user to the function only after both checks pass.
 
-Known crew emails map to stable IDs. This mapping supports actions that belong
-to one person, such as individual Kit acknowledgements and campsite rankings.
-The interface never offers a "post as someone else" selector.
+Known crew emails map to stable IDs. Other authorized `basecamp` accounts use a
+stable Identity-derived ID, and the server stores their trusted display name in
+`campsiteVoters` so their ranking is visible in crew totals. This mapping
+supports actions that belong to one person, such as individual Kit
+acknowledgements and campsite rankings. The interface never offers a "post as
+someone else" selector.
 
 | Capability | Anonymous visitor | Signed in without role | Basecamp crew | Project owner |
 |---|---:|---:|---:|---:|
@@ -211,6 +214,9 @@ An abbreviated shape is:
     "campsiteRankings": {
       "priitivi": ["shortlake-farm", "eweleaze", "ringstead"]
     },
+    "campsiteVoters": {
+      "priitivi": { "name": "Priitivi" }
+    },
     "campsiteDecision": {
       "deadline": "2026-08-02"
     },
@@ -226,6 +232,12 @@ An abbreviated shape is:
 The client merges stored data with the current built-in campsite and Kit
 defaults. This lets a newer deployment add researched entries without erasing
 crew comments, rankings, or completion state.
+
+Rank changes use a dedicated authenticated `PATCH /basecamp/api/state` request.
+The client applies the choice optimistically, locks all vote controls until the
+request completes, then either adopts the returned server state or restores the
+previous ranking with an inline error. The general `PUT` path still saves the
+rest of the shared trip document.
 
 ### Storage inventory
 
@@ -615,6 +627,9 @@ Current Basecamp-focused tests cover:
 - shared Kit normalization;
 - preservation of other people's campsite rankings;
 - ranking deduplication, valid-ID filtering, and three-choice limit;
+- ranked-choice add, reorder, removal, reachable-position, and duplicate-submit behavior;
+- trusted voter profiles for newly authorized Identity accounts;
+- friendly authentication and request-failure messages;
 - Conditions trip-window selection;
 - Conditions planning signal calculation;
 - modelled tide normalization and turning-point detection.

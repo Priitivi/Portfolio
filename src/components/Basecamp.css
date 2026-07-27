@@ -162,6 +162,7 @@
 
 .basecamp-shell button:focus-visible,
 .basecamp-shell a:focus-visible,
+.basecamp-shell summary:focus-visible,
 .basecamp-shell input:focus-visible,
 .basecamp-shell select:focus-visible,
 .basecamp-shell textarea:focus-visible {
@@ -188,7 +189,8 @@
   display: none;
 }
 
-.basecamp-tabs button {
+.basecamp-tabs > button,
+.basecamp-more-nav > summary {
   position: relative;
   flex: 0 0 auto;
   padding: 15px 10px 13px;
@@ -202,7 +204,67 @@
   text-transform: uppercase;
 }
 
-.basecamp-tabs button::after {
+.basecamp-more-nav {
+  flex: 0 0 auto;
+}
+
+.basecamp-more-nav > summary {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  list-style: none;
+}
+
+.basecamp-more-nav > summary::-webkit-details-marker {
+  display: none;
+}
+
+.basecamp-more-nav > summary span {
+  transition: transform 180ms ease;
+}
+
+.basecamp-more-nav[open] > summary span {
+  transform: rotate(180deg);
+}
+
+.basecamp-more-nav > div {
+  position: fixed;
+  top: 125px;
+  right: clamp(16px, 5vw, 72px);
+  z-index: 60;
+  width: min(220px, calc(100vw - 24px));
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  background: rgba(9, 20, 17, 0.98);
+  border: 1px solid rgba(247, 242, 232, 0.18);
+  border-radius: 12px;
+  box-shadow: 0 18px 46px rgba(9, 20, 17, 0.3);
+}
+
+.basecamp-more-nav > div button {
+  min-height: 42px;
+  padding: 9px 12px;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: rgba(247, 242, 232, 0.72);
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.basecamp-more-nav > div button:hover,
+.basecamp-more-nav > div button.is-active {
+  background: var(--camp-forest);
+  color: var(--camp-paper);
+}
+
+.basecamp-tabs > button::after,
+.basecamp-more-nav > summary::after {
   content: "";
   position: absolute;
   right: 9px;
@@ -214,12 +276,16 @@
   transition: transform 180ms ease;
 }
 
-.basecamp-tabs button:hover,
-.basecamp-tabs button.is-active {
+.basecamp-tabs > button:hover,
+.basecamp-tabs > button.is-active,
+.basecamp-more-nav > summary:hover,
+.basecamp-more-nav > summary.is-active,
+.basecamp-more-nav[open] > summary {
   color: var(--camp-ink);
 }
 
-.basecamp-tabs button.is-active::after {
+.basecamp-tabs > button.is-active::after,
+.basecamp-more-nav > summary.is-active::after {
   transform: scaleX(1);
 }
 
@@ -1191,20 +1257,28 @@
 
 .ranked-vote-panel {
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr);
+  grid-template-columns: auto auto minmax(260px, 1fr);
   align-items: center;
   gap: 14px;
-  padding-top: 16px;
-  border-top: 1px solid var(--camp-line);
+  padding: 16px;
+  background: rgba(234, 223, 202, 0.35);
+  border: 1px solid rgba(16, 33, 30, 0.12);
+  border-radius: 14px;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
 }
 
-.ranked-vote-panel > div:first-child {
+.ranked-vote-panel.is-saving {
+  border-color: rgba(239, 108, 62, 0.5);
+  box-shadow: 0 0 0 3px rgba(239, 108, 62, 0.08);
+}
+
+.rank-score-summary {
   display: grid;
   justify-items: center;
   line-height: 1;
 }
 
-.ranked-vote-panel > div:first-child small {
+.rank-score-summary small {
   color: rgba(16, 33, 30, 0.44);
   font-size: 0.56rem;
   text-transform: uppercase;
@@ -1236,32 +1310,59 @@
 }
 
 .rank-controls {
-  justify-self: end;
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(58px, 1fr)) auto;
   align-items: center;
-  gap: 5px;
+  gap: 7px;
 }
 
-.rank-controls > span {
-  margin-right: 3px;
-  color: rgba(16, 33, 30, 0.48);
-  font-size: 0.58rem;
-  font-weight: 800;
-  text-transform: uppercase;
+.rank-action {
+  min-width: 0;
+  display: grid;
+  gap: 9px;
+}
+
+.rank-action-heading {
+  display: grid;
+  gap: 2px;
+}
+
+.rank-action-heading strong {
+  font-size: 0.76rem;
+}
+
+.rank-action-heading span {
+  color: rgba(16, 33, 30, 0.58);
+  font-size: 0.64rem;
 }
 
 .rank-controls button {
-  width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  background: transparent;
-  border: 1px solid var(--camp-line);
+  min-width: 0;
+  min-height: 46px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 9px;
+  background: rgba(247, 242, 232, 0.85);
+  border: 1px solid rgba(16, 33, 30, 0.24);
+  border-radius: 8px;
   color: var(--camp-ink);
   cursor: pointer;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 800;
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.rank-controls button strong {
+  font-size: 0.76rem;
+}
+
+.rank-controls button small {
+  color: currentColor;
+  font-size: 0.56rem;
+  font-weight: 700;
+  opacity: 0.68;
 }
 
 .rank-controls button:hover,
@@ -1271,9 +1372,19 @@
   color: #fff;
 }
 
+.rank-controls button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.rank-controls button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
 .rank-controls button.clear-rank {
   width: auto;
-  padding-inline: 7px;
+  min-width: 66px;
+  flex-direction: row;
+  padding-inline: 10px;
   color: rgba(16, 33, 30, 0.54);
 }
 
@@ -1282,8 +1393,53 @@
 }
 
 .rank-controls button:disabled {
-  cursor: default;
-  opacity: 0.35;
+  cursor: not-allowed;
+  opacity: 0.46;
+}
+
+.vote-feedback {
+  min-height: 1.2em;
+  margin: 0;
+  color: rgba(16, 33, 30, 0.62);
+  font-size: 0.64rem;
+  font-weight: 700;
+}
+
+.vote-feedback.is-saving::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  display: inline-block;
+  margin-right: 6px;
+  border: 2px solid rgba(239, 108, 62, 0.3);
+  border-top-color: var(--camp-orange);
+  border-radius: 50%;
+  animation: basecamp-vote-spin 700ms linear infinite;
+}
+
+.vote-feedback.is-saved {
+  color: var(--camp-forest);
+}
+
+.vote-feedback.is-saved::before {
+  content: "✓";
+  margin-right: 5px;
+}
+
+.vote-feedback.is-error {
+  color: #9f351f;
+}
+
+.vote-feedback a {
+  color: inherit;
+  font-weight: 900;
+  text-underline-offset: 2px;
+}
+
+@keyframes basecamp-vote-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .vote-row button,
@@ -3403,6 +3559,10 @@
     justify-content: flex-start;
   }
 
+  .basecamp-more-nav > div {
+    top: 167px;
+  }
+
   .trip-hero {
     min-height: 680px;
     grid-template-columns: 1fr;
@@ -3514,6 +3674,10 @@
 }
 
 @media (max-width: 620px) {
+  .basecamp-page-controls {
+    display: none;
+  }
+
   .basecamp-header {
     min-height: 58px;
     grid-template-columns: auto minmax(0, 1fr) auto;
@@ -3581,9 +3745,15 @@
     padding-inline: 8px;
   }
 
-  .basecamp-tabs button {
+  .basecamp-tabs > button,
+  .basecamp-more-nav > summary {
     padding: 11px 9px 10px;
     font-size: 0.66rem;
+  }
+
+  .basecamp-more-nav > div {
+    top: 103px;
+    right: 8px;
   }
 
   .basecamp-main {
@@ -3863,15 +4033,15 @@
   .ranked-vote-panel {
     grid-template-columns: auto minmax(0, 1fr);
     gap: 8px 12px;
+    padding: 14px;
+  }
+
+  .rank-action {
+    grid-column: 1 / -1;
   }
 
   .rank-controls {
-    grid-column: 1 / -1;
-    justify-self: stretch;
-  }
-
-  .rank-controls > span {
-    margin-right: auto;
+    grid-template-columns: repeat(3, minmax(52px, 1fr)) auto;
   }
 
   .basecamp-shell .add-form {

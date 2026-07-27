@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  canSetCrewCampsiteRank,
   enforceCampsiteRankings,
+  enforceCampsiteVoters,
   enforcePackingAcknowledgements,
+  setCrewCampsiteRank,
 } from "../netlify/functions/basecamp-state.mjs";
 
 test("a crew member can only change their own acknowledgement", () => {
@@ -115,4 +118,57 @@ test("omitting rankings cannot erase another crew member's choices", () => {
 
   const result = enforceCampsiteRankings(requested, previous, "priitivi");
   assert.deepEqual(result.campsiteRankings, previous.campsiteRankings);
+});
+
+test("a dedicated vote update changes or removes only the active member's choice", () => {
+  const initial = {
+    campsiteRankings: {
+      husain: ["one"],
+      priitivi: ["one", "two", "three"],
+    },
+  };
+  const changed = setCrewCampsiteRank(initial, "priitivi", "three", 1);
+  const removed = setCrewCampsiteRank(changed, "priitivi", "one", 0);
+
+  assert.deepEqual(changed.campsiteRankings, {
+    husain: ["one"],
+    priitivi: ["three", "one", "two"],
+  });
+  assert.deepEqual(removed.campsiteRankings, {
+    husain: ["one"],
+    priitivi: ["three", "two"],
+  });
+});
+
+test("the server rejects rank positions that the compact top-three cannot represent", () => {
+  const state = { campsiteRankings: {} };
+  assert.equal(canSetCrewCampsiteRank(state, "priitivi", "one", 1), true);
+  assert.equal(canSetCrewCampsiteRank(state, "priitivi", "one", 2), false);
+  assert.equal(setCrewCampsiteRank(state, "priitivi", "one", 2), state);
+});
+
+test("voter profiles are server-owned and include newly authorized accounts", () => {
+  const previous = {
+    campsiteVoters: {
+      husain: { name: "Husain" },
+    },
+  };
+  const requested = {
+    campsiteVoters: {
+      husain: { name: "Forged name" },
+      "identity-new-user": { name: "Also forged" },
+    },
+  };
+
+  const result = enforceCampsiteVoters(
+    requested,
+    previous,
+    "identity-new-user",
+    "New Crew Member",
+  );
+
+  assert.deepEqual(result.campsiteVoters, {
+    husain: { name: "Husain" },
+    "identity-new-user": { name: "New Crew Member" },
+  });
 });

@@ -1,6 +1,7 @@
 import { getStore } from "@netlify/blobs";
 import {
   getCrewId,
+  getCrewName,
   isSameOrigin,
   json,
   requireBasecampUser,
@@ -76,6 +77,86 @@ export function enforceCampsiteRankings(nextState, previousState, activeCrewId) 
   return { ...nextState, campsiteRankings: protectedRankings };
 }
 
+export function canSetCrewCampsiteRank(state, activeCrewId, campsiteId, rank) {
+  if (!Number.isInteger(rank) || rank < 1 || rank > 3) return false;
+  const currentRanking = Array.isArray(state?.campsiteRankings?.[activeCrewId])
+    ? state.campsiteRankings[activeCrewId]
+    : [];
+  const isAlreadyRanked = currentRanking.includes(campsiteId);
+  const highestReachableRank = isAlreadyRanked
+    ? currentRanking.length
+    : Math.min(3, currentRanking.length + 1);
+  return rank <= highestReachableRank;
+}
+
+export function setCrewCampsiteRank(state, activeCrewId, campsiteId, rank) {
+  const currentRanking = Array.isArray(state?.campsiteRankings?.[activeCrewId])
+    ? state.campsiteRankings[activeCrewId]
+    : [];
+  if (rank > 0 && !canSetCrewCampsiteRank(state, activeCrewId, campsiteId, rank)) {
+    return state;
+  }
+  const nextRanking = currentRanking.filter((id) => id !== campsiteId);
+  if (rank > 0) nextRanking.splice(rank - 1, 0, campsiteId);
+
+  return {
+    ...state,
+    campsiteRankings: {
+      ...(state?.campsiteRankings ?? {}),
+      [activeCrewId]: nextRanking.slice(0, 3),
+    },
+  };
+}
+
+export function enforceCampsiteVoters(
+  nextState,
+  previousState,
+  activeCrewId,
+  activeCrewName,
+) {
+  const previousProfiles = previousState?.campsiteVoters
+    && typeof previousState.campsiteVoters === "object"
+    && !Array.isArray(previousState.campsiteVoters)
+    ? previousState.campsiteVoters
+    : {};
+  const safeName = typeof activeCrewName === "string"
+    ? activeCrewName.trim().slice(0, 40)
+    : "Crewmate";
+
+  return {
+    ...nextState,
+    campsiteVoters: {
+      ...previousProfiles,
+      [activeCrewId]: { name: safeName || "Crewmate" },
+    },
+  };
+}
+
+async function readRequestBody(request) {
+  const contentLength = Number(request.headers.get("content-length") || 0);
+  if (contentLength > MAX_BODY_BYTES) {
+    return { error: json({ code: "PAYLOAD_TOO_LARGE" }, 413) };
+  }
+
+  try {
+    return { body: await request.json() };
+  } catch {
+    return { error: json({ code: "INVALID_REQUEST" }, 400) };
+  }
+}
+
+async function saveTripState(store, state) {
+  const updatedAt = new Date().toISOString();
+  const saved = { state, updatedAt };
+  const encoded = JSON.stringify(saved);
+  if (Buffer.byteLength(encoded, "utf8") > MAX_BODY_BYTES) {
+    return { error: json({ code: "PAYLOAD_TOO_LARGE" }, 413) };
+  }
+
+  await store.setJSON(STATE_KEY, saved);
+  return { saved };
+}
+
 export default async function handler(request) {
   const { user, error } = await requireBasecampUser();
   if (error) return error;
@@ -87,48 +168,80 @@ export default async function handler(request) {
     return json(saved ?? { state: null, updatedAt: null });
   }
 
-  if (request.method !== "PUT") {
-    return json({ code: "METHOD_NOT_ALLOWED" }, 405, { Allow: "GET, PUT" });
+  if (!["PUT", "PATCH"].includes(request.method)) {
+    return json({ code: "METHOD_NOT_ALLOWED" }, 405, { Allow: "GET, PUT, PATCH" });
   }
 
   if (!isSameOrigin(request)) {
     return json({ code: "ORIGIN_REJECTED" }, 403);
   }
 
-  const contentLength = Number(request.headers.get("content-length") || 0);
-  if (contentLength > MAX_BODY_BYTES) {
-    return json({ code: "PAYLOAD_TOO_LARGE" }, 413);
-  }
+  const parsed = await readRequestBody(request);
+  if (parsed.error) return parsed.error;
+  const { body } = parsed;
+  const activeCrewId = getCrewId(user);
+  const activeCrewName = getCrewName(user);
+  const previous = await store.get(STATE_KEY, { type: "json" });
 
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return json({ code: "INVALID_REQUEST" }, 400);
+  if (request.method === "PATCH") {
+    const campsiteId = typeof body?.campsiteId === "string" ? body.campsiteId : "";
+    const rank = body?.rank;
+    if (!campsiteId || !Number.isInteger(rank) || rank < 0 || rank > 3) {
+      return json({ code: "INVALID_VOTE" }, 400);
+    }
+    if (!previous?.state) {
+      return json({ code: "STATE_NOT_READY" }, 409);
+    }
+    const validCampsite = Array.isArray(previous.state.campsites)
+      && previous.state.campsites.some((campsite) => campsite?.id === campsiteId);
+    if (!validCampsite) {
+      return json({ code: "INVALID_CAMPSITE" }, 400);
+    }
+    if (
+      rank > 0
+      && !canSetCrewCampsiteRank(previous.state, activeCrewId, campsiteId, rank)
+    ) {
+      return json({ code: "INVALID_RANK_POSITION" }, 400);
+    }
+
+    const rankedState = setCrewCampsiteRank(
+      previous.state,
+      activeCrewId,
+      campsiteId,
+      rank,
+    );
+    const protectedState = enforceCampsiteVoters(
+      rankedState,
+      previous.state,
+      activeCrewId,
+      activeCrewName,
+    );
+    const result = await saveTripState(store, protectedState);
+    if (result.error) return result.error;
+    return json(result.saved);
   }
 
   if (!body?.state || typeof body.state !== "object" || Array.isArray(body.state)) {
     return json({ code: "INVALID_STATE" }, 400);
   }
 
-  const previous = await store.get(STATE_KEY, { type: "json" });
   const packingProtectedState = enforcePackingAcknowledgements(
     body.state,
     previous?.state,
-    getCrewId(user),
+    activeCrewId,
   );
-  const protectedState = enforceCampsiteRankings(
+  const rankingsProtectedState = enforceCampsiteRankings(
     packingProtectedState,
     previous?.state,
-    getCrewId(user),
+    activeCrewId,
   );
-  const updatedAt = new Date().toISOString();
-  const saved = { state: protectedState, updatedAt };
-  const encoded = JSON.stringify(saved);
-  if (Buffer.byteLength(encoded, "utf8") > MAX_BODY_BYTES) {
-    return json({ code: "PAYLOAD_TOO_LARGE" }, 413);
-  }
-
-  await store.setJSON(STATE_KEY, saved);
-  return json({ updatedAt });
+  const protectedState = enforceCampsiteVoters(
+    rankingsProtectedState,
+    previous?.state,
+    activeCrewId,
+    activeCrewName,
+  );
+  const result = await saveTripState(store, protectedState);
+  if (result.error) return result.error;
+  return json(result.saved);
 }
