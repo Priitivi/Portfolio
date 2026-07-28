@@ -39,12 +39,12 @@ As documented for the rest of the Lab, this client-side gate controls access to 
 
 The implementation separates content by provenance:
 
-- `data/competencies.js` contains role areas explicitly described in the supplied interview brief and labels suggested preparation questions as `practice-prompt`.
-- `data/candidateEvidence.js` contains a redacted, role-relevant evidence set from the supplied CV summary and labels each entry `source-backed-cv`.
+- `data/competencies.js` contains role areas from the complete job description, labels suggested preparation questions as `practice-prompt`, and keeps the candidate's handwritten positioning notes separate as `candidate-preparation-note`.
+- `data/candidateEvidence.js` contains a redacted, role-relevant evidence set from the complete CV and labels each entry `source-backed-cv`.
 - `data/mockQuestions.js` contains a curated question tree grounded in the described role responsibilities.
 - `data/smartRebookScenario.js` keeps `confirmed-source-fact` entries completely separate from `fictional-exercise-assumption` entries.
 
-The original PDFs are not included in `src`, `public` or the production bundle. In the desktop implementation environment, the two PDF paths named in the brief were not mounted; the checked-in source-backed data is therefore limited to the detailed source excerpts included in that brief and should be reconciled against the full documents when they are available.
+The content was reconciled against the complete interview pack, handwritten preparation notes, job description and CV on 28 July 2026. The original documents live only in the ignored local directory `docs/private-source/`. That directory is excluded by `.gitignore`, is not tracked by Git and is not copied into `src`, `public` or the production bundle.
 
 Do not add contact details or unnecessary personal identifiers when updating the evidence bank.
 
@@ -55,6 +55,7 @@ Do not add contact details or unnecessary personal identifiers when updating the
 - No answer is logged, uploaded, analysed by an external AI service or sent to analytics.
 - The deterministic response and scoring systems run entirely in the browser.
 - Original source documents are not shipped with the frontend.
+- `.gitignore` excludes `docs/private-source/` and temporary PDF renders under `tmp/pdfs/`.
 
 ## Core maintenance files
 

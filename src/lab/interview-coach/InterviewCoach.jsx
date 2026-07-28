@@ -24,7 +24,7 @@ const modes = [
     id: "mock",
     number: "02",
     title: "Mock Interview",
-    duration: "20–30 min",
+    duration: "25–35 min",
     description: "Answer a curated interview question tree one question at a time, with realistic follow-ups.",
   },
   {
@@ -46,7 +46,7 @@ function WelcomeScreen({ selectedMode, onSelect, onStart }) {
           <p className="ic-welcome-copy">A focused interview simulator for discovery, stakeholder communication and customer learning design.</p>
         </div>
         <aside>
-          <div><span>SESSION</span><strong>10–30 min</strong></div>
+          <div><span>SESSION</span><strong>10–35 min</strong></div>
           <div><span>STORAGE</span><strong>This tab only</strong></div>
           <div><span>MODEL</span><strong>Deterministic</strong></div>
           <p>This is a private practice tool, not an assessment result. Answers stay in session storage and are never sent to an AI service or analytics.</p>

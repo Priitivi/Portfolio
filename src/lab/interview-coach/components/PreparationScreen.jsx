@@ -1,5 +1,6 @@
 import { candidateEvidence, evidenceById } from "../data/candidateEvidence.js";
 import {
+  candidatePreparationNotes,
   competencies,
   preparationAreas,
   smartRebookDiscoveryChecklist,
@@ -7,7 +8,9 @@ import {
 import { confirmedSourceFacts } from "../data/smartRebookScenario.js";
 
 export default function PreparationScreen({ onBack, onStartMode }) {
-  const confirmedBehaviour = confirmedSourceFacts.find((item) => item.id === "core-behaviour");
+  const roleplayBriefFacts = confirmedSourceFacts.filter((item) =>
+    ["company-profile", "core-product", "typical-customers", "feature-status", "learning-brief", "core-behaviour"].includes(item.id),
+  );
 
   return (
     <main className="ic-main ic-preparation">
@@ -64,9 +67,25 @@ export default function PreparationScreen({ onBack, onStartMode }) {
         </div>
       </section>
 
+      <section className="ic-section" aria-labelledby="notes-title">
+        <div className="ic-section-heading">
+          <div><span>03</span><h2 id="notes-title">Your preparation notes</h2></div>
+          <p>These themes come from the handwritten interview plan. They are candidate positioning, not claims from the CV or job description.</p>
+        </div>
+        <div className="ic-note-grid">
+          {candidatePreparationNotes.map((note) => (
+            <article key={note.id}>
+              <span className="ic-source-label is-note">YOUR WRITTEN NOTE</span>
+              <h3>{note.title}</h3>
+              <p>{note.detail}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section className="ic-section" aria-labelledby="gaps-title">
         <div className="ic-section-heading">
-          <div><span>03</span><h2 id="gaps-title">Areas to prepare</h2></div>
+          <div><span>04</span><h2 id="gaps-title">Areas to prepare</h2></div>
           <p>These are preparation prompts, not claims that the candidate lacks the experience.</p>
         </div>
         <div className="ic-prompt-grid">
@@ -82,13 +101,17 @@ export default function PreparationScreen({ onBack, onStartMode }) {
 
       <section className="ic-section ic-checklist-section" aria-labelledby="checklist-title">
         <div className="ic-section-heading">
-          <div><span>04</span><h2 id="checklist-title">Smart Rebook discovery map</h2></div>
-          <p>The confirmed behaviour is separated from questions that would uncover the rest of a usable learning brief.</p>
+          <div><span>05</span><h2 id="checklist-title">Smart Rebook discovery map</h2></div>
+          <p>Facts provided before the exercise are separated from questions that would uncover the rest of a usable learning brief.</p>
         </div>
-        <aside className="ic-fact-callout">
-          <span className="ic-source-label is-fact">CONFIRMED SOURCE FACT</span>
-          <p>{confirmedBehaviour.statement}</p>
-        </aside>
+        <div className="ic-fact-grid" aria-label="Confirmed BookNest and Smart Rebook facts">
+          {roleplayBriefFacts.map((fact) => (
+            <article key={fact.id}>
+              <span className="ic-source-label is-fact">CONFIRMED SOURCE FACT</span>
+              <p>{fact.statement}</p>
+            </article>
+          ))}
+        </div>
         <ol className="ic-checklist">
           {smartRebookDiscoveryChecklist.map((item, index) => (
             <li key={item.id}>

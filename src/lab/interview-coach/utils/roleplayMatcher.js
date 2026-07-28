@@ -1,13 +1,19 @@
 import {
   CONFIRMED_SOURCE_TYPE,
+  confirmedFactById,
   exerciseAssumptionById,
-  confirmedSourceFacts,
 } from "../data/smartRebookScenario.js";
 
-const coreBehaviour = confirmedSourceFacts.find((fact) => fact.id === "core-behaviour");
+function sourceResponse(...ids) {
+  return ids.map((id) => confirmedFactById[id].statement).join(" ");
+}
 
 export const roleplayTopicLabels = {
   opening: "Opening and agenda",
+  "stakeholder-role": "Product Owner role",
+  "booknest-context": "BookNest product context",
+  "customer-profile": "BookNest customer profile",
+  "learning-brief": "Customer-learning brief",
   purpose: "Purpose and customer problem",
   audience: "Target audience",
   "prior-knowledge": "Current user knowledge",
@@ -32,6 +38,12 @@ export const roleplayTopicLabels = {
 
 const intents = [
   {
+    id: "stakeholder-role",
+    phrases: ["introduce yourself", "what is your role", "what's your role", "your role", "who are you"],
+    response: "I'm Duncan, the Product Owner for Smart Rebook.",
+    sourceType: CONFIRMED_SOURCE_TYPE,
+  },
+  {
     id: "opening",
     phrases: ["agenda", "time together", "cover today", "aim for this meeting", "like to understand"],
     response: "That works for me. I have ten minutes now, and I can answer questions about the feature and the learning brief.",
@@ -50,6 +62,24 @@ const intents = [
     sourceType: "practice-interaction",
   },
   {
+    id: "booknest-context",
+    phrases: ["what is booknest", "tell me about booknest", "core product", "existing product", "booknest already do", "current product"],
+    response: sourceResponse("company-profile", "core-product"),
+    sourceType: CONFIRMED_SOURCE_TYPE,
+  },
+  {
+    id: "customer-profile",
+    phrases: ["typical customer", "types of business", "kinds of business", "kind of business", "who uses booknest", "booknest customers", "who are your customers", "who are the customers", "customer base"],
+    response: sourceResponse("typical-customers"),
+    sourceType: CONFIRMED_SOURCE_TYPE,
+  },
+  {
+    id: "learning-brief",
+    phrases: ["what am i creating", "what have i been asked to create", "learning brief", "course brief", "piece of learning", "what should the learning do", "goal of the content"],
+    response: sourceResponse("learning-brief"),
+    sourceType: CONFIRMED_SOURCE_TYPE,
+  },
+  {
     id: "multiple-responses",
     phrases: ["multiple people", "more than one", "respond at once", "responds first", "already taken", "competing response", "same time"],
   },
@@ -59,12 +89,12 @@ const intents = [
   },
   {
     id: "client-experience",
-    phrases: ["what does the client see", "what do clients see", "what does the customer see", "email look like", "message contain", "claim button", "end client"],
+    phrases: ["what does the client see", "what do clients see", "what does the customer see", "what does the customer receive", "customer receive", "email look like", "message contain", "claim button", "end client"],
   },
   {
     id: "core-behaviour",
-    phrases: ["how does smart rebook work", "what does smart rebook do", "end to end", "what triggers", "after a cancellation", "when someone cancels", "when a customer cancels"],
-    response: coreBehaviour.statement,
+    phrases: ["how does smart rebook work", "what does smart rebook do", "end to end", "beginning to end", "process from", "what triggers", "after a cancellation", "when someone cancels", "when a customer cancels"],
+    response: sourceResponse("core-behaviour"),
     sourceType: CONFIRMED_SOURCE_TYPE,
   },
   {
@@ -85,11 +115,11 @@ const intents = [
   },
   {
     id: "support",
-    phrases: ["support", "escalat", "help centre", "help center", "contact for help", "raise a ticket"],
+    phrases: ["support", "escalat", "help centre", "help center", "contact for help", "raise a ticket", "signpost"],
   },
   {
     id: "success",
-    phrases: ["measure", "metric", "success", "effective", "impact", "data", "analytics"],
+    phrases: ["measure", "metric", "success", "effective", "impact", "data", "analytics", "stop using", "drop off", "after three months"],
   },
   {
     id: "materials",
@@ -97,11 +127,11 @@ const intents = [
   },
   {
     id: "test-access",
-    phrases: ["test environment", "sandbox", "test access", "try it", "test account", "test inbox"],
+    phrases: ["test environment", "test instance", "sandbox", "test access", "try it", "test account", "test inbox"],
   },
   {
     id: "signoff",
-    phrases: ["sign off", "sign-off", "reviewer", "review and approval", "approve", "accuracy review", "stakeholder"],
+    phrases: ["sign off", "sign-off", "reviewer", "review and approval", "approve", "accuracy review", "stakeholder", "proofing", "who should review", "which sme"],
   },
   {
     id: "timing",
@@ -109,19 +139,19 @@ const intents = [
   },
   {
     id: "prior-knowledge",
-    phrases: ["already know", "prior knowledge", "current knowledge", "familiar with", "prerequisite", "starting knowledge"],
+    phrases: ["already know", "prior knowledge", "current knowledge", "technical knowledge", "familiar with", "prerequisite", "starting knowledge"],
   },
   {
     id: "learning-outcomes",
-    phrases: ["learning outcome", "able to do", "need to learn", "desired outcome", "after the learning", "training outcome"],
+    phrases: ["learning outcome", "aim of the learning", "objective of the learning", "able to do", "need to learn", "desired outcome", "after the learning", "training outcome"],
   },
   {
     id: "audience",
-    phrases: ["target audience", "who is this for", "who uses", "which users", "which customer", "learner", "administrator", "front desk"],
+    phrases: ["target audience", "who is this for", "intended for", "only booknest customers", "who uses", "which users", "which customer", "learner", "administrator", "front desk"],
   },
   {
     id: "purpose",
-    phrases: ["why does", "why was", "purpose", "customer problem", "problem solve", "benefit", "value", "why now", "need for the feature"],
+    phrases: ["why does", "why was", "purpose", "customer problem", "problem solve", "doing today", "current workaround", "benefit", "value", "why now", "need for the feature"],
   },
 ];
 

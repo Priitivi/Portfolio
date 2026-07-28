@@ -33,6 +33,13 @@ const discoveryIntents = [
   "next-steps",
 ];
 
+const optionalContextIntents = [
+  "stakeholder-role",
+  "booknest-context",
+  "customer-profile",
+  "learning-brief",
+];
+
 function label(value, strongAt = 2, developingAt = 1) {
   if (value >= strongAt) return LABELS.strong;
   if (value >= developingAt) return LABELS.developing;
@@ -119,16 +126,17 @@ export function scoreMockInterview(answers) {
       title: "Instructional-design thinking",
       label: label([
         includesAny(combined, ["learning outcome", "objective", "able to"]),
-        includesAny(combined, ["practice", "task", "scenario", "accessib", "measure"]),
+        includesAny(combined, ["practice", "task", "scenario", "accessib", "measure", "knowledge check"]),
+        includesAny(combined, ["instructional copy", "authoring", "lms", "screenshot", "screencast", "video", "ai"]),
       ].filter(Boolean).length),
-      reason: "Looks for outcomes, purposeful practice, accessibility and evaluation.",
+      reason: "Looks for outcomes, purposeful practice, production choices, accessibility and evaluation.",
     },
     {
       id: "stakeholders",
       title: "Stakeholder communication",
       label: label([
         includesAny(combined, ["stakeholder", "client", "subject matter", "sme"]),
-        includesAny(combined, ["update", "progress", "expectation", "confirm", "sign off"]),
+        includesAny(combined, ["update", "progress", "expectation", "confirm", "sign off", "launch"]),
       ].filter(Boolean).length),
       reason: "Looks for both stakeholder context and a concrete communication behaviour.",
     },
@@ -195,6 +203,17 @@ export function scoreRoleplay({ messages, coveredIntents, timer }) {
   const unknownCount = coveredIntents.filter((intent) => intent === "unknown").length;
   const openCount = candidateQuestions.filter((message) => questionIsOpen(message.text)).length;
   const elapsed = ROLEPLAY_DURATION_SECONDS - timer.remainingSeconds;
+  const matchedIntents = new Set(coveredIntents.filter((intent) => intent !== "unknown"));
+  const workflowDepth = [
+    "core-behaviour",
+    "activation",
+    "waitlist",
+    "notification",
+    "client-experience",
+    "multiple-responses",
+    "after-acceptance",
+    "errors",
+  ].filter((intent) => covered.has(intent)).length;
 
   const dimensions = [
     {
@@ -206,8 +225,8 @@ export function scoreRoleplay({ messages, coveredIntents, timer }) {
     {
       id: "relevance",
       title: "Relevance of questions",
-      label: label(candidateQuestions.length - unknownCount, 8, 3),
-      reason: `${candidateQuestions.length - unknownCount} question${candidateQuestions.length - unknownCount === 1 ? "" : "s"} matched the controlled discovery model.`,
+      label: label(matchedIntents.size, 8, 3),
+      reason: `${matchedIntents.size} distinct topic${matchedIntents.size === 1 ? "" : "s"} matched the controlled discovery model; ${unknownCount} question${unknownCount === 1 ? " was" : "s were"} too broad to match.`,
     },
     {
       id: "open-questions",
@@ -218,19 +237,19 @@ export function scoreRoleplay({ messages, coveredIntents, timer }) {
     {
       id: "follow-up",
       title: "Follow-up depth",
-      label: label(candidateQuestions.length, 12, 5),
-      reason: "Uses the depth and continuity of the discovery conversation as a proxy.",
+      label: label(workflowDepth, 5, 2),
+      reason: `${workflowDepth} workflow or edge-case topic${workflowDepth === 1 ? " was" : "s were"} explored beyond the high-level feature description.`,
     },
     {
       id: "customer",
       title: "Customer and learner focus",
-      label: label(["purpose", "audience", "prior-knowledge", "client-experience"].filter((intent) => covered.has(intent)).length, 3, 1),
+      label: label(["purpose", "customer-profile", "audience", "prior-knowledge", "client-experience"].filter((intent) => covered.has(intent)).length, 3, 1),
       reason: "Checks whether the problem, audience, prior knowledge and client experience were explored.",
     },
     {
       id: "learning-design",
       title: "Instructional-design thinking",
-      label: label(["prior-knowledge", "learning-outcomes", "materials", "test-access", "success"].filter((intent) => covered.has(intent)).length, 4, 2),
+      label: label(["learning-brief", "prior-knowledge", "learning-outcomes", "materials", "test-access", "success"].filter((intent) => covered.has(intent)).length, 4, 2),
       reason: "Checks for learning outcomes, source material, safe exploration and measures.",
     },
     {
@@ -269,6 +288,7 @@ export function scoreRoleplay({ messages, coveredIntents, timer }) {
   ];
 
   const uniqueCovered = discoveryIntents.filter((intent) => covered.has(intent));
+  const contextCovered = optionalContextIntents.filter((intent) => covered.has(intent));
   const missed = discoveryIntents.filter((intent) => !covered.has(intent));
   const relevantEvidence = [
     "Primary client contact: use this to show confident, structured discovery.",
@@ -277,7 +297,7 @@ export function scoreRoleplay({ messages, coveredIntents, timer }) {
   ];
 
   return reportShape("Smart Rebook Role-play", dimensions, {
-    questionsCovered: uniqueCovered.map((intent) => roleplayTopicLabels[intent]),
+    questionsCovered: [...contextCovered, ...uniqueCovered].map((intent) => roleplayTopicLabels[intent]),
     topicsNotCovered: missed.map((intent) => roleplayTopicLabels[intent]),
     relevantEvidence,
     improvements: [

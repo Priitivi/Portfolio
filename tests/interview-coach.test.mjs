@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { candidateEvidence, CANDIDATE_SOURCE_TYPE } from "../src/lab/interview-coach/data/candidateEvidence.js";
 import {
+  candidatePreparationNotes,
   competencies,
   PREPARATION_PROMPT_TYPE,
   preparationAreas,
@@ -80,6 +81,29 @@ test("role-play matcher answers only the detected topic and does not volunteer u
   assert.equal(confirmed.intent, "core-behaviour");
   assert.equal(confirmed.sourceType, CONFIRMED_SOURCE_TYPE);
 
+  const booknest = matchRoleplayResponse("Tell me about BookNest and its core product.");
+  assert.equal(booknest.intent, "booknest-context");
+  assert.equal(booknest.sourceType, CONFIRMED_SOURCE_TYPE);
+  assert.match(booknest.response, /five years/i);
+  assert.match(booknest.response, /online booking page/i);
+  assert.doesNotMatch(booknest.response, /enabled|waitlist|support/i);
+
+  const customers = matchRoleplayResponse("What types of businesses are typical BookNest customers?");
+  assert.equal(customers.intent, "customer-profile");
+  assert.match(customers.response, /hair and beauty salons/i);
+  assert.match(customers.response, /dog walkers/i);
+
+  const sourceNoteVariations = [
+    ["What level of technical knowledge do learners already have?", "prior-knowledge"],
+    ["What is the aim of the learning?", "learning-outcomes"],
+    ["What does the customer receive?", "client-experience"],
+    ["Is there a test instance available?", "test-access"],
+    ["Which SME should review the content for proofing?", "signoff"],
+  ];
+  sourceNoteVariations.forEach(([question, expectedIntent]) => {
+    assert.equal(matchRoleplayResponse(question).intent, expectedIntent);
+  });
+
   const unknown = matchRoleplayResponse("What should I ask you next?");
   assert.equal(unknown.intent, "unknown");
   assert.doesNotMatch(unknown.response, /waitlist|activation|measure|support/i);
@@ -129,6 +153,14 @@ test("practice scoring uses labelled heuristics and reports coverage without fal
   assert.ok(roleplayReport.questionsCovered.includes("Purpose and customer problem"));
   assert.ok(roleplayReport.topicsNotCovered.includes("Support and escalation"));
   assert.equal("score" in roleplayReport, false);
+
+  const contextReport = scoreRoleplay({
+    messages: [{ role: "candidate", text: "What is BookNest?" }],
+    coveredIntents: ["booknest-context"],
+    timer: { remainingSeconds: 570, running: false, expired: false },
+  });
+  assert.ok(contextReport.questionsCovered.includes("BookNest product context"));
+  assert.ok(contextReport.topicsNotCovered.includes("Purpose and customer problem"));
 });
 
 test("session state is namespaced, recoverable and fully cleared", () => {
@@ -156,10 +188,23 @@ test("source-backed facts, prompts and fictional assumptions remain explicitly s
   assert.ok(candidateEvidence.every((item) => item.sourceType === CANDIDATE_SOURCE_TYPE));
   assert.ok(competencies.every((item) => item.sourceType === ROLE_SOURCE_TYPE));
   assert.ok(preparationAreas.every((item) => item.sourceType === PREPARATION_PROMPT_TYPE));
+  assert.ok(candidatePreparationNotes.every((item) => item.sourceType === "candidate-preparation-note"));
   assert.ok(smartRebookDiscoveryChecklist.every((item) => item.sourceType === PREPARATION_PROMPT_TYPE));
   assert.ok(confirmedSourceFacts.every((item) => item.sourceType === CONFIRMED_SOURCE_TYPE));
   assert.ok(fictionalExerciseAssumptions.every((item) => item.sourceType === FICTIONAL_ASSUMPTION_TYPE));
 
   const confirmedIds = new Set(confirmedSourceFacts.map((item) => item.id));
   assert.equal(fictionalExerciseAssumptions.some((item) => confirmedIds.has(item.id)), false);
+});
+
+test("private source documents are explicitly excluded from Git and public application paths", async () => {
+  const gitignore = await readFile(new URL("../.gitignore", import.meta.url), "utf8");
+  assert.match(gitignore, /^docs\/private-source\/$/m);
+  assert.match(gitignore, /^tmp\/pdfs\/$/m);
+
+  const coachSource = await readFile(
+    new URL("../src/lab/interview-coach/InterviewCoach.jsx", import.meta.url),
+    "utf8",
+  );
+  assert.doesNotMatch(coachSource, /private-source|Induction\.pdf|Sim-CV\.pdf/);
 });

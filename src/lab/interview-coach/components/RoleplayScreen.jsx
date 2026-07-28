@@ -108,7 +108,7 @@ export default function RoleplayScreen({
         </label>
         <div className="ic-assumption-note">
           <span>SCENARIO TRANSPARENCY</span>
-          <p>The source pack confirms only the core behaviour. Additional details are internally consistent fictional assumptions for practice.</p>
+          <p>The source pack confirms the BookNest context, customer types, learning brief and core Smart Rebook behaviour. Additional workflow details are internally consistent fictional assumptions for practice.</p>
         </div>
       </aside>
     </main>

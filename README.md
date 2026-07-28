@@ -147,7 +147,7 @@ See [The Deceptive Trial engineering guide](src/lab/deceptive-trial/README.md) f
 
 Interview Coach is a local-first preparation workspace at `/lab/interview-coach`. It provides source-labelled preparation material, a one-question-at-a-time mock interview, a controlled Smart Rebook Product Owner role-play and transparent heuristic feedback.
 
-Answers and notes use namespaced `sessionStorage`; they are not uploaded, logged or sent to an AI service. The route inherits the same central Lab session gate as every other chamber. Confirmed Smart Rebook behaviour is kept separate from fictional exercise assumptions in the content model.
+Answers and notes use namespaced `sessionStorage`; they are not uploaded, logged or sent to an AI service. The route inherits the same central Lab session gate as every other chamber. Confirmed BookNest and Smart Rebook facts are kept separate from fictional exercise assumptions in the content model.
 
 See the [Interview Coach maintenance guide](src/lab/interview-coach/README.md) for content provenance, privacy, access integration and validation details.
 

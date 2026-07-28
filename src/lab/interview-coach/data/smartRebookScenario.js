@@ -8,14 +8,44 @@ export const confirmedSourceFacts = [
     statement: "BookNest is a fictional B2B SaaS product used in the interview exercise.",
   },
   {
+    id: "company-profile",
+    sourceType: CONFIRMED_SOURCE_TYPE,
+    statement: "BookNest has been operating for five years and is used by small, service-based businesses across the UK.",
+  },
+  {
+    id: "core-product",
+    sourceType: CONFIRMED_SOURCE_TYPE,
+    statement: "Its core product includes an online booking page, a calendar for appointments, automated reminders and simple payment collection.",
+  },
+  {
+    id: "typical-customers",
+    sourceType: CONFIRMED_SOURCE_TYPE,
+    statement: "Typical BookNest customers include hair and beauty salons, physio and health clinics, personal trainers and dog walkers.",
+  },
+  {
+    id: "feature-status",
+    sourceType: CONFIRMED_SOURCE_TYPE,
+    statement: "Smart Rebook is presented as a brand-new BookNest feature for customers.",
+  },
+  {
     id: "meeting",
     sourceType: CONFIRMED_SOURCE_TYPE,
     statement: "The candidate is meeting Duncan, the Smart Rebook Product Owner, for the first time.",
   },
   {
+    id: "product-owner",
+    sourceType: CONFIRMED_SOURCE_TYPE,
+    statement: "Duncan plays the role of the Smart Rebook Product Owner throughout the ten-minute conversation.",
+  },
+  {
     id: "assessment",
     sourceType: CONFIRMED_SOURCE_TYPE,
     statement: "The exercise assesses discovery. The candidate is gathering enough information to begin a short piece of customer-facing learning, not creating the course.",
+  },
+  {
+    id: "learning-brief",
+    sourceType: CONFIRMED_SOURCE_TYPE,
+    statement: "The short learning should introduce Smart Rebook, help customers understand how it works and build confidence in setting it up and getting started.",
   },
   {
     id: "core-behaviour",
@@ -28,12 +58,12 @@ export const fictionalExerciseAssumptions = [
   {
     id: "purpose",
     sourceType: FICTIONAL_ASSUMPTION_TYPE,
-    response: "For this exercise, the problem is unused appointment capacity after a cancellation. The intended value is to help venue teams refill that slot without contacting waitlisted people one by one.",
+    response: "For this exercise, the problem is unused appointment capacity after a cancellation. The intended value is to help small-business teams refill that slot without contacting waitlisted people one by one.",
   },
   {
     id: "audience",
     sourceType: FICTIONAL_ASSUMPTION_TYPE,
-    response: "For this exercise, the primary learners are BookNest venue administrators who manage appointment availability. Front-desk colleagues may also need a short overview of what clients receive.",
+    response: "For this exercise, the primary learners are BookNest business owners or administrators who manage appointment availability. Front-desk colleagues may also need a short overview of what clients receive.",
   },
   {
     id: "prior-knowledge",
@@ -53,7 +83,7 @@ export const fictionalExerciseAssumptions = [
   {
     id: "waitlist",
     sourceType: FICTIONAL_ASSUMPTION_TYPE,
-    response: "For practice, assume people join a waitlist for a specific appointment type and date window. Venue staff can also add someone after obtaining their consent.",
+    response: "For practice, assume people join a waitlist for a specific appointment type and date window. Business staff can also add someone after obtaining their consent.",
   },
   {
     id: "notification",
@@ -88,7 +118,7 @@ export const fictionalExerciseAssumptions = [
   {
     id: "success",
     sourceType: FICTIONAL_ASSUMPTION_TYPE,
-    response: "For this scenario, product success is fewer unfilled cancellation slots and less manual contact by venue teams. For learning, we would also watch setup-related support contacts and quick confidence feedback.",
+    response: "For this scenario, product success is fewer unfilled cancellation slots and less manual contact by business teams. For learning, we would also watch setup-related support contacts and quick confidence feedback.",
   },
   {
     id: "materials",
@@ -98,7 +128,7 @@ export const fictionalExerciseAssumptions = [
   {
     id: "test-access",
     sourceType: FICTIONAL_ASSUMPTION_TYPE,
-    response: "For the exercise, a sandbox venue can be provided with test clients and waitlists. Email delivery is captured in a test inbox.",
+    response: "For the exercise, a sandbox business can be provided with test clients and waitlists. Email delivery is captured in a test inbox.",
   },
   {
     id: "signoff",
@@ -114,4 +144,8 @@ export const fictionalExerciseAssumptions = [
 
 export const exerciseAssumptionById = Object.fromEntries(
   fictionalExerciseAssumptions.map((item) => [item.id, item]),
+);
+
+export const confirmedFactById = Object.fromEntries(
+  confirmedSourceFacts.map((item) => [item.id, item]),
 );

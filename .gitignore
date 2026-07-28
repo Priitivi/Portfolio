@@ -29,3 +29,7 @@ dist-ssr
 
 # Local Netlify folder
 .netlify
+
+# Private interview source documents and temporary PDF renders
+docs/private-source/
+tmp/pdfs/
