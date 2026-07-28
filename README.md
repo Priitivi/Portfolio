@@ -40,7 +40,7 @@ Features include:
 
 ### Priit's Lab
 
-Priit's Lab is a protected route at `/lab` containing five interactive experiments. Each experience is lazy-loaded so it does not affect the initial portfolio bundle.
+Priit's Lab is a protected route at `/lab` containing six interactive experiments. Each experience is lazy-loaded so it does not affect the initial portfolio bundle.
 
 | Experiment | Description |
 | --- | --- |
@@ -49,6 +49,7 @@ Priit's Lab is a protected route at `/lab` containing five interactive experimen
 | **Fluid Lab** | Interact with a pressure-solved GPU fluid simulation using mouse, pen, or touch input, configurable palettes, and live solver controls. |
 | **Shortcut Lab** | Learn practical productivity shortcuts inside a simulated desktop containing fake browser, editor, terminal, files, mail, notes, and spreadsheet applications. |
 | **The Deceptive Trial** | Survive a data-driven platform campaign whose rules, traps, and expectations shift across twelve increasingly tense levels. |
+| **Interview Coach** | Prepare for a Digital Learning Designer interview through structured evidence review, a deterministic mock interview, a timed discovery role-play and transparent practice feedback. |
 
 ---
 
@@ -142,6 +143,14 @@ Audio cues and an adaptive four-act storybook score are synthesized with Web Aud
 
 See [The Deceptive Trial engineering guide](src/lab/deceptive-trial/README.md) for engine, level-authoring, accessibility, audio, and performance details.
 
+### Interview Coach
+
+Interview Coach is a local-first preparation workspace at `/lab/interview-coach`. It provides source-labelled preparation material, a one-question-at-a-time mock interview, a controlled Smart Rebook Product Owner role-play and transparent heuristic feedback.
+
+Answers and notes use namespaced `sessionStorage`; they are not uploaded, logged or sent to an AI service. The route inherits the same central Lab session gate as every other chamber. Confirmed BookNest and Smart Rebook facts are kept separate from fictional exercise assumptions in the content model.
+
+See the [Interview Coach maintenance guide](src/lab/interview-coach/README.md) for content provenance, privacy, access integration and validation details.
+
 ---
 
 ## Tech stack
@@ -181,6 +190,7 @@ flowchart TD
     Dashboard --> Drifter[Lazy Paper Drifter]
     Dashboard --> Fluid[Lazy Fluid Lab]
     Dashboard --> Shortcuts[Lazy Shortcut Lab]
+    Dashboard --> Coach[Lazy Interview Coach]
 
     Audio --> WebAudio[Web Audio analysis]
     Audio --> R3F[React Three Fiber scenes]
@@ -197,6 +207,10 @@ flowchart TD
     Shortcuts --> Safety[Shortcut safety manager]
     Shortcuts --> Desktop[Simulated desktop and apps]
     Engine --> Mastery[Adaptive local mastery]
+
+    Coach --> QuestionTree[Curated question tree]
+    Coach --> Roleplay[Intent-driven role-play]
+    Coach --> Feedback[Heuristic feedback]
 ```
 
 The application intentionally avoids a full routing dependency. `App.jsx` delegates `/lab` paths to `LabApp`, which manages nested Lab navigation with the History API.
@@ -406,6 +420,7 @@ The tests cover:
 - Shortcut safety classification and training substitutes
 - Scoring, combos, mastery, deterministic daily sets, and persistence recovery
 - Shortcut curriculum and workflow references
+- Interview Coach route gating, question progression, role-play matching, timer, scoring, reset and provenance separation
 
 Interactive changes should also be tested manually at desktop and mobile widths because graphics capability, pointer input, autoplay policy, fullscreen behaviour, and performance differ across browsers and devices.
 
@@ -465,6 +480,7 @@ Redeploy after changing environment variables so the Functions runtime receives 
 ## Known limitations
 
 - Shortcut Lab progress is local to one browser profile.
+- Interview Coach answers and notes persist only for the current browser tab session.
 - The project does not include user accounts, cloud sync, or a public leaderboard.
 - Browsers differ in which reserved shortcuts reach webpage event handlers.
 - Fullscreen requests can be declined by browser policy.
