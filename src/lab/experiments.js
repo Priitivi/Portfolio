@@ -47,4 +47,13 @@ export const experiments = [
     preview: "deceptive",
     signals: ["Canvas 2D", "12-level campaign", "Expectation traps", "Keyboard + touch"],
   },
+  {
+    id: "interview-coach",
+    experimentNumber: "006",
+    title: "Interview Coach",
+    status: "Private MVP",
+    description: "A focused interview simulator for discovery, stakeholder communication and customer learning design.",
+    route: "/lab/interview-coach",
+    signals: ["Structured preparation", "Deterministic role-play", "Local session only", "Practice feedback"],
+  },
 ];
