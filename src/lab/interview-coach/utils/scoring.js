@@ -1,3 +1,5 @@
+import { analyseMockAnswer } from "../conversation/analyseMockAnswer.js";
+import { roleplayIntentById } from "../conversation/intentDefinitions.js";
 import { candidateEvidence } from "../data/candidateEvidence.js";
 import { mockQuestions } from "../data/mockQuestions.js";
 import { roleplayTopicLabels } from "./roleplayMatcher.js";
@@ -10,39 +12,34 @@ const LABELS = {
   unassessed: "Not assessed",
 };
 
-const discoveryIntents = [
-  "purpose",
-  "audience",
-  "prior-knowledge",
-  "learning-outcomes",
-  "core-behaviour",
-  "activation",
-  "waitlist",
-  "notification",
-  "client-experience",
-  "multiple-responses",
-  "after-acceptance",
-  "errors",
-  "support",
-  "success",
-  "materials",
-  "test-access",
-  "signoff",
-  "timing",
-  "summary",
-  "next-steps",
-];
-
-const optionalContextIntents = [
-  "stakeholder-role",
-  "booknest-context",
-  "customer-profile",
-  "learning-brief",
+const roleplayCoverageGroups = [
+  { id: "opening", title: "Opening and agenda", intents: ["opening", "meeting-questions"] },
+  { id: "purpose", title: "Business-purpose discovery", intents: ["purpose"] },
+  { id: "customer", title: "Customer focus", intents: ["customer-profile", "purpose", "client-experience"] },
+  { id: "audience", title: "Audience discovery", intents: ["audience", "prior-knowledge"] },
+  { id: "learning-outcomes", title: "Learning outcomes", intents: ["learning-brief", "learning-outcomes"] },
+  { id: "workflow", title: "Workflow discovery", intents: ["core-behaviour", "waitlist", "notification", "client-experience", "after-acceptance"] },
+  { id: "setup", title: "Setup and activation", intents: ["activation"] },
+  { id: "edge-cases", title: "Edge cases and likely confusion", intents: ["multiple-responses", "errors"] },
+  { id: "support", title: "Support routes", intents: ["support"] },
+  { id: "success", title: "Success measures", intents: ["success"] },
+  { id: "materials", title: "Available materials and access", intents: ["materials", "test-access"] },
+  { id: "review", title: "Review, stakeholders and dependencies", intents: ["signoff", "timing", "role-stakeholders"] },
+  { id: "summary", title: "Summarising and confirming", intents: ["summary"] },
+  { id: "closing", title: "Closing and next steps", intents: ["next-steps", "thanks"] },
 ];
 
 function label(value, strongAt = 2, developingAt = 1) {
   if (value >= strongAt) return LABELS.strong;
   if (value >= developingAt) return LABELS.developing;
+  return LABELS.needs;
+}
+
+function ratioLabel(present, total, strongRatio = 0.55, developingRatio = 0.25) {
+  if (!total) return LABELS.needs;
+  const ratio = present / total;
+  if (ratio >= strongRatio) return LABELS.strong;
+  if (ratio >= developingRatio) return LABELS.developing;
   return LABELS.needs;
 }
 
@@ -67,107 +64,85 @@ function reportShape(mode, dimensions, extra) {
     mode,
     overall: overallFromDimensions(dimensions),
     dimensions,
-    strongestAreas: strongestAreas.length ? strongestAreas : ["You completed a practice attempt and created evidence to review."],
+    strongestAreas: strongestAreas.length
+      ? strongestAreas
+      : ["You completed a practice attempt and created evidence to review."],
     missedAreas,
-    heuristicNote: "These labels come from transparent keyword, coverage and structure checks. They are practice signals, not a judgement of interview performance.",
+    heuristicNote: "These labels come from transparent local practice heuristics. They identify evidence and coverage patterns, not meaning with human certainty, and they are not a hiring prediction.",
     ...extra,
   };
 }
 
-function includesAny(text, terms) {
-  return terms.some((term) => text.includes(term));
+function analysisForAnswer(answer) {
+  return answer.analysis || analyseMockAnswer(answer.answer);
+}
+
+function countDimension(answers, dimension) {
+  return answers.filter((answer) => analysisForAnswer(answer).dimensions[dimension]).length;
 }
 
 export function scoreMockInterview(answers) {
-  const combined = answers.map((item) => item.answer.toLowerCase()).join(" ");
   const answeredCore = answers.filter((item) => item.kind === "core");
-  const substantial = answeredCore.filter((item) => item.answer.trim().split(/\s+/).length >= 35);
+  const assessable = answeredCore.length ? answeredCore : answers;
+  const total = assessable.length;
+  const combined = answers.map((item) => item.answer.toLowerCase()).join(" ");
   const cvMatches = candidateEvidence.filter((evidence) =>
-    evidence.keywords.some((keyword) => combined.includes(keyword)),
-  );
-  const evidenceMarkers = ["for example", "when i", "my role", "i was responsible", "the result", "as a result"];
+    evidence.keywords.some((keyword) => combined.includes(keyword)));
 
-  const dimensions = [
+  const dimensionDefinitions = [
     {
-      id: "opening",
-      title: "Opening and agenda setting",
-      label: LABELS.unassessed,
-      reason: "This is not directly observed in question-and-answer mode.",
+      id: "specific-evidence",
+      title: "Specific evidence",
+      signal: "specificEvidence",
+      reason: "answers combined a concrete example, personal action and an outcome",
+    },
+    {
+      id: "clarity",
+      title: "Clarity and structure",
+      signal: "clarity",
+      reason: "answers contained enough structured detail for the heuristic to follow",
+    },
+    {
+      id: "contribution",
+      title: "Personal contribution",
+      signal: "personalAction",
+      reason: "answers made the candidate's own action explicit",
+    },
+    {
+      id: "outcome",
+      title: "Outcome and evidence",
+      signal: "result",
+      reason: "answers stated an outcome rather than ending with the activity",
+    },
+    {
+      id: "reflection",
+      title: "Reflection and learning",
+      signal: "reflection",
+      reason: "answers described a lesson or how the approach would change next time",
     },
     {
       id: "relevance",
-      title: "Relevance of answers",
-      label: label(substantial.length, 7, 3),
-      reason: `${substantial.length} answer${substantial.length === 1 ? "" : "s"} contained enough detail for the heuristic to assess.`,
+      title: "Relevance to the role",
+      signal: "roleRelevance",
+      reason: "answers connected with learning, software, customers, stakeholders or delivery",
     },
     {
-      id: "open-questions",
-      title: "Use of open questions",
-      label: LABELS.unassessed,
-      reason: "Question technique is assessed in the Smart Rebook role-play.",
-    },
-    {
-      id: "follow-up",
-      title: "Follow-up depth",
-      label: label(answers.filter((item) => item.kind === "follow-up" && item.answer.split(/\s+/).length >= 20).length, 4, 1),
-      reason: "Based on the number of follow-up answers developed beyond a short response.",
-    },
-    {
-      id: "customer",
-      title: "Customer and learner focus",
-      label: label([
-        includesAny(combined, ["customer", "client", "learner", "school"]),
-        includesAny(combined, ["need", "feedback", "understand", "confus"]),
-      ].filter(Boolean).length),
-      reason: "Looks for explicit attention to audience needs, understanding and feedback.",
-    },
-    {
-      id: "learning-design",
-      title: "Instructional-design thinking",
-      label: label([
-        includesAny(combined, ["learning outcome", "objective", "able to"]),
-        includesAny(combined, ["practice", "task", "scenario", "accessib", "measure", "knowledge check"]),
-        includesAny(combined, ["instructional copy", "authoring", "lms", "screenshot", "screencast", "video", "ai"]),
-      ].filter(Boolean).length),
-      reason: "Looks for outcomes, purposeful practice, production choices, accessibility and evaluation.",
-    },
-    {
-      id: "stakeholders",
-      title: "Stakeholder communication",
-      label: label([
-        includesAny(combined, ["stakeholder", "client", "subject matter", "sme"]),
-        includesAny(combined, ["update", "progress", "expectation", "confirm", "sign off", "launch"]),
-      ].filter(Boolean).length),
-      reason: "Looks for both stakeholder context and a concrete communication behaviour.",
-    },
-    {
-      id: "evidence",
-      title: "Use of evidence",
-      label: label([
-        evidenceMarkers.some((marker) => combined.includes(marker)),
-        cvMatches.length >= 2,
-      ].filter(Boolean).length),
-      reason: `${cvMatches.length} relevant CV evidence area${cvMatches.length === 1 ? " was" : "s were"} detected.`,
-    },
-    {
-      id: "summary",
-      title: "Summarising and confirming",
-      label: label(includesAny(combined, ["summaris", "confirm", "check my understanding"]) ? 1 : 0, 2, 1),
-      reason: "Looks for an explicit habit of checking understanding or confirming decisions.",
-    },
-    {
-      id: "closing",
-      title: "Closing and next steps",
-      label: label(includesAny(combined, ["next step", "follow up", "action", "owner"]) ? 1 : 0, 2, 1),
-      reason: "Looks for clear actions, owners or follow-up.",
-    },
-    {
-      id: "time",
-      title: "Time management",
-      label: label(answeredCore.length, mockQuestions.length, Math.ceil(mockQuestions.length / 2)),
-      reason: `${answeredCore.length} of ${mockQuestions.length} focus areas were completed.`,
+      id: "audience-impact",
+      title: "Customer or learner impact",
+      signal: "audienceImpact",
+      reason: "answers considered the customer, client, learner or audience receiving the work",
     },
   ];
+
+  const dimensions = dimensionDefinitions.map((definition) => {
+    const present = countDimension(assessable, definition.signal);
+    return {
+      id: definition.id,
+      title: definition.title,
+      label: ratioLabel(present, total),
+      reason: `${present} of ${total} assessable answer${total === 1 ? "" : "s"} ${definition.reason}.`,
+    };
+  });
 
   const answeredIds = new Set(answeredCore.map((answer) => answer.questionId));
   const notCovered = mockQuestions
@@ -178,135 +153,115 @@ export function scoreMockInterview(answers) {
     .slice(0, 4)
     .map((item) => `${item.title}: ${item.summary}`);
 
+  const weakest = dimensions.find((dimension) => dimension.label === LABELS.needs);
   return reportShape("Mock Interview", dimensions, {
     questionsCovered: answeredCore.map((answer) => answer.prompt),
     topicsNotCovered: notCovered,
     relevantEvidence,
     improvements: [
-      "Make each answer explicit about your personal action and the resulting change.",
-      "Connect customer or learner need to the decision you made, not only the task you completed.",
-      "Close examples with a truthful measure, feedback signal or lesson you carried forward.",
+      "Use one truthful, specific example and make your own decision or action unmistakable.",
+      "Close the example with the outcome, evidence available and what you learned.",
+      "Connect the action to the customer or learner receiving the work and to this role.",
     ],
-    retryGoal: notCovered.length
-      ? `Complete the remaining focus areas, beginning with ${notCovered[0]}.`
-      : "Retry with tighter examples: situation, personal action, customer effect and evidence.",
+    retryGoal: weakest
+      ? `Strengthen ${weakest.title.toLowerCase()} while keeping each answer concise and relevant.`
+      : "Retry with equally specific evidence in fewer words.",
   });
 }
 
-function questionIsOpen(text) {
-  return /^(what|how|why|who|which|where|when|tell me|could you explain|can you describe)\b/i.test(text.trim());
+function coveredCount(covered, intents) {
+  return intents.filter((intent) => covered.has(intent)).length;
 }
 
-export function scoreRoleplay({ messages, coveredIntents, timer }) {
+function openQuestion(text) {
+  return /^(what|how|why|who|which|where|when|tell me|could you explain|can you describe)\b/i
+    .test(text.trim());
+}
+
+export function scoreRoleplay({ messages, coveredIntents = [], turns = [], timer }) {
   const candidateQuestions = messages.filter((message) => message.role === "candidate");
   const covered = new Set(coveredIntents);
-  const unknownCount = coveredIntents.filter((intent) => intent === "unknown").length;
-  const openCount = candidateQuestions.filter((message) => questionIsOpen(message.text)).length;
   const elapsed = ROLEPLAY_DURATION_SECONDS - timer.remainingSeconds;
-  const matchedIntents = new Set(coveredIntents.filter((intent) => intent !== "unknown"));
-  const workflowDepth = [
-    "core-behaviour",
-    "activation",
-    "waitlist",
-    "notification",
-    "client-experience",
-    "multiple-responses",
-    "after-acceptance",
-    "errors",
-  ].filter((intent) => covered.has(intent)).length;
+  const clarificationCount = turns.filter((turn) => turn.clarificationNeeded).length;
+  const contextTopics = new Set(
+    turns
+      .filter((turn) => turn.contextUsed && turn.topicId)
+      .map((turn) => turn.topicId),
+  );
+  const openCount = candidateQuestions.filter((message) => openQuestion(message.text)).length;
 
-  const dimensions = [
+  const dimensions = roleplayCoverageGroups.map((group) => {
+    const present = coveredCount(covered, group.intents);
+    const strongAt = group.intents.length >= 4 ? 3 : group.intents.length >= 2 ? 2 : 1;
+    return {
+      id: group.id,
+      title: group.title,
+      label: label(present, strongAt, 1),
+      reason: present
+        ? `${present} distinct relevant topic${present === 1 ? " was" : "s were"} explored without counting paraphrased repeats twice.`
+        : "No distinct question covering this area was detected.",
+    };
+  });
+
+  const repeatedIntentCount = turns.reduce((count, turn, index) => {
+    if (!turn.primaryIntent || turn.clarificationNeeded) return count;
+    return count + (turns.slice(0, index).some((prior) => prior.primaryIntent === turn.primaryIntent) ? 1 : 0);
+  }, 0);
+  dimensions.push(
     {
-      id: "opening",
-      title: "Opening and agenda setting",
-      label: label(covered.has("opening") ? 2 : 0),
-      reason: covered.has("opening") ? "You set or confirmed an agenda before discovery." : "No explicit agenda-setting question was detected.",
-    },
-    {
-      id: "relevance",
-      title: "Relevance of questions",
-      label: label(matchedIntents.size, 8, 3),
-      reason: `${matchedIntents.size} distinct topic${matchedIntents.size === 1 ? "" : "s"} matched the controlled discovery model; ${unknownCount} question${unknownCount === 1 ? " was" : "s were"} too broad to match.`,
-    },
-    {
-      id: "open-questions",
-      title: "Use of open questions",
-      label: label(openCount, 6, 2),
-      reason: `${openCount} question${openCount === 1 ? "" : "s"} began with an open-question form.`,
-    },
-    {
-      id: "follow-up",
+      id: "follow-up-depth",
       title: "Follow-up depth",
-      label: label(workflowDepth, 5, 2),
-      reason: `${workflowDepth} workflow or edge-case topic${workflowDepth === 1 ? " was" : "s were"} explored beyond the high-level feature description.`,
+      label: label(contextTopics.size, 3, 1),
+      reason: `${contextTopics.size} distinct topic${contextTopics.size === 1 ? " used" : "s used"} a resolved contextual follow-up; ${repeatedIntentCount} repeated question${repeatedIntentCount === 1 ? " was" : "s were"} not counted as new coverage.`,
     },
     {
-      id: "customer",
-      title: "Customer and learner focus",
-      label: label(["purpose", "customer-profile", "audience", "prior-knowledge", "client-experience"].filter((intent) => covered.has(intent)).length, 3, 1),
-      reason: "Checks whether the problem, audience, prior knowledge and client experience were explored.",
-    },
-    {
-      id: "learning-design",
-      title: "Instructional-design thinking",
-      label: label(["learning-brief", "prior-knowledge", "learning-outcomes", "materials", "test-access", "success"].filter((intent) => covered.has(intent)).length, 4, 2),
-      reason: "Checks for learning outcomes, source material, safe exploration and measures.",
-    },
-    {
-      id: "stakeholders",
-      title: "Stakeholder communication",
-      label: label(["signoff", "support", "timing"].filter((intent) => covered.has(intent)).length, 3, 1),
-      reason: "Checks review, support, timing and dependency conversations.",
-    },
-    {
-      id: "evidence",
-      title: "Use of evidence",
-      label: label(["core-behaviour", "summary"].filter((intent) => covered.has(intent)).length, 2, 1),
-      reason: "Checks whether confirmed behaviour was discovered and then used in a summary.",
-    },
-    {
-      id: "summary",
-      title: "Summarising and confirming",
-      label: label(covered.has("summary") ? 2 : 0),
-      reason: covered.has("summary") ? "You checked or summarised your understanding." : "No explicit summary check was detected.",
-    },
-    {
-      id: "closing",
-      title: "Closing and next steps",
-      label: label(covered.has("next-steps") ? 2 : 0),
-      reason: covered.has("next-steps") ? "You agreed a follow-up or next action." : "No explicit next-step question was detected.",
+      id: "question-technique",
+      title: "Focused question technique",
+      label: label([
+        openCount >= 4,
+        clarificationCount <= Math.max(1, Math.floor(candidateQuestions.length / 5)),
+      ].filter(Boolean).length),
+      reason: `${openCount} open question${openCount === 1 ? " was" : "s were"} detected and Duncan requested clarification ${clarificationCount} time${clarificationCount === 1 ? "" : "s"}.`,
     },
     {
       id: "time",
-      title: "Time management",
+      title: "Use of the ten-minute period",
       label: label([
         candidateQuestions.length >= 8,
         elapsed > 0 && elapsed <= ROLEPLAY_DURATION_SECONDS,
       ].filter(Boolean).length),
-      reason: `${candidateQuestions.length} question${candidateQuestions.length === 1 ? "" : "s"} asked in ${Math.floor(elapsed / 60)}m ${elapsed % 60}s of timer time.`,
+      reason: `${candidateQuestions.length} question${candidateQuestions.length === 1 ? "" : "s"} were asked in ${Math.floor(Math.max(0, elapsed) / 60)}m ${Math.max(0, elapsed) % 60}s of timer time.`,
     },
-  ];
+  );
 
-  const uniqueCovered = discoveryIntents.filter((intent) => covered.has(intent));
-  const contextCovered = optionalContextIntents.filter((intent) => covered.has(intent));
-  const missed = discoveryIntents.filter((intent) => !covered.has(intent));
-  const relevantEvidence = [
-    "Primary client contact: use this to show confident, structured discovery.",
-    "iSAMS school training: connect product understanding to customer-facing explanation.",
-    "Cross-functional collaboration: use this when agreeing reviewers, owners and next steps.",
-  ];
+  const coveredTopics = new Set(
+    [...covered]
+      .map((intent) => roleplayIntentById[intent]?.topicId)
+      .filter(Boolean),
+  );
+  const questionsCovered = [...coveredTopics]
+    .map((topic) => roleplayTopicLabels[topic])
+    .filter(Boolean);
+  const missedGroups = roleplayCoverageGroups.filter((group) =>
+    coveredCount(covered, group.intents) === 0);
 
   return reportShape("Smart Rebook Role-play", dimensions, {
-    questionsCovered: [...contextCovered, ...uniqueCovered].map((intent) => roleplayTopicLabels[intent]),
-    topicsNotCovered: missed.map((intent) => roleplayTopicLabels[intent]),
-    relevantEvidence,
-    improvements: [
-      missed.length ? `Prioritise the missed area "${roleplayTopicLabels[missed[0]]}" in the next attempt.` : "Keep the same coverage while using fewer, sharper questions.",
-      "Use a brief midpoint summary to test assumptions before moving into edge cases.",
-      "Reserve the final minute for gaps, owners, source materials and a confirmed next step.",
+    questionsCovered,
+    topicsNotCovered: missedGroups.map((group) => group.title),
+    relevantEvidence: [
+      "Primary client contact: use this to show confident, structured discovery.",
+      "iSAMS school training: connect product understanding to customer-facing explanation.",
+      "Cross-functional collaboration: use this when agreeing reviewers, owners and next steps.",
     ],
-    retryGoal: missed.length
-      ? `Cover ${roleplayTopicLabels[missed[0]]}, ${roleplayTopicLabels[missed[1]] || "a midpoint summary"} and a clear close.`
-      : "Repeat with a tighter ten-minute structure and the same breadth.",
+    improvements: [
+      missedGroups.length
+        ? `Prioritise the missed area "${missedGroups[0].title}" in the next attempt.`
+        : "Keep the same breadth while using fewer, sharper questions.",
+      "Use contextual follow-ups to deepen a useful answer instead of paraphrasing the same broad question.",
+      "Reserve the final minute for a concise summary, unresolved gaps, owners and next steps.",
+    ],
+    retryGoal: missedGroups.length
+      ? `Cover ${missedGroups.slice(0, 2).map((group) => group.title).join(" and ")}, then close with a summary.`
+      : "Repeat with the same coverage and a tighter ten-minute structure.",
   });
 }

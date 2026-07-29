@@ -12,9 +12,11 @@ It is designed for final-stage Digital Learning Designer practice, with particul
 
 - Preparation dashboard covering role competencies, strong evidence, relevant CV examples and preparation areas
 - Smart Rebook discovery checklist
-- One-question-at-a-time mock interview with deterministic follow-ups
+- One-question-at-a-time mock interview with answer-dimension follow-ups
 - Ten-minute Product Owner role-play with pause, resume and restart controls
-- Intent and keyword-driven Product Owner responses
+- Layered local intent classification with contextual follow-up resolution
+- Progressive, source-referenced Product Owner responses with controlled variation
+- Confidence-aware clarification for ambiguous or low-signal input
 - Transparent heuristic feedback after either practice mode
 - Retry, preparation and clear-session actions
 - Keyboard focus states, semantic controls, reduced-motion support and responsive layouts
@@ -54,6 +56,7 @@ Do not add contact details or unnecessary personal identifiers when updating the
 - Clear session removes that key and resets the in-memory state.
 - No answer is logged, uploaded, analysed by an external AI service or sent to analytics.
 - The deterministic response and scoring systems run entirely in the browser.
+- Conversation interpretation makes no network request and needs no external model, account, API key or subscription.
 - Original source documents are not shipped with the frontend.
 - `.gitignore` excludes `docs/private-source/` and temporary PDF renders under `tmp/pdfs/`.
 
@@ -61,11 +64,20 @@ Do not add contact details or unnecessary personal identifiers when updating the
 
 ```text
 interview-coach/
+├── conversation/
+│   ├── normaliseInput.js
+│   ├── calculateIntentScore.js
+│   ├── resolveContextualFollowUp.js
+│   ├── detectAmbiguity.js
+│   ├── classifyRoleplayTurn.js
+│   ├── selectRoleplayResponse.js
+│   └── analyseMockAnswer.js
 ├── components/
 ├── data/
 │   ├── candidateEvidence.js
 │   ├── competencies.js
 │   ├── mockQuestions.js
+│   ├── roleplayResponses.js
 │   └── smartRebookScenario.js
 ├── hooks/
 ├── utils/
@@ -80,6 +92,47 @@ interview-coach/
 
 Keep confirmed product behaviour out of the fictional assumptions array. New role-play detail that is not explicitly supported by the interview pack must be labelled `fictional-exercise-assumption`.
 
+## Conversation engine
+
+The role-play deliberately uses a controlled local language engine rather than an external AI service:
+
+```text
+Raw message
+  → normalisation and light spelling correction
+  → conversational-reference detection
+  → weighted intent candidate scoring
+  → context-aware reranking
+  → confidence and ambiguity handling
+  → progressive response selection
+  → coverage and scoring metadata
+```
+
+Intent definitions contain examples, phrases, keywords, synonym groups, required signals, negative signals, question-word compatibility and priority. Classification combines those signals with phrase similarity, light stemming, one-edit fuzzy token matches, recent transcript topic, previous Duncan response, repeated-question penalties and multi-intent clause order.
+
+The result is structured metadata containing the primary intent, secondary intents, confidence, whether context was used, whether clarification is needed and the signals that matched. Internal scores and signals are never displayed in the normal interface.
+
+Contextual phrases such as “What does that involve?”, “Who would do that?” and “What happens next?” are resolved against recent turn metadata. If a pronoun has no reliable antecedent, Duncan asks a short clarification question instead of selecting a topic from a generic word.
+
+Responses use three progressive detail levels. Selection is deterministic, avoids the immediately previous variant and does not reveal another topic merely to create novelty. Every authored Duncan response references at least one valid `confirmed-source-fact` or `fictional-exercise-assumption`; the response library validates those references when imported and in tests.
+
+## Root cause of the original role bug
+
+The original matcher normalised punctuation and then used `Array.find()` to return the first intent containing any configured substring. The first role entry grouped “introduce yourself”, “who are you”, “what is your role” and the broad phrase “your role” under one fixed introduction response.
+
+Consequently, “Can you please elaborate on your role?” contained “your role”, immediately matched that first entry and returned “I’m Duncan, the Product Owner for Smart Rebook.” There was no competing-candidate score, negative signal, distinction between identity and responsibility, transcript context, confidence threshold or repetition handling.
+
+The replacement separates identity, responsibilities, Smart Rebook involvement, day-to-day contribution, decision authority and stakeholder relationships into distinct intents. Broad role phrases no longer override a more specific request.
+
+## Mock-interview heuristics
+
+Mock answers are checked locally for a concrete example, situation, personal action, outcome, customer focus, learner focus, collaboration, blocker, reflection and measurable evidence. A maximum of one follow-up is selected for the most important missing dimension. A sufficiently complete answer moves on or uses a deeper authored competency follow-up rather than repeatedly demanding STAR wording.
+
+Feedback uses the stored per-answer analysis and transcript coverage. Labels remain `Strong`, `Developing` and `Needs more evidence`, with an explicit statement that they are heuristic practice feedback rather than a hiring prediction.
+
+## Deterministic limitations
+
+The engine can handle a sizeable authored range of paraphrases, spelling errors and local conversational references, but it does not understand unrestricted language. It cannot infer facts that are absent from the scenario, resolve every long-distance reference or judge whether an interview answer is substantively true. Low-confidence clarification is intentional: it is safer than inventing a fact or confidently selecting an unrelated topic.
+
 ## Validation
 
 Run:
@@ -90,4 +143,4 @@ npm test
 npm run build
 ```
 
-The Interview Coach tests cover protected route integration, question progression, controlled role-play matching, timer expiry, heuristic scoring, session reset and provenance separation.
+The Interview Coach tests cover protected route integration, a large natural-language evaluation fixture, the demonstrated role-elaboration regression, contextual references, multi-intent questions, progressive disclosure, safe fallbacks, source validation, mock follow-ups, transcript scoring, session migration/reset, responsive input behaviour and privacy boundaries.

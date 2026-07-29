@@ -460,6 +460,17 @@
   background: rgba(13,15,19,.92);
 }
 
+.ic-roleplay-layout .ic-session-stage {
+  display: flex;
+  max-height: calc(100dvh - 7rem);
+  flex-direction: column;
+}
+
+.ic-roleplay-layout .ic-conversation {
+  min-height: 12rem;
+  max-height: none;
+}
+
 .ic-session-kicker {
   display: flex;
   justify-content: space-between;
@@ -539,13 +550,16 @@
 
 .ic-conversation {
   display: flex;
+  flex: 1 1 auto;
   min-height: 24rem;
   max-height: 52vh;
   flex-direction: column;
   gap: 1rem;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: clamp(1rem, 3vw, 2rem);
   scroll-behavior: smooth;
+  scrollbar-gutter: stable;
 }
 .ic-message { max-width: min(85%, 42rem); }
 .ic-message > span { display: block; margin-bottom: .35rem; color: #858b95; font: 800 .55rem ui-monospace, monospace; letter-spacing: .1em; text-transform: uppercase; }
@@ -553,10 +567,37 @@
 .ic-message.is-candidate { align-self: flex-end; }
 .ic-message.is-candidate > span { color: var(--ic-amber); text-align: right; }
 .ic-message.is-candidate p { border-color: rgba(250,204,21,.35); background: #211e10; }
-.ic-chat-form { border-top: 1px solid var(--ic-line); padding: 1rem; }
-.ic-chat-form > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: stretch; }
-.ic-chat-form textarea { min-height: 5.5rem; resize: none; border-right: 0; }
-.ic-chat-form .ic-primary-button { min-width: 7rem; }
+.ic-chat-form {
+  position: sticky;
+  z-index: 3;
+  bottom: 0;
+  flex: 0 0 auto;
+  border-top: 1px solid var(--ic-line);
+  background: rgba(13,15,19,.98);
+  padding: 1rem;
+}
+.ic-chat-form > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(7.5rem, 9rem);
+  align-items: end;
+  gap: .65rem;
+}
+.ic-chat-form textarea {
+  min-height: 5.5rem;
+  resize: none;
+  overflow-wrap: anywhere;
+}
+.ic-chat-form .ic-primary-button {
+  width: 100%;
+  min-width: 0;
+  height: 3.25rem;
+  align-self: end;
+}
+.ic-natural-language-hint {
+  margin: -.1rem 0 .65rem !important;
+  color: #c8ccd4 !important;
+  font-size: .76rem !important;
+}
 
 .ic-notes { display: block; }
 .ic-notes textarea { min-height: 12rem; margin-top: .7rem; font-size: .78rem; }
@@ -628,6 +669,9 @@
   .ic-session-sidebar { position: static; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ic-session-sidebar > button,
   .ic-session-sidebar > .ic-assumption-note { grid-column: 1 / -1; }
+  .ic-roleplay-layout .ic-session-stage { max-height: calc(100dvh - 6.5rem); }
+  .ic-chat-form textarea,
+  .ic-notes textarea { font-size: 1rem; }
 }
 
 @media (max-width: 700px) {
@@ -653,6 +697,8 @@
   .ic-session-sidebar { grid-template-columns: 1fr; }
   .ic-session-sidebar > button,
   .ic-session-sidebar > .ic-assumption-note { grid-column: auto; }
+  .ic-conversation { min-height: 18rem; }
+  .ic-chat-form > div { grid-template-columns: minmax(0, 1fr) 8rem; }
 }
 
 @media (max-width: 480px) {
@@ -671,10 +717,11 @@
   .ic-timer { min-width: 0; justify-items: start; border-top: 1px solid var(--ic-line); border-left: 0; }
   .ic-timer-controls { flex-wrap: wrap; }
   .ic-timer-controls button { flex: 1 1 33%; }
-  .ic-conversation { min-height: 20rem; max-height: 45vh; padding: .8rem; }
+  .ic-roleplay-layout .ic-conversation { min-height: 15rem; max-height: 45vh; }
+  .ic-conversation { padding: .8rem; }
   .ic-message { max-width: 95%; }
   .ic-chat-form > div { grid-template-columns: 1fr; }
-  .ic-chat-form textarea { border-right: 1px solid #484d57; border-bottom: 0; }
+  .ic-chat-form .ic-primary-button { height: 3.1rem; }
   .ic-rating { white-space: nowrap; }
   .ic-dimension-grid article > div { align-items: flex-start; flex-direction: column; }
   .ic-report-actions { flex-direction: column; }

@@ -56,6 +56,46 @@ export const confirmedSourceFacts = [
 
 export const fictionalExerciseAssumptions = [
   {
+    id: "role-responsibilities",
+    sourceType: FICTIONAL_ASSUMPTION_TYPE,
+    response: "For this exercise, Duncan shapes the feature direction, prioritises delivery work and checks that Smart Rebook addresses the intended customer problem.",
+  },
+  {
+    id: "role-involvement",
+    sourceType: FICTIONAL_ASSUMPTION_TYPE,
+    response: "For this exercise, Duncan owns the product direction for Smart Rebook and connects the delivery team with colleagues who can provide detail for customer learning.",
+  },
+  {
+    id: "role-day-to-day",
+    sourceType: FICTIONAL_ASSUMPTION_TYPE,
+    response: "In the practice scenario, Duncan reviews customer needs, clarifies product decisions, prioritises delivery work and checks progress with the people building and supporting the feature.",
+  },
+  {
+    id: "role-authority",
+    sourceType: FICTIONAL_ASSUMPTION_TYPE,
+    response: "For practice, Duncan owns product-priority and product-accuracy decisions. The Digital Learning lead retains final learning-design approval.",
+  },
+  {
+    id: "role-stakeholders",
+    sourceType: FICTIONAL_ASSUMPTION_TYPE,
+    response: "In this exercise, Duncan works with the delivery team, Customer Support and the Digital Learning lead. He can connect the designer with the right product specialist when more detail is needed.",
+  },
+  {
+    id: "meeting-conduct",
+    sourceType: FICTIONAL_ASSUMPTION_TYPE,
+    response: "For the simulation, Duncan has ten minutes for a focused first conversation and answers product and learning-brief questions without coaching the interview structure.",
+  },
+  {
+    id: "summary-and-close",
+    sourceType: FICTIONAL_ASSUMPTION_TYPE,
+    response: "For practice, Duncan can confirm points already discussed and asks for a short written summary of confirmed details, open questions, required assets and owners.",
+  },
+  {
+    id: "conversation-boundaries",
+    sourceType: FICTIONAL_ASSUMPTION_TYPE,
+    response: "For the simulation, Duncan stays in the Product Owner role, does not reveal the complete scenario on request and asks for clarification when a question is genuinely ambiguous.",
+  },
+  {
     id: "purpose",
     sourceType: FICTIONAL_ASSUMPTION_TYPE,
     response: "For this exercise, the problem is unused appointment capacity after a cancellation. The intended value is to help small-business teams refill that slot without contacting waitlisted people one by one.",
@@ -78,7 +118,7 @@ export const fictionalExerciseAssumptions = [
   {
     id: "activation",
     sourceType: FICTIONAL_ASSUMPTION_TYPE,
-    response: "In this exercise, Smart Rebook is enabled by an administrator in appointment settings. It is off by default for existing venues, and the administrator must confirm an email template before activation.",
+    response: "In this exercise, Smart Rebook is enabled by an administrator in appointment settings. It is off by default for existing businesses, and the administrator must confirm an email template before activation.",
   },
   {
     id: "waitlist",
@@ -93,7 +133,7 @@ export const fictionalExerciseAssumptions = [
   {
     id: "client-experience",
     sourceType: FICTIONAL_ASSUMPTION_TYPE,
-    response: "In the exercise, the client sees the venue name, appointment time and a claim button. They are told availability is not guaranteed until the booking is confirmed.",
+    response: "In the exercise, the client sees the business name, appointment time and a claim button. They are told availability is not guaranteed until the booking is confirmed.",
   },
   {
     id: "multiple-responses",
