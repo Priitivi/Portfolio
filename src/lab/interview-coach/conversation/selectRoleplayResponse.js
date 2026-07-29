@@ -17,6 +17,12 @@ function stableHash(value) {
 
 function selectVariant(variants, seed, previousResponseId, idPrefix) {
   if (variants.length === 1) {
+    if (`${idPrefix}-0` === previousResponseId) {
+      return {
+        text: "I have shared the detail I can confirm on that point. Which specific part would you like to explore next?",
+        responseId: `${idPrefix}-repeat-boundary`,
+      };
+    }
     return { text: variants[0], responseId: `${idPrefix}-0` };
   }
   let index = stableHash(seed) % variants.length;

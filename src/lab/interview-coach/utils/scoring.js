@@ -81,9 +81,29 @@ function countDimension(answers, dimension) {
   return answers.filter((answer) => analysisForAnswer(answer).dimensions[dimension]).length;
 }
 
+function effectiveMockAnswers(answers) {
+  const coreAnswers = answers.filter((answer) => answer.kind === "core");
+  const latestRetries = new Map();
+  answers
+    .filter((answer) => answer.kind === "retry")
+    .forEach((answer) => latestRetries.set(answer.coreQuestionId, answer));
+  return coreAnswers.map((answer) => latestRetries.get(answer.questionId) || answer);
+}
+
+function retryReason(answer) {
+  const { dimensions } = analysisForAnswer(answer);
+  if (!dimensions.personalAction) return "Make your own decision or action explicit.";
+  if (!dimensions.result) return "Add the outcome and the evidence you used to judge it.";
+  if (!dimensions.clarity) return "Give the answer a clearer situation, action and outcome structure.";
+  if (!dimensions.audienceImpact) return "Connect the example to the customer or learner receiving the work.";
+  if (!dimensions.reflection) return "Close with what you learned or would change next time.";
+  return null;
+}
+
 export function scoreMockInterview(answers) {
   const answeredCore = answers.filter((item) => item.kind === "core");
-  const assessable = answeredCore.length ? answeredCore : answers;
+  const effectiveAnswers = effectiveMockAnswers(answers);
+  const assessable = effectiveAnswers.length ? effectiveAnswers : answers;
   const total = assessable.length;
   const combined = answers.map((item) => item.answer.toLowerCase()).join(" ");
   const cvMatches = candidateEvidence.filter((evidence) =>
@@ -94,43 +114,43 @@ export function scoreMockInterview(answers) {
       id: "specific-evidence",
       title: "Specific evidence",
       signal: "specificEvidence",
-      reason: "answers combined a concrete example, personal action and an outcome",
+      reason: "combined a concrete example, personal action and an outcome",
     },
     {
       id: "clarity",
       title: "Clarity and structure",
       signal: "clarity",
-      reason: "answers contained enough structured detail for the heuristic to follow",
+      reason: "contained enough structured detail for the heuristic to follow",
     },
     {
       id: "contribution",
       title: "Personal contribution",
       signal: "personalAction",
-      reason: "answers made the candidate's own action explicit",
+      reason: "made the candidate's own action explicit",
     },
     {
       id: "outcome",
       title: "Outcome and evidence",
       signal: "result",
-      reason: "answers stated an outcome rather than ending with the activity",
+      reason: "stated an outcome rather than ending with the activity",
     },
     {
       id: "reflection",
       title: "Reflection and learning",
       signal: "reflection",
-      reason: "answers described a lesson or how the approach would change next time",
+      reason: "described a lesson or how the approach would change next time",
     },
     {
       id: "relevance",
       title: "Relevance to the role",
       signal: "roleRelevance",
-      reason: "answers connected with learning, software, customers, stakeholders or delivery",
+      reason: "connected with learning, software, customers, stakeholders or delivery",
     },
     {
       id: "audience-impact",
       title: "Customer or learner impact",
       signal: "audienceImpact",
-      reason: "answers considered the customer, client, learner or audience receiving the work",
+      reason: "considered the customer, client, learner or audience receiving the work",
     },
   ];
 
@@ -152,6 +172,22 @@ export function scoreMockInterview(answers) {
     .filter((item) => !cvMatches.includes(item))
     .slice(0, 4)
     .map((item) => `${item.title}: ${item.summary}`);
+  const retryQuestions = effectiveAnswers
+    .map((answer) => {
+      const reason = retryReason(answer);
+      const coreQuestionId = answer.coreQuestionId || answer.questionId;
+      const original = answeredCore.find((item) => item.questionId === coreQuestionId);
+      return reason && original
+        ? {
+          questionId: coreQuestionId,
+          prompt: original.prompt,
+          originalAnswer: original.answer,
+          latestAnswer: answer.kind === "retry" ? answer.answer : null,
+          reason,
+        }
+        : null;
+    })
+    .filter(Boolean);
 
   const weakest = dimensions.find((dimension) => dimension.label === LABELS.needs);
   return reportShape("Mock Interview", dimensions, {
@@ -166,6 +202,7 @@ export function scoreMockInterview(answers) {
     retryGoal: weakest
       ? `Strengthen ${weakest.title.toLowerCase()} while keeping each answer concise and relevant.`
       : "Retry with equally specific evidence in fewer words.",
+    retryQuestions,
   });
 }
 
