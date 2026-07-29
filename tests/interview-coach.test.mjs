@@ -28,10 +28,21 @@ import {
 import { experiments } from "../src/lab/experiments.js";
 import {
   createMockState,
+  createQuestionPlan,
+  createQuestionRetry,
   mockProgress,
+  PRACTICE_DIFFICULTIES,
   progressMockInterview,
   selectFollowUp,
 } from "../src/lab/interview-coach/utils/questionProgression.js";
+import {
+  appendTranscript,
+  createSpeechRecognitionController,
+  createSpeechSynthesisController,
+  SPEECH_LANGUAGE,
+  supportsSpeechRecognition,
+  supportsSpeechSynthesis,
+} from "../src/lab/interview-coach/utils/browserSpeech.js";
 import { matchRoleplayResponse } from "../src/lab/interview-coach/utils/roleplayMatcher.js";
 import { scoreMockInterview, scoreRoleplay } from "../src/lab/interview-coach/utils/scoring.js";
 import {
@@ -223,6 +234,21 @@ test("repeated questions progressively disclose detail without exact response re
   assert.equal(roleplay.coveredIntents.filter((intent) => intent === "purpose").length, 1);
 });
 
+test("max-depth contextual role questions use a boundary instead of echoing the last response", () => {
+  const roleplay = emptyRoleplay();
+  const responses = [
+    ask(roleplay, "Can you introduce yourself?"),
+    ask(roleplay, "Can you elaborate on your role?"),
+    ask(roleplay, "Tell me more."),
+    ask(roleplay, "Can you elaborate on your role?"),
+  ];
+  assert.match(responses[0].response, /Duncan|Product Owner/i);
+  assert.match(responses[1].response, /priorit|direction|customer needs/i);
+  assert.notEqual(responses[2].response, responses[1].response);
+  assert.notEqual(responses[3].response, responses[2].response);
+  assert.match(responses[3].response, /specific part|detail I can confirm/i);
+});
+
 test("every authored Duncan response has valid confirmed or fictional source references", () => {
   assert.deepEqual(validateRoleplayResponseLibrary(), []);
   for (const entry of Object.values(roleplayResponseLibrary)) {
@@ -305,6 +331,186 @@ test("mock interview progresses one question at a time, stores analysis and pres
   assert.equal(progressMockInterview(progressed, "   "), progressed);
 });
 
+test("session plans keep primary questions unique and track follow-ups separately", () => {
+  const plan = createQuestionPlan({ sessionNumber: 4 });
+  assert.equal(plan.primaryQuestionIds.length, new Set(plan.primaryQuestionIds).size);
+  assert.equal(new Set(plan.primaryQuestionIds.slice(0, 8)).size, 8);
+  assert.equal(plan.primaryQuestionIds.length, plan.competencyIds.length);
+
+  let state = createMockState({ difficulty: "realistic", sessionNumber: 4 });
+  const completeAnswer = "For example, when I delivered client software training, I planned the explanation, worked with stakeholders and adapted it for the learner. As a result, feedback showed improved understanding, and I learned to validate prior knowledge first.";
+  while (
+    state.primaryAskedIds.length < 8
+    && !state.completed
+  ) {
+    state = progressMockInterview(state, completeAnswer);
+  }
+
+  assert.equal(new Set(state.primaryAskedIds.slice(0, 8)).size, 8);
+  assert.ok(state.followUpAskedIds.every((id) => !state.primaryAskedIds.includes(id)));
+  assert.deepEqual(
+    state.askedQuestionIds,
+    [...new Set(state.askedQuestionIds)],
+  );
+});
+
+test("practice difficulty changes probing without changing the primary plan", () => {
+  const question = createMockState().queue[0];
+  const completeAnswer = "For example, when I delivered client software training, I planned the explanation, worked with stakeholders and adapted it for the learner. As a result, feedback showed improved understanding, and I learned to validate prior knowledge first.";
+
+  assert.equal(selectFollowUp(question, completeAnswer, "supportive"), null);
+  assert.ok(selectFollowUp(question, completeAnswer, "pressure"));
+  assert.deepEqual(
+    createMockState({ difficulty: "supportive" }).plan.primaryQuestionIds,
+    createMockState({ difficulty: "pressure" }).plan.primaryQuestionIds,
+  );
+  assert.deepEqual(
+    Object.keys(PRACTICE_DIFFICULTIES),
+    ["supportive", "realistic", "pressure"],
+  );
+});
+
+test("focused retry preserves the original answer and records a separate improved attempt", () => {
+  const initial = createMockState();
+  const answered = progressMockInterview(initial, "I communicate clearly.");
+  const retry = createQuestionRetry(answered, initial.queue[0].id);
+
+  assert.equal(retry.queue.length, 1);
+  assert.equal(retry.queue[0].kind, "retry");
+  assert.equal(retry.queue[0].originalAnswer, "I communicate clearly.");
+  assert.equal(retry.answers[0].answer, "I communicate clearly.");
+
+  const improved = progressMockInterview(
+    retry,
+    "For example, when I supported a client project, I planned the communication and adapted it for the learner. As a result, feedback showed understanding, and I learned to confirm prior knowledge.",
+  );
+  assert.equal(improved.completed, true);
+  assert.equal(improved.answers.filter((answer) => answer.kind === "core").length, 1);
+  assert.equal(improved.answers.filter((answer) => answer.kind === "retry").length, 1);
+  assert.equal(improved.answers[0].answer, "I communicate clearly.");
+});
+
+test("browser speech recognition supports interim and final editable transcripts", () => {
+  class FakeRecognition {
+    start() {
+      this.started = true;
+      this.onstart();
+    }
+
+    stop() {
+      this.stopped = true;
+      this.onend();
+    }
+
+    abort() {
+      this.aborted = true;
+    }
+  }
+
+  const events = {
+    final: [],
+    interim: [],
+    listening: [],
+    errors: [],
+  };
+  const controller = createSpeechRecognitionController({
+    windowObject: { SpeechRecognition: FakeRecognition },
+    onFinalTranscript: (value) => events.final.push(value),
+    onInterimTranscript: (value) => events.interim.push(value),
+    onListeningChange: (value) => events.listening.push(value),
+    onError: (value) => events.errors.push(value),
+  });
+
+  assert.equal(controller.supported, true);
+  assert.equal(controller.recognition.lang, SPEECH_LANGUAGE);
+  assert.equal(controller.recognition.interimResults, true);
+  controller.start();
+
+  const interimResult = [{ transcript: "I adapted" }];
+  interimResult.isFinal = false;
+  const finalResult = [{ transcript: " the training for the learner" }];
+  finalResult.isFinal = true;
+  controller.recognition.onresult({
+    resultIndex: 0,
+    results: [interimResult, finalResult],
+  });
+
+  assert.ok(events.interim.includes("I adapted"));
+  assert.deepEqual(events.final, ["the training for the learner"]);
+  assert.equal(
+    appendTranscript("My example:", events.final[0]),
+    "My example: the training for the learner",
+  );
+  assert.equal(events.listening[0], true);
+});
+
+test("speech recognition handles unsupported browsers and microphone permission denial", () => {
+  assert.equal(supportsSpeechRecognition({}), false);
+  const unsupported = createSpeechRecognitionController({ windowObject: {} });
+  assert.equal(unsupported.supported, false);
+  assert.equal(unsupported.start(), false);
+
+  class DeniedRecognition {}
+  let permissionMessage = "";
+  const denied = createSpeechRecognitionController({
+    windowObject: { webkitSpeechRecognition: DeniedRecognition },
+    onError: (message) => { permissionMessage = message; },
+  });
+  denied.recognition.onerror({ error: "not-allowed" });
+  assert.match(permissionMessage, /permission was denied/i);
+  assert.equal(denied.recognition.lang, "en-GB");
+});
+
+test("speech synthesis supports replay, pause, resume and stop without an external service", () => {
+  class FakeUtterance {
+    constructor(text) {
+      this.text = text;
+    }
+  }
+
+  const synthesis = {
+    speaking: false,
+    paused: false,
+    cancelCount: 0,
+    speak(utterance) {
+      this.utterance = utterance;
+      this.speaking = true;
+      utterance.onstart();
+    },
+    pause() {
+      this.paused = true;
+    },
+    resume() {
+      this.paused = false;
+    },
+    cancel() {
+      this.cancelCount += 1;
+      this.speaking = false;
+      this.paused = false;
+    },
+  };
+  const states = [];
+  const windowObject = { speechSynthesis: synthesis, SpeechSynthesisUtterance: FakeUtterance };
+  const playback = createSpeechSynthesisController({
+    windowObject,
+    onStateChange: (state) => states.push(state),
+  });
+
+  assert.equal(supportsSpeechSynthesis(windowObject), true);
+  assert.equal(playback.speak("Interview question"), true);
+  assert.equal(synthesis.utterance.text, "Interview question");
+  assert.equal(synthesis.utterance.lang, "en-GB");
+  playback.pause();
+  assert.equal(synthesis.paused, true);
+  playback.resume();
+  assert.equal(synthesis.paused, false);
+  playback.stop();
+  assert.equal(synthesis.speaking, false);
+  assert.ok(synthesis.cancelCount >= 2);
+  assert.ok(states.some((state) => state.paused));
+  assert.equal(createSpeechSynthesisController({ windowObject: {} }).supported, false);
+});
+
 test("feedback uses transcript dimensions and counts distinct role-play topics only once", () => {
   const mockReport = scoreMockInterview([
     {
@@ -374,13 +580,18 @@ test("session state migrates safely, preserves drafts and fully clears local dat
   session.mock.draft = "Mock draft";
   session.roleplay.draft = "Role-play draft";
   session.roleplay.turns.push({ primaryIntent: "purpose" });
+  session.notes = "Private local note";
+  session.settings.readAloud = true;
   saveCoachSession(session, storage);
 
   const loaded = loadCoachSession(storage);
-  assert.equal(loaded.version, 2);
+  assert.equal(loaded.version, 3);
   assert.equal(loaded.mock.draft, "Mock draft");
   assert.equal(loaded.roleplay.draft, "Role-play draft");
   assert.equal(loaded.roleplay.turns[0].primaryIntent, "purpose");
+  assert.equal(loaded.notes, "Private local note");
+  assert.equal(loaded.settings.readAloud, true);
+  assert.ok(loaded.mock.plan.primaryQuestionIds.length >= 8);
 
   values.set(COACH_SESSION_KEY, JSON.stringify({
     version: 1,
@@ -389,15 +600,17 @@ test("session state migrates safely, preserves drafts and fully clears local dat
     roleplay: { messages: [], coveredIntents: [], notes: "", timer: createTimerState() },
   }));
   const migrated = loadCoachSession(storage);
-  assert.equal(migrated.version, 2);
+  assert.equal(migrated.version, 3);
   assert.deepEqual(migrated.roleplay.turns, []);
   assert.equal(migrated.roleplay.draft, "");
+  assert.equal(migrated.settings.difficulty, "realistic");
 
   const reset = clearCoachSession(storage);
   assert.equal(values.has(COACH_SESSION_KEY), false);
   assert.equal(reset.screen, "welcome");
   assert.deepEqual(reset.mock.answers, []);
   assert.equal(reset.roleplay.draft, "");
+  assert.equal(reset.notes, "");
 });
 
 test("source-backed facts, prompts and fictional assumptions remain explicitly separated", () => {
@@ -468,6 +681,35 @@ test("role-play UI preserves drafts, keyboard submission, focus clarity and resp
   assert.match(styles, /@media \(max-width: 480px\)[\s\S]*grid-template-columns: 1fr/);
   assert.match(styles, /overflow-x: hidden/);
   assert.match(styles, /prefers-reduced-motion: reduce/);
+});
+
+test("V2 UI exposes browser speech, manual send, retry, notes and mobile-safe controls", async () => {
+  const [coach, mockScreen, roleplayScreen, speechInput, playback, feedback, styles] = await Promise.all([
+    readFile(new URL("../src/lab/interview-coach/InterviewCoach.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/lab/interview-coach/components/MockInterviewScreen.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/lab/interview-coach/components/RoleplayScreen.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/lab/interview-coach/components/SpeechInput.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/lab/interview-coach/components/SpeechPlayback.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/lab/interview-coach/components/FeedbackScreen.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/lab/interview-coach/interview-coach.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(coach, /PRACTICE_DIFFICULTIES/);
+  assert.match(coach, /handsFree/);
+  assert.match(mockScreen, /SpeechInput/);
+  assert.match(roleplayScreen, /SpeechInput/);
+  assert.match(speechInput, /Start recording/);
+  assert.match(speechInput, /never sent automatically|never starts or submits automatically/i);
+  assert.match(playback, /Replay/);
+  assert.match(playback, /Pause/);
+  assert.match(playback, /Resume/);
+  assert.match(playback, /Stop/);
+  assert.match(feedback, /Retry this question/);
+  assert.match(feedback, /original answer/i);
+  assert.match(mockScreen, /PRIVATE NOTES/);
+  assert.match(styles, /\.ic-mic-button[\s\S]*min-height: 2\.75rem/);
+  assert.match(styles, /@media \(max-width: 480px\)[\s\S]*\.ic-mic-button \{ width: 100%/);
+  assert.match(styles, /\.ic-speech-status[\s\S]*overflow-wrap: anywhere/);
 });
 
 test("classification results expose structured metadata without adding it to Duncan's text", () => {
