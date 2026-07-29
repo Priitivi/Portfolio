@@ -7,7 +7,12 @@ import RoleplayScreen from "./components/RoleplayScreen.jsx";
 import useCoachSession from "./hooks/useCoachSession.js";
 import useRoleplayTimer from "./hooks/useRoleplayTimer.js";
 import { matchRoleplayResponse } from "./utils/roleplayMatcher.js";
-import { createMockState, progressMockInterview } from "./utils/questionProgression.js";
+import {
+  createMockState,
+  createQuestionRetry,
+  PRACTICE_DIFFICULTIES,
+  progressMockInterview,
+} from "./utils/questionProgression.js";
 import { scoreMockInterview, scoreRoleplay } from "./utils/scoring.js";
 import { advanceTimer, createTimerState, setTimerRunning } from "./utils/timer.js";
 import "./interview-coach.css";
@@ -36,7 +41,7 @@ const modes = [
   },
 ];
 
-function WelcomeScreen({ selectedMode, onSelect, onStart }) {
+function WelcomeScreen({ selectedMode, settings, onSelect, onSettingsChange, onStart }) {
   return (
     <main className="ic-main ic-welcome">
       <section className="ic-welcome-hero">
@@ -51,6 +56,49 @@ function WelcomeScreen({ selectedMode, onSelect, onStart }) {
           <div><span>MODEL</span><strong>Deterministic</strong></div>
           <p>This is a private practice tool, not an assessment result. Answers stay in session storage and are never sent to an AI service or analytics.</p>
         </aside>
+      </section>
+
+      <section className="ic-practice-settings" aria-labelledby="practice-style-title">
+        <div className="ic-section-heading">
+          <div><span>PRACTICE</span><h2 id="practice-style-title">Choose the interview pressure</h2></div>
+          <p>The mode changes follow-up frequency and directness only. It does not invent interviewer behaviour or alter the source-backed role-play facts.</p>
+        </div>
+        <div className="ic-difficulty-grid" role="radiogroup" aria-label="Interview pressure">
+          {Object.values(PRACTICE_DIFFICULTIES).map((difficulty) => (
+            <button
+              className={settings.difficulty === difficulty.id ? "is-selected" : ""}
+              type="button"
+              role="radio"
+              aria-checked={settings.difficulty === difficulty.id}
+              onClick={() => onSettingsChange({ difficulty: difficulty.id })}
+              key={difficulty.id}
+            >
+              <strong>{difficulty.title}</strong>
+              <span>{difficulty.description}</span>
+            </button>
+          ))}
+        </div>
+        <div className="ic-setting-toggles">
+          <label>
+            <input
+              type="checkbox"
+              checked={settings.readAloud}
+              onChange={(event) => onSettingsChange({ readAloud: event.target.checked })}
+            />
+            <span><strong>Read interviewer responses aloud</strong>Uses your browser&apos;s built-in speech synthesis, with replay, pause and stop controls.</span>
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={settings.handsFree}
+              onChange={(event) => onSettingsChange({
+                handsFree: event.target.checked,
+                ...(event.target.checked ? { readAloud: true } : {}),
+              })}
+            />
+            <span><strong>Hands-free practice sequence</strong>Listen, press Start recording, review the editable transcript, then send it yourself.</span>
+          </label>
+        </div>
       </section>
 
       <section className="ic-mode-section" aria-labelledby="mode-title">
@@ -77,7 +125,7 @@ function WelcomeScreen({ selectedMode, onSelect, onStart }) {
           ))}
         </div>
         <div className="ic-start-row">
-          <p><span aria-hidden="true">●</span> Ready when you are. No microphone or account required.</p>
+          <p><span aria-hidden="true">●</span> Ready when you are. Voice controls are optional and no external AI service is used.</p>
           <button className="ic-primary-button" type="button" onClick={() => onStart(selectedMode)}>Start {modes.find((mode) => mode.id === selectedMode)?.title} →</button>
         </div>
       </section>
@@ -94,15 +142,24 @@ export default function InterviewCoach({ navigate }) {
     return () => { document.title = previousTitle; };
   }, []);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, [session.screen]);
+
   const startMode = useCallback((mode) => {
     updateSession((current) => {
       if (mode === "prepare") return { ...current, selectedMode: mode, screen: "prepare" };
       if (mode === "mock") {
+        const mockSessionCounter = (current.mockSessionCounter || 0) + 1;
         return {
           ...current,
           selectedMode: mode,
           screen: "mock",
-          mock: createMockState(),
+          mockSessionCounter,
+          mock: createMockState({
+            difficulty: current.settings.difficulty,
+            sessionNumber: mockSessionCounter,
+          }),
           report: null,
         };
       }
@@ -121,7 +178,6 @@ export default function InterviewCoach({ navigate }) {
           turns: [],
           draft: "",
           turnCounter: 0,
-          notes: "",
           timer: { ...createTimerState(), running: true },
         },
         report: null,
@@ -245,6 +301,22 @@ export default function InterviewCoach({ navigate }) {
     startMode(session.report?.mode === "Mock Interview" ? "mock" : "roleplay");
   };
 
+  const retryQuestion = (questionId) => {
+    updateSession((current) => ({
+      ...current,
+      mock: createQuestionRetry(current.mock, questionId),
+      screen: "mock",
+      report: null,
+    }));
+  };
+
+  const updateSettings = (patch) => {
+    updateSession((current) => ({
+      ...current,
+      settings: { ...current.settings, ...patch },
+    }));
+  };
+
   let content;
   if (session.screen === "prepare") {
     content = <PreparationScreen onBack={() => updateSession((current) => ({ ...current, screen: "welcome" }))} onStartMode={startMode} />;
@@ -252,6 +324,8 @@ export default function InterviewCoach({ navigate }) {
     content = (
       <MockInterviewScreen
         mock={session.mock}
+        settings={session.settings}
+        notes={session.notes}
         onSubmit={submitMockAnswer}
         onEnd={endMock}
         onDraftChange={(draft) => updateSession((current) => ({
@@ -259,12 +333,16 @@ export default function InterviewCoach({ navigate }) {
           mock: { ...current.mock, draft },
         }))}
         onPreparation={() => updateSession((current) => ({ ...current, screen: "prepare" }))}
+        onNotesChange={(notes) => updateSession((current) => ({ ...current, notes }))}
+        onReadAloudChange={(readAloud) => updateSettings({ readAloud })}
       />
     );
   } else if (session.screen === "roleplay") {
     content = (
       <RoleplayScreen
         roleplay={session.roleplay}
+        settings={session.settings}
+        notes={session.notes}
         onSend={sendRoleplayQuestion}
         onDraftChange={(draft) => updateSession((current) => ({
           ...current,
@@ -274,10 +352,8 @@ export default function InterviewCoach({ navigate }) {
         onResume={() => updateRoleplayTimer((timer) => setTimerRunning(timer, true))}
         onRestartTimer={() => updateRoleplayTimer(() => ({ ...createTimerState(), running: true }))}
         onEnd={endRoleplay}
-        onNotesChange={(notes) => updateSession((current) => ({
-          ...current,
-          roleplay: { ...current.roleplay, notes },
-        }))}
+        onNotesChange={(notes) => updateSession((current) => ({ ...current, notes }))}
+        onReadAloudChange={(readAloud) => updateSettings({ readAloud })}
       />
     );
   } else if (session.screen === "feedback" && session.report) {
@@ -285,6 +361,7 @@ export default function InterviewCoach({ navigate }) {
       <FeedbackScreen
         report={session.report}
         onRetry={retry}
+        onRetryQuestion={retryQuestion}
         onPreparation={() => updateSession((current) => ({ ...current, screen: "prepare" }))}
         onReset={clearWithConfirmation}
       />
@@ -293,7 +370,9 @@ export default function InterviewCoach({ navigate }) {
     content = (
       <WelcomeScreen
         selectedMode={session.selectedMode}
+        settings={session.settings}
         onSelect={(selectedMode) => updateSession((current) => ({ ...current, selectedMode }))}
+        onSettingsChange={updateSettings}
         onStart={startMode}
       />
     );

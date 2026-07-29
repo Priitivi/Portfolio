@@ -12,13 +12,18 @@ It is designed for final-stage Digital Learning Designer practice, with particul
 
 - Preparation dashboard covering role competencies, strong evidence, relevant CV examples and preparation areas
 - Smart Rebook discovery checklist
-- One-question-at-a-time mock interview with answer-dimension follow-ups
+- One-question-at-a-time mock interview with a unique primary-question plan and separately tracked follow-ups
+- Supportive, Realistic and Pressure practice modes that adjust probing without changing source content
+- Optional browser speech recognition with interim text, editable final transcripts and manual submission
+- Optional browser speech synthesis for interviewer questions and Duncan, with replay, pause, resume and stop
+- Focused post-interview retries that preserve the original answer
+- Private local notes shared across practice modes
 - Ten-minute Product Owner role-play with pause, resume and restart controls
 - Layered local intent classification with contextual follow-up resolution
 - Progressive, source-referenced Product Owner responses with controlled variation
 - Confidence-aware clarification for ambiguous or low-signal input
 - Transparent heuristic feedback after either practice mode
-- Retry, preparation and clear-session actions
+- Whole-session retry, individual-answer retry, preparation and clear-session actions
 - Keyboard focus states, semantic controls, reduced-motion support and responsive layouts
 
 ## Protected access
@@ -54,9 +59,11 @@ Do not add contact details or unnecessary personal identifiers when updating the
 
 - Answers, notes, timer state and feedback use the namespaced `sessionStorage` key `priit:lab:interview-coach:v1`.
 - Clear session removes that key and resets the in-memory state.
-- No answer is logged, uploaded, analysed by an external AI service or sent to analytics.
+- Typed answers are not logged, uploaded, analysed by an external AI service or sent to analytics.
 - The deterministic response and scoring systems run entirely in the browser.
 - Conversation interpretation makes no network request and needs no external model, account, API key or subscription.
+- Voice features use only the browser-standard `SpeechRecognition`/`webkitSpeechRecognition` and `speechSynthesis` interfaces. The application does not call or subscribe to a speech API. A browser may process microphone audio using its own vendor service, so voice remains optional and typing fully available.
+- Speech recognition never auto-submits. The candidate reviews and may edit the final transcript before sending.
 - Original source documents are not shipped with the frontend.
 - `.gitignore` excludes `docs/private-source/` and temporary PDF renders under `tmp/pdfs/`.
 
@@ -129,9 +136,29 @@ Mock answers are checked locally for a concrete example, situation, personal act
 
 Feedback uses the stored per-answer analysis and transcript coverage. Labels remain `Strong`, `Developing` and `Needs more evidence`, with an explicit statement that they are heuristic practice feedback rather than a hiring prediction.
 
+### Question planning and practice pressure
+
+Every new mock interview creates a session plan containing ordered primary question IDs and competency IDs. The session separately records all asked IDs, primary IDs and follow-up IDs. Primary IDs are deduplicated before the plan is created, and progression refuses to save the same queue item twice. The first eight primary questions therefore remain unique; follow-ups do not increment or replace that primary-question sequence.
+
+The previous implementation relied only on a mutable queue and `currentIndex`. It had no asked-question ledger or explicit uniqueness invariant, and the old retry action rebuilt the whole queue from its first question. That made repetition possible when queue state was restored or extended and guaranteed unnecessary repetition when a candidate only wanted to improve one weak answer.
+
+Supportive mode withholds a probe once an answer has a usable foundation. Realistic mode uses one targeted missing-dimension probe. Pressure practice uses a concise, more direct probe even when the answer is broadly complete. These modes never change IRIS or Duncan facts and never introduce invented interviewer behaviour.
+
+### Browser speech controls
+
+`utils/browserSpeech.js` isolates feature detection and small deterministic controllers for recognition and synthesis. React hooks own lifecycle cleanup and UI state. Both mock interview answers and role-play questions can be dictated in `en-GB`; interim words remain visibly separate until the browser marks a result final, then the final transcript is appended to the editable textarea.
+
+Submission always remains a distinct candidate action. Speech synthesis is also user-gated: it does not speak on first load or after restoring a saved setting. Replay is always manual, and automatic reading of the next interviewer or Duncan response starts only after a user interaction has unlocked playback.
+
+### Focused retry
+
+The feedback report identifies answer-level missing signals and offers an individual retry. Starting one creates a one-question retry state, shows the preserved original answer and stores the improved attempt as a separate record linked to the original primary question. Scoring uses the latest retry for practice feedback without deleting or overwriting the original answer.
+
 ## Deterministic limitations
 
 The engine can handle a sizeable authored range of paraphrases, spelling errors and local conversational references, but it does not understand unrestricted language. It cannot infer facts that are absent from the scenario, resolve every long-distance reference or judge whether an interview answer is substantively true. Low-confidence clarification is intentional: it is safer than inventing a fact or confidently selecting an unrelated topic.
+
+Speech recognition quality, permission prompts, supported languages and whether audio is processed on-device or by a browser vendor vary by browser and operating system. The simulator cannot control those implementation details. Unsupported or denied speech features always fall back to the editable text workflow.
 
 ## Validation
 
@@ -143,4 +170,4 @@ npm test
 npm run build
 ```
 
-The Interview Coach tests cover protected route integration, a large natural-language evaluation fixture, the demonstrated role-elaboration regression, contextual references, multi-intent questions, progressive disclosure, safe fallbacks, source validation, mock follow-ups, transcript scoring, session migration/reset, responsive input behaviour and privacy boundaries.
+The Interview Coach tests cover protected route integration, a large natural-language evaluation fixture, the demonstrated role-elaboration regression, contextual references, multi-intent questions, progressive disclosure, safe fallbacks, source validation, unique eight-question plans, difficulty probing, focused retry, browser speech recognition/synthesis fakes, microphone permission denial, unsupported-browser fallback, transcript scoring, session migration/reset, responsive input behaviour and privacy boundaries.

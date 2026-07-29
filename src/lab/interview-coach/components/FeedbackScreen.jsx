@@ -11,7 +11,13 @@ function ListSection({ title, items, empty }) {
   );
 }
 
-export default function FeedbackScreen({ report, onRetry, onPreparation, onReset }) {
+export default function FeedbackScreen({
+  report,
+  onRetry,
+  onRetryQuestion,
+  onPreparation,
+  onReset,
+}) {
   return (
     <main className="ic-main ic-report">
       <section className="ic-report-hero">
@@ -48,8 +54,43 @@ export default function FeedbackScreen({ report, onRetry, onPreparation, onReset
         <h2>{report.retryGoal}</h2>
       </section>
 
+      {report.retryQuestions?.length > 0 && (
+        <section className="ic-question-retries" aria-labelledby="retry-questions-title">
+          <div>
+            <span>FOCUSED RETRY</span>
+            <h2 id="retry-questions-title">Improve one answer without restarting</h2>
+            <p>Your original answer is preserved. The retry is scored as a new attempt against the same question.</p>
+          </div>
+          <div>
+            {report.retryQuestions.map((question) => (
+              <article key={question.questionId}>
+                <h3>{question.prompt}</h3>
+                <p>{question.reason}</p>
+                <details>
+                  <summary>Review original answer</summary>
+                  <p>{question.originalAnswer}</p>
+                  {question.latestAnswer && (
+                    <>
+                      <strong>Latest retry</strong>
+                      <p>{question.latestAnswer}</p>
+                    </>
+                  )}
+                </details>
+                <button
+                  className="ic-secondary-button"
+                  type="button"
+                  onClick={() => onRetryQuestion(question.questionId)}
+                >
+                  Retry this question
+                </button>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="ic-report-actions">
-        <button className="ic-primary-button" type="button" onClick={onRetry}>Retry {report.mode.toLowerCase()} →</button>
+        <button className="ic-primary-button" type="button" onClick={onRetry}>Start a new {report.mode.toLowerCase()} →</button>
         <button className="ic-secondary-button" type="button" onClick={onPreparation}>Return to preparation</button>
         <button className="ic-text-button" type="button" onClick={onReset}>Reset entire session</button>
       </section>

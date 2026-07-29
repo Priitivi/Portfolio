@@ -1,8 +1,13 @@
 import { useEffect, useRef, useState } from "react";
+import SpeechInput from "./SpeechInput.jsx";
+import SpeechPlayback from "./SpeechPlayback.jsx";
+import useSpeechSynthesis from "../hooks/useSpeechSynthesis.js";
 import { formatTimer } from "../utils/timer.js";
 
 export default function RoleplayScreen({
   roleplay,
+  settings,
+  notes,
   onSend,
   onDraftChange,
   onPause,
@@ -10,14 +15,22 @@ export default function RoleplayScreen({
   onRestartTimer,
   onEnd,
   onNotesChange,
+  onReadAloudChange,
 }) {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const feedRef = useRef(null);
   const inputRef = useRef(null);
   const formRef = useRef(null);
+  const previousMessageCountRef = useRef(0);
+  const speech = useSpeechSynthesis();
+  const speak = speech.speak;
   const { timer } = roleplay;
   const question = roleplay.draft || "";
+  const latestDuncanMessage = [...roleplay.messages]
+    .reverse()
+    .find((message) => message.role === "product-owner");
+  const latestDuncanText = latestDuncanMessage?.text || "";
 
   useEffect(() => {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -27,7 +40,21 @@ export default function RoleplayScreen({
     });
     setIsSubmitting(false);
     inputRef.current?.focus({ preventScroll: true });
-  }, [roleplay.messages.length]);
+    if (
+      previousMessageCountRef.current > 0
+      && roleplay.messages.length > previousMessageCountRef.current
+      && latestDuncanText
+      && settings.readAloud
+    ) {
+      speak(latestDuncanText);
+    }
+    previousMessageCountRef.current = roleplay.messages.length;
+  }, [
+    latestDuncanText,
+    roleplay.messages.length,
+    settings.readAloud,
+    speak,
+  ]);
 
   const submit = (event) => {
     event.preventDefault();
@@ -38,8 +65,18 @@ export default function RoleplayScreen({
       return;
     }
     setIsSubmitting(true);
+    speech.unlock();
     onSend(question);
     setError("");
+  };
+
+  const toggleReadAloud = (enabled) => {
+    onReadAloudChange(enabled);
+    if (enabled && latestDuncanMessage) {
+      speech.speak(latestDuncanMessage.text, { userInitiated: true });
+    } else if (!enabled) {
+      speech.stop();
+    }
   };
 
   return (
@@ -64,6 +101,27 @@ export default function RoleplayScreen({
           <button type="button" onClick={onRestartTimer}>Restart timer</button>
           <button type="button" onClick={onEnd}>End role-play</button>
         </div>
+        <div className="ic-roleplay-speech">
+          <label>
+            <input
+              type="checkbox"
+              checked={settings.readAloud}
+              onChange={(event) => toggleReadAloud(event.target.checked)}
+            />
+            <span>Read Duncan aloud</span>
+          </label>
+          <SpeechPlayback
+            supported={speech.supported}
+            speaking={speech.speaking}
+            paused={speech.paused}
+            error={speech.error}
+            onReplay={() => speech.speak(latestDuncanMessage?.text, { userInitiated: true })}
+            onPause={speech.pause}
+            onResume={speech.resume}
+            onStop={speech.stop}
+            label="Replay Duncan"
+          />
+        </div>
         {timer.expired && (
           <p className="ic-time-message" role="status">Ten minutes have elapsed. Continue and finish your conversation when ready; nothing has been lost.</p>
         )}
@@ -73,6 +131,16 @@ export default function RoleplayScreen({
             <article className={`ic-message is-${message.role}`} key={message.id}>
               <span>{message.role === "candidate" ? "You" : "Duncan"}</span>
               <p>{message.text}</p>
+              {message.role === "product-owner" && (
+                <button
+                  className="ic-message-replay"
+                  type="button"
+                  onClick={() => speech.speak(message.text, { userInitiated: true })}
+                  aria-label="Replay this Duncan response aloud"
+                >
+                  Replay
+                </button>
+              )}
             </article>
           ))}
         </div>
@@ -112,6 +180,12 @@ export default function RoleplayScreen({
               {isSubmitting ? "Sending…" : "Send →"}
             </button>
           </div>
+          <SpeechInput
+            value={question}
+            onChange={onDraftChange}
+            idPrefix="roleplay-question"
+            handsFree={settings.handsFree}
+          />
           <p id="roleplay-note">Press Enter to send or Shift+Enter for a new line. Duncan stays in role and answers only what you ask.</p>
           {error && <p className="ic-form-error" id="roleplay-error" role="alert">{error}</p>}
         </form>
@@ -127,7 +201,7 @@ export default function RoleplayScreen({
           <span className="ic-sidebar-label">PRIVATE SCRATCHPAD</span>
           <textarea
             rows="9"
-            value={roleplay.notes}
+            value={notes}
             onChange={(event) => onNotesChange(event.target.value)}
             placeholder="Capture facts, assumptions and open questions…"
           />
