@@ -4,33 +4,42 @@ import { formatTimer } from "../utils/timer.js";
 export default function RoleplayScreen({
   roleplay,
   onSend,
+  onDraftChange,
   onPause,
   onResume,
   onRestartTimer,
   onEnd,
   onNotesChange,
 }) {
-  const [question, setQuestion] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const feedRef = useRef(null);
   const inputRef = useRef(null);
+  const formRef = useRef(null);
   const { timer } = roleplay;
+  const question = roleplay.draft || "";
 
   useEffect(() => {
-    feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight, behavior: "smooth" });
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    feedRef.current?.scrollTo({
+      top: feedRef.current.scrollHeight,
+      behavior: reduceMotion ? "auto" : "smooth",
+    });
+    setIsSubmitting(false);
+    inputRef.current?.focus({ preventScroll: true });
   }, [roleplay.messages.length]);
 
   const submit = (event) => {
     event.preventDefault();
+    if (isSubmitting) return;
     if (!question.trim()) {
       setError("Ask Duncan a specific question before sending.");
       inputRef.current?.focus();
       return;
     }
+    setIsSubmitting(true);
     onSend(question);
-    setQuestion("");
     setError("");
-    inputRef.current?.focus();
   };
 
   return (
@@ -68,8 +77,9 @@ export default function RoleplayScreen({
           ))}
         </div>
 
-        <form className="ic-chat-form" onSubmit={submit}>
+        <form className="ic-chat-form" onSubmit={submit} ref={formRef} aria-busy={isSubmitting}>
           <label htmlFor="roleplay-question">Ask Duncan</label>
+          <p className="ic-natural-language-hint">Ask naturally — you do not need to use an exact phrase.</p>
           <div>
             <textarea
               ref={inputRef}
@@ -77,16 +87,32 @@ export default function RoleplayScreen({
               rows="3"
               value={question}
               onChange={(event) => {
-                setQuestion(event.target.value);
+                onDraftChange(event.target.value);
                 if (error) setError("");
+              }}
+              onKeyDown={(event) => {
+                if (
+                  event.key === "Enter"
+                  && !event.shiftKey
+                  && !event.nativeEvent.isComposing
+                ) {
+                  event.preventDefault();
+                  formRef.current?.requestSubmit();
+                }
               }}
               placeholder="Ask one focused discovery question…"
               aria-describedby={error ? "roleplay-error" : "roleplay-note"}
               autoFocus
             />
-            <button className="ic-primary-button" type="submit">Send →</button>
+            <button
+              className="ic-primary-button"
+              type="submit"
+              disabled={!question.trim() || isSubmitting}
+            >
+              {isSubmitting ? "Sending…" : "Send →"}
+            </button>
           </div>
-          <p id="roleplay-note">Duncan answers only the detected question. He will not suggest what to ask next.</p>
+          <p id="roleplay-note">Press Enter to send or Shift+Enter for a new line. Duncan stays in role and answers only what you ask.</p>
           {error && <p className="ic-form-error" id="roleplay-error" role="alert">{error}</p>}
         </form>
       </section>

@@ -1,16 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { mockProgress } from "../utils/questionProgression.js";
 
-export default function MockInterviewScreen({ mock, onSubmit, onEnd, onPreparation }) {
-  const [answer, setAnswer] = useState("");
+export default function MockInterviewScreen({ mock, onSubmit, onEnd, onDraftChange, onPreparation }) {
   const [error, setError] = useState("");
   const textareaRef = useRef(null);
+  const answer = mock.draft || "";
   const question = mock.queue[mock.currentIndex];
   const progress = mockProgress(mock);
   const progressPercent = Math.round((progress.completed / progress.total) * 100);
 
   useEffect(() => {
-    setAnswer("");
     setError("");
     textareaRef.current?.focus();
   }, [mock.currentIndex]);
@@ -51,7 +50,7 @@ export default function MockInterviewScreen({ mock, onSubmit, onEnd, onPreparati
               id="mock-answer"
               value={answer}
               onChange={(event) => {
-                setAnswer(event.target.value);
+                onDraftChange(event.target.value);
                 if (error) setError("");
               }}
               placeholder="Type your response as you would give it in the interview…"

@@ -118,6 +118,9 @@ export default function InterviewCoach({ navigate }) {
             text: "Hi, thanks for meeting with me. Where would you like to start?",
           }],
           coveredIntents: [],
+          turns: [],
+          draft: "",
+          turnCounter: 0,
           notes: "",
           timer: { ...createTimerState(), running: true },
         },
@@ -162,19 +165,49 @@ export default function InterviewCoach({ navigate }) {
   };
 
   const sendRoleplayQuestion = (question) => {
-    const match = matchRoleplayResponse(question);
-    updateSession((current) => ({
-      ...current,
-      roleplay: {
-        ...current.roleplay,
-        messages: [
-          ...current.roleplay.messages,
-          { id: `candidate-${Date.now()}`, role: "candidate", text: question.trim() },
-          { id: `duncan-${Date.now()}`, role: "product-owner", text: match.response },
-        ],
-        coveredIntents: [...current.roleplay.coveredIntents, match.intent],
-      },
-    }));
+    updateSession((current) => {
+      const match = matchRoleplayResponse(question, current.roleplay);
+      const turnNumber = (current.roleplay.turnCounter || 0) + 1;
+      const coveredIntents = new Set(current.roleplay.coveredIntents || []);
+      match.answeredIntents.forEach((intent) => coveredIntents.add(intent));
+      const turn = {
+        id: `turn-${turnNumber}`,
+        primaryIntent: match.classification.primaryIntent,
+        secondaryIntents: match.classification.secondaryIntents,
+        topicId: match.classification.topicId,
+        confidence: match.classification.confidence,
+        contextUsed: match.classification.contextUsed,
+        clarificationNeeded: match.classification.clarificationNeeded,
+        clarificationType: match.classification.clarificationType,
+        referenceKind: match.classification.referenceKind,
+        responseId: match.responseId,
+        detailLevel: match.detailLevel,
+        sourceRefs: match.sourceRefs,
+      };
+
+      return {
+        ...current,
+        roleplay: {
+          ...current.roleplay,
+          messages: [
+            ...current.roleplay.messages,
+            { id: `candidate-${turnNumber}`, role: "candidate", text: question.trim(), turnId: turn.id },
+            {
+              id: `duncan-${turnNumber}`,
+              role: "product-owner",
+              text: match.response,
+              turnId: turn.id,
+              intent: match.intent,
+              responseId: match.responseId,
+            },
+          ],
+          coveredIntents: [...coveredIntents],
+          turns: [...(current.roleplay.turns || []), turn],
+          draft: "",
+          turnCounter: turnNumber,
+        },
+      };
+    });
   };
 
   const updateRoleplayTimer = (updater) => {
@@ -221,6 +254,10 @@ export default function InterviewCoach({ navigate }) {
         mock={session.mock}
         onSubmit={submitMockAnswer}
         onEnd={endMock}
+        onDraftChange={(draft) => updateSession((current) => ({
+          ...current,
+          mock: { ...current.mock, draft },
+        }))}
         onPreparation={() => updateSession((current) => ({ ...current, screen: "prepare" }))}
       />
     );
@@ -229,6 +266,10 @@ export default function InterviewCoach({ navigate }) {
       <RoleplayScreen
         roleplay={session.roleplay}
         onSend={sendRoleplayQuestion}
+        onDraftChange={(draft) => updateSession((current) => ({
+          ...current,
+          roleplay: { ...current.roleplay, draft },
+        }))}
         onPause={() => updateRoleplayTimer((timer) => setTimerRunning(timer, false))}
         onResume={() => updateRoleplayTimer((timer) => setTimerRunning(timer, true))}
         onRestartTimer={() => updateRoleplayTimer(() => ({ ...createTimerState(), running: true }))}
