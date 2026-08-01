@@ -11,6 +11,7 @@ const FluidLab = lazy(() => import("./fluid-lab/FluidLab"));
 const ShortcutLab = lazy(() => import("./shortcut-lab/ShortcutLab"));
 const DeceptiveTrial = lazy(() => import("./deceptive-trial/DeceptiveTrial"));
 const InterviewCoach = lazy(() => import("./interview-coach/InterviewCoach"));
+const SimCosyCorner = lazy(() => import("./sim-cosy-corner/SimCosyCorner"));
 const chamberRoutes = new Set(experiments.map((experiment) => experiment.route));
 
 function normalizePath(pathname) {
@@ -144,6 +145,14 @@ export default function LabApp() {
     return (
       <Suspense fallback={<main className="lab-boot" role="status"><div className="lab-scanlines" aria-hidden="true" /><span>EXPERIMENT 006</span><strong>PREPARING INTERVIEW WORKSPACE…</strong><i /></main>}>
         <InterviewCoach navigate={navigate} />
+      </Suspense>
+    );
+  }
+
+  if (pathname === "/lab/sim-cosy-corner") {
+    return (
+      <Suspense fallback={<main className="lab-boot" role="status"><div className="lab-scanlines" aria-hidden="true" /><span>EXPERIMENT 007</span><strong>OPENING THE SCRAPBOOK…</strong><i /></main>}>
+        <SimCosyCorner navigate={navigate} />
       </Suspense>
     );
   }

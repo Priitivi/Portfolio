@@ -56,4 +56,14 @@ export const experiments = [
     route: "/lab/interview-coach",
     signals: ["Structured preparation", "Deterministic role-play", "Local session only", "Practice feedback"],
   },
+  {
+    id: "sim-cosy-corner",
+    experimentNumber: "007",
+    title: "Sim’s Cosy Corner",
+    status: "Private preview",
+    description: "A lavender scrapbook for cosy hobbies, alcohol-marker notes, pastel palettes and original Pokopia build plans.",
+    route: "/lab/sim-cosy-corner",
+    preview: "cosy",
+    signals: ["Lavender Daydream", "Local-first journal", "Accessible scrapbook", "Concept build book"],
+  },
 ];

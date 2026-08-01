@@ -131,6 +131,14 @@
 .lab-trial-player b { position:absolute; top:-.3rem; right:.1rem; width:.9rem; height:.7rem; border-radius:50% 50% 20% 20%; background:#bb5748; }
 .lab-trial-door { position:absolute; z-index:2; right:12%; bottom:3.4rem; width:1.7rem; height:2.8rem; border:.18rem solid #d7a94e; border-radius:.85rem .85rem .1rem .1rem; background:#20252c; box-shadow:0 0 1.4rem rgba(215,169,78,.32); }
 .lab-card-preview-trial span { color:#f0d79f; }
+.lab-card-preview-cosy { border-color:rgba(201,182,228,.75); background:radial-gradient(circle at 80% 18%,rgba(255,255,255,.58),transparent 18%),linear-gradient(135deg,#dac8e8,#f2d8df); color:#46354f; }
+.lab-card-preview-cosy::after { background:linear-gradient(135deg,rgba(255,255,255,.12),rgba(71,50,81,.12)); }
+.lab-cosy-book { position:absolute; z-index:2; right:11%; bottom:8%; width:48%; height:70%; border:1px solid #695278; border-radius:.25rem .75rem .7rem .25rem; background:#9b7db6; box-shadow:-.35rem .35rem 0 #74588d; color:#fffaf0; transform:rotate(-6deg); }
+.lab-cosy-book::before { content:""; position:absolute; top:0; bottom:0; left:.55rem; border-left:1px dashed rgba(255,255,255,.42); }
+.lab-cosy-book i { position:absolute; right:.65rem; bottom:.55rem; font-size:1.4rem; font-style:normal; }.lab-cosy-book strong { position:absolute; top:.6rem; left:1.3rem; font:900 .58rem/.9 Georgia,serif; letter-spacing:-.02em; }
+.lab-cosy-note { position:absolute; z-index:3; top:16%; left:8%; width:39%; background:#f3db91; padding:.65rem .35rem; font:italic 700 .48rem/1.25 Georgia,serif; text-align:center; transform:rotate(5deg); }
+.lab-cosy-swatches { position:absolute; z-index:4; bottom:10%; left:7%; display:flex; gap:.2rem; }.lab-cosy-swatches i { position:static; width:.72rem; height:.72rem; border:1px solid rgba(60,44,69,.35); border-radius:50%; background:#a98cc4; filter:none; opacity:1; animation:none; }.lab-cosy-swatches i:nth-child(2) { background:#e8bdc8; }.lab-cosy-swatches i:nth-child(3) { background:#b7c9a8; }.lab-cosy-swatches i:nth-child(4) { background:#bad4e3; }
+.lab-card-preview-cosy>span { color:#584263; }
 .lab-experiment-card.has-preview h3,.lab-experiment-card.has-preview>p,.lab-experiment-card.has-preview>ul { max-width:50%; }
 @keyframes lab-fluid-preview { to { border-radius:64% 36% 32% 68%; transform:translate(3.5rem,1.5rem) rotate(35deg) scale(1.18); } }
 .lab-experiment-empty { grid-column:1/-1; min-height:18rem; display:flex; flex-direction:column; justify-content:flex-end; background:repeating-linear-gradient(135deg,#0b0c10 0 1.2rem,#0e1015 1.2rem 2.4rem); }
