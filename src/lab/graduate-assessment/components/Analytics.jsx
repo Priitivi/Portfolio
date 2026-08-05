@@ -12,12 +12,16 @@ export default function Analytics({ progress, onStart }) {
   const mastery = topicMastery(progress);
   const weakest = mastery.slice(0, 5);
   const readiness = estimatedReadiness(progress);
+  const isReadinessAssessed = readiness !== null;
   const categoryRows = assessmentCategories.map((category) => ({ ...category, stats: progress.byCategory[category.id] }));
   return (
     <main className="ga-main ga-analytics">
       <section className="ga-page-title"><p className="ga-kicker">PERFORMANCE INTELLIGENCE</p><h1>Read the signal, not the noise.</h1><p>Use accuracy, pace, breadth and topic-level evidence to decide where the next practice minute will matter most.</p></section>
       <section className="ga-analytics-summary">
-        <article className="ga-readiness-card"><div><span>PRACTICE READINESS ESTIMATE</span><strong>{readiness}<small>/100</small></strong><p>{progress.totals.attempted < 20 ? "Early heuristic—complete more categories before drawing conclusions." : "A non-validated estimate from your locally stored practice history."}</p></div><div className="ga-readiness-scale"><i style={{ width: `${readiness}%` }} /><span style={{ left: `${readiness}%` }} /></div><footer><small>LIMITED</small><small>BUILDING</small><small>STRONG EVIDENCE</small></footer></article>
+        <article className={`ga-readiness-card${isReadinessAssessed ? "" : " is-empty"}`} aria-label={isReadinessAssessed ? `Practice readiness estimate ${readiness} percent` : "Practice readiness not assessed yet"}>
+          <div><span>PRACTICE READINESS ESTIMATE</span><strong>{isReadinessAssessed ? <>{readiness}<small>/100</small></> : "Not assessed yet"}</strong><p>{isReadinessAssessed ? (progress.totals.attempted < 20 ? "Early heuristic—complete more categories before drawing conclusions." : "A non-validated estimate from your locally stored practice history.") : "Complete a practice session to generate your readiness estimate."}</p></div>
+          {isReadinessAssessed && <><div className="ga-readiness-scale"><i style={{ width: `${readiness}%` }} /><span style={{ left: `${readiness}%` }} /></div><footer><small>LIMITED</small><small>BUILDING</small><small>STRONG EVIDENCE</small></footer></>}
+        </article>
         <article><span>REASONING ACCURACY</span><strong>{accuracy(progress.totals)}%</strong><small>{progress.totals.correct} correct reasoning answers</small></article>
         <article><span>AVG. RESPONSE</span><strong>{responseTime(progress.totals)}s</strong><small>Across reasoning questions</small></article>
         <article><span>BEST STREAK</span><strong>{progress.bestAnswerStreak}</strong><small>Consecutive correct answers</small></article>

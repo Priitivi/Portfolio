@@ -57,6 +57,7 @@
 .ga-hero-copy>p:not(.ga-kicker) { max-width:37rem; margin:1.5rem 0 0; color:#a9a9a9; font-size:clamp(.9rem,1.3vw,1.05rem); line-height:1.65; }
 .ga-hero-actions { display:flex; flex-wrap:wrap; gap:.7rem; margin-top:2rem; }
 .ga-readiness { position:relative; z-index:1; display:grid; justify-items:center; gap:1.4rem; padding-left:2rem; text-align:center; }
+.ga-readiness.is-empty { grid-template-columns:1fr; align-content:center; }
 .ga-readiness-ring,.ga-score-ring { display:grid; width:12rem; height:12rem; place-items:center; border-radius:50%; background:conic-gradient(var(--ga-yellow) var(--readiness),#292929 0); }
 .ga-readiness-ring::before,.ga-score-ring::before { content:""; grid-area:1/1; width:calc(100% - 14px); height:calc(100% - 14px); border-radius:inherit; background:#141414; }
 .ga-readiness-ring>span,.ga-score-ring>span { position:relative; grid-area:1/1; display:flex; align-items:baseline; }
@@ -308,6 +309,7 @@
 .ga-analytics-summary>article { min-height:10rem; background:#111; padding:1.3rem; }
 .ga-analytics-summary>article>strong { display:block; margin:.8rem 0 .3rem; font-size:2.4rem; letter-spacing:-.06em; }
 .ga-readiness-card { grid-row:span 1; }
+.ga-readiness-card.is-empty { display:grid; align-content:center; }
 .ga-readiness-card>div:first-child>strong { display:block; margin:.6rem 0; font-size:2.8rem; letter-spacing:-.07em; }
 .ga-readiness-card strong small { color:#929292; font-size:.7rem; }
 .ga-readiness-card p { margin:0; color:#929292; font-size:.6rem; }

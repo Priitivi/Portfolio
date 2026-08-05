@@ -19,6 +19,7 @@ function formatRelativeDate(value) {
 
 export default function Dashboard({ progress, onStart }) {
   const readiness = estimatedReadiness(progress);
+  const isReadinessAssessed = readiness !== null;
   const recommendations = getRecommendations(progress);
   const heatmap = heatmapDays(progress.practiceDates);
   const streak = dailyStreak(progress.practiceDates);
@@ -36,9 +37,9 @@ export default function Dashboard({ progress, onStart }) {
             <button type="button" className="ga-button ga-button-ghost" onClick={() => onStart("numerical")}>Quick numerical set</button>
           </div>
         </div>
-        <div className="ga-readiness" aria-label={`Practice readiness estimate ${readiness} percent`}>
-          <div className="ga-readiness-ring" style={{ "--readiness": `${readiness * 3.6}deg` }}><span><strong>{readiness}</strong><small>/ 100</small></span></div>
-          <div><small>PRACTICE READINESS ESTIMATE</small><strong>{readiness < 35 ? "Building foundations" : readiness < 70 ? "Gaining momentum" : "Strong practice evidence"}</strong><p>A local heuristic based on breadth, accuracy and practice volume—not a validated or hiring prediction.</p></div>
+        <div className={`ga-readiness${isReadinessAssessed ? "" : " is-empty"}`} aria-label={isReadinessAssessed ? `Practice readiness estimate ${readiness} percent` : "Practice readiness not assessed yet"}>
+          {isReadinessAssessed && <div className="ga-readiness-ring" style={{ "--readiness": `${readiness * 3.6}deg` }}><span><strong>{readiness}</strong><small>/ 100</small></span></div>}
+          <div><small>PRACTICE READINESS ESTIMATE</small><strong>{isReadinessAssessed ? (readiness < 35 ? "Building foundations" : readiness < 70 ? "Gaining momentum" : "Strong practice evidence") : "Not assessed yet"}</strong><p>{isReadinessAssessed ? "A local heuristic based on breadth, accuracy and practice volume—not a validated or hiring prediction." : "Complete a practice session to generate your readiness estimate."}</p></div>
         </div>
       </section>
 

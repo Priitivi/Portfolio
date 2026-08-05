@@ -80,7 +80,7 @@ The payload stores:
 
 Session IDs make recording idempotent, including under React Strict Mode or duplicate event delivery. Load-time sanitisation clamps numeric fields, removes unknown categories and achievements, validates dates, deduplicates activity and bounds retained arrays. Storage failures leave the current session usable, but progress becomes temporary.
 
-Topic mastery combines accuracy, response pace, evidence volume and recent trend. Recommendations first create missing category baselines, then prioritise limited evidence, low mastery or strong-but-slow topics. The readiness estimate combines evidence volume, breadth and quality, deliberately resisting a high score from a single attempt. It is educational, bounded and explicitly non-validated; it is not a prediction of hiring outcomes.
+Topic mastery combines accuracy, response pace, evidence volume and recent trend. Recommendations first create missing category baselines, then prioritise limited evidence, low mastery or strong-but-slow topics. Readiness remains “Not assessed yet” until one completed reasoning or interview session has produced category evidence; progress is only recorded on completion, so this is the first shared meaningful-evidence boundary across all modes. After that threshold, the estimate combines evidence volume, breadth and quality and applies its bounded minimum, deliberately resisting overconfidence from limited evidence. It is educational and explicitly non-validated; it is not a prediction of hiring outcomes.
 
 ## Adding a question pack
 

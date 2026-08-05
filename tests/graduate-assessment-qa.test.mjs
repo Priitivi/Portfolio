@@ -21,12 +21,15 @@ import {
   supportsSpeechRecognition,
 } from "../src/lab/graduate-assessment/engine/speech.js";
 import {
+  MIN_READINESS_SESSIONS,
   PROGRESS_VERSION,
   accuracy,
   categoryPerformance,
   createInitialProgress,
   dailyStreak,
   estimatedReadiness,
+  getRecommendations,
+  hasReadinessEvidence,
   loadProgress,
   recordInterviewAnswer,
   recordPracticeSession,
@@ -245,10 +248,23 @@ test("response time, mastery and recommendations retain evidence quality", () =>
   assert.equal(topicMastery(improving)[0].trend, "improving");
 });
 
-test("the practice readiness estimate resists single-attempt overconfidence", () => {
+test("readiness requires a completed session and resists limited-evidence overconfidence", () => {
   const empty = createInitialProgress();
-  const onePerfect = recordPracticeSession(empty, practiceSession("single", [{ correct: true, seconds: 20 }])).progress;
-  assert.equal(estimatedReadiness(empty), 8);
+  const uncompletedEvidence = createInitialProgress();
+  uncompletedEvidence.totals.attempted = 4;
+  uncompletedEvidence.totals.correct = 4;
+  uncompletedEvidence.byCategory.numerical.attempted = 4;
+  uncompletedEvidence.byCategory.numerical.correct = 4;
+  const onePerfect = recordPracticeSession(empty, practiceSession("single", [{ correct: true, seconds: 20 }, { correct: true, seconds: 20 }])).progress;
+  assert.equal(MIN_READINESS_SESSIONS, 1);
+  assert.equal(hasReadinessEvidence(empty), false);
+  assert.equal(hasReadinessEvidence(uncompletedEvidence), false);
+  assert.equal(estimatedReadiness(empty), null);
+  assert.equal(estimatedReadiness(uncompletedEvidence), null);
+  assert.match(getRecommendations(empty)[0].reason, /Complete a practice session to generate your readiness estimate\./);
+  assert.equal(hasReadinessEvidence(onePerfect), true);
+  assert.equal(typeof estimatedReadiness(onePerfect), "number");
+  assert.ok(estimatedReadiness(onePerfect) >= 8, "the assessed-state floor applies after the evidence threshold");
   assert.ok(estimatedReadiness(onePerfect) < 25);
   let broad = createInitialProgress();
   for (const [index, category] of ["numerical", "verbal", "logical", "situational"].entries()) {

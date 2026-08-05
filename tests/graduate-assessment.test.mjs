@@ -6,10 +6,12 @@ import { graduateCorePack, interviewQuestions, numericalTopics } from "../src/la
 import { analyseInterviewAnswer } from "../src/lab/graduate-assessment/engine/interview.js";
 import { createPracticeSession, isCorrectAnswer, verbalOptions } from "../src/lab/graduate-assessment/engine/questions.js";
 import {
+  MIN_READINESS_SESSIONS,
   accuracy,
   PROGRESS_VERSION,
   createInitialProgress,
   estimatedReadiness,
+  hasReadinessEvidence,
   heatmapDays,
   loadProgress,
   recordInterviewAnswer,
@@ -97,6 +99,9 @@ test("interview analysis rewards structured, specific first-person evidence", ()
 test("interview practice contributes to readiness and camera-ready progression", () => {
   let progress = createInitialProgress();
   const baseline = estimatedReadiness(progress);
+  assert.equal(MIN_READINESS_SESSIONS, 1);
+  assert.equal(hasReadinessEvidence(progress), false);
+  assert.equal(baseline, null);
   for (let index = 0; index < 3; index += 1) {
     progress = recordInterviewAnswer(progress, {
       id: `interview-${index}`,
@@ -109,15 +114,23 @@ test("interview practice contributes to readiness and camera-ready progression",
   }
   assert.equal(progress.interviewAnswers, 3);
   assert.ok(progress.unlocked.includes("camera-ready"));
-  assert.ok(estimatedReadiness(progress) > baseline);
+  assert.equal(hasReadinessEvidence(progress), true);
+  assert.equal(typeof estimatedReadiness(progress), "number");
 });
 
 test("responsive and reduced-motion safeguards are present", async () => {
   const css = await readFile(new URL("../src/lab/graduate-assessment/graduate-assessment.css", import.meta.url), "utf8");
   const app = await readFile(new URL("../src/lab/graduate-assessment/GraduateAssessmentLab.jsx", import.meta.url), "utf8");
+  const dashboard = await readFile(new URL("../src/lab/graduate-assessment/components/Dashboard.jsx", import.meta.url), "utf8");
+  const analytics = await readFile(new URL("../src/lab/graduate-assessment/components/Analytics.jsx", import.meta.url), "utf8");
   assert.match(css, /@media \(max-width:420px\)/);
   assert.match(css, /@media \(prefers-reduced-motion:reduce\)/);
   assert.match(css, /:focus-visible/);
   assert.match(app, /ga-skip-link/);
   assert.match(app, /window\.localStorage/);
+  assert.match(dashboard, /Practice readiness not assessed yet/);
+  assert.match(dashboard, /Complete a practice session to generate your readiness estimate\./);
+  assert.match(dashboard, /isReadinessAssessed && <div className="ga-readiness-ring"/);
+  assert.match(analytics, /Practice readiness not assessed yet/);
+  assert.match(analytics, /isReadinessAssessed && <><div className="ga-readiness-scale"/);
 });

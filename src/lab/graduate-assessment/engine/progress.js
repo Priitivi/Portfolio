@@ -2,6 +2,9 @@ import { assessmentCategories } from "../data/packs.js";
 
 export const STORAGE_KEY = "priit-lab:graduate-assessment:v1";
 export const PROGRESS_VERSION = 2;
+// Progress is only recorded after a runner or interview completes. One completed
+// session is therefore the first meaningful evidence boundary across every mode.
+export const MIN_READINESS_SESSIONS = 1;
 const SESSION_ID_LIMIT = 200;
 const RECENT_TOPIC_LIMIT = 20;
 const categoryIds = new Set(assessmentCategories.map((category) => category.id));
@@ -305,7 +308,7 @@ export function getRecommendations(progress) {
   const unattempted = reasoning.filter((category) => !progress.byCategory[category.id]?.attempted);
   if (unattempted.length) {
     return [
-      { category: unattempted[0].id, title: `Set a ${unattempted[0].label.toLowerCase()} baseline`, reason: "No evidence yet. Start with a short Foundation set before interpreting readiness." },
+      { category: unattempted[0].id, title: `Set a ${unattempted[0].label.toLowerCase()} baseline`, reason: hasReadinessEvidence(progress) ? "This category has no evidence yet. Start with a short Foundation set." : "Complete a practice session to generate your readiness estimate." },
       progress.interviewAnswers < 1
         ? { category: "interview", title: "Add one interview rep", reason: "A transcript-based practice answer broadens the estimate beyond multiple-choice work." }
         : { category: unattempted[1]?.id || reasoning[0].id, title: "Broaden the evidence", reason: "An unpractised category currently limits the practice readiness estimate." },
@@ -329,9 +332,18 @@ export function getRecommendations(progress) {
   ];
 }
 
+export function hasReadinessEvidence(progress) {
+  const completedSessions = Math.max(
+    safeInteger(progress?.totals?.sessions),
+    Array.isArray(progress?.recentSessions) ? progress.recentSessions.length : 0,
+  );
+  const hasRecordedCategoryEvidence = assessmentCategories.some((category) => safeInteger(progress?.byCategory?.[category.id]?.attempted) > 0);
+  return completedSessions >= MIN_READINESS_SESSIONS && hasRecordedCategoryEvidence;
+}
+
 export function estimatedReadiness(progress) {
+  if (!hasReadinessEvidence(progress)) return null;
   const active = assessmentCategories.filter((category) => progress.byCategory[category.id]?.attempted > 0);
-  if (!active.length) return 8;
   const quality = active.reduce((sum, category) => sum + categoryPerformance(progress.byCategory[category.id], category.id), 0) / active.length;
   const breadth = active.length / assessmentCategories.length;
   const evidence = Math.min(1, (progress.totals.attempted + progress.interviewAnswers * 3) / 60);
