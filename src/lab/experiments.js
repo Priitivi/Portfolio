@@ -66,4 +66,13 @@ export const experiments = [
     preview: "cosy",
     signals: ["Lavender Daydream", "Local-first journal", "Accessible scrapbook", "Concept build book"],
   },
+  {
+    id: "graduate-assessment",
+    experimentNumber: "008",
+    title: "Graduate Assessment Lab",
+    status: "Practice ready",
+    description: "An adaptive preparation system for original numerical, verbal, logical, judgement and video interview practice.",
+    route: "/lab/graduate-assessment",
+    signals: ["5 practice modes", "Adaptive recommendations", "Local analytics", "Original content only"],
+  },
 ];
