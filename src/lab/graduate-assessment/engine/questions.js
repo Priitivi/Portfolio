@@ -1,4 +1,5 @@
-import { graduateCorePack, numericalTopics } from "../data/packs.js";
+import { numericalTopics } from "../data/catalog.js";
+import { graduateCorePack } from "../data/packs.js";
 import { alternateNumericalFactories } from "./numerical-expansion.js";
 
 export const answerLabels = ["A", "B", "C", "D"];
@@ -418,11 +419,12 @@ function normaliseSelectionContext(selectionContext = {}) {
     recentTemplateIds: new Set(Array.isArray(selectionContext.recentTemplateIds) ? selectionContext.recentTemplateIds : []),
     weakTopics: new Set(Array.isArray(selectionContext.weakTopics) ? selectionContext.weakTopics : []),
     unansweredTopics: new Set(Array.isArray(selectionContext.unansweredTopics) ? selectionContext.unansweredTopics : []),
+    focusTopics: new Set(Array.isArray(selectionContext.focusTopics) ? selectionContext.focusTopics : []),
   };
 }
 
 function topicPriority(topic, context) {
-  return (context.unansweredTopics.has(topic) ? 2 : 0) + (context.weakTopics.has(topic) ? 1 : 0);
+  return (context.focusTopics.has(topic) ? 6 : 0) + (context.unansweredTopics.has(topic) ? 2 : 0) + (context.weakTopics.has(topic) ? 1 : 0);
 }
 
 function createNumericalQuestions({ count, difficulty, random, selectionContext }) {
@@ -463,7 +465,8 @@ function selectAuthoredItems(items, count, random, selectionContext) {
       (context.recentQuestionIds.has(item.id) ? 0 : 100)
       + (context.recentPassageIds.has(passageId) ? 0 : 35)
       + (context.unansweredTopics.has(item.topic) ? 25 : 0)
-      + (context.weakTopics.has(item.topic) ? 15 : 0);
+      + (context.weakTopics.has(item.topic) ? 15 : 0)
+      + (context.focusTopics.has(item.topic) ? 60 : 0);
     return score(right, rightPassage) - score(left, leftPassage);
   });
   const selected = [];

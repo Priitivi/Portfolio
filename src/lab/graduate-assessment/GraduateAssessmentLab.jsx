@@ -1,15 +1,20 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import Analytics from "./components/Analytics.jsx";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import AssessmentHeader from "./components/AssessmentHeader.jsx";
 import Dashboard from "./components/Dashboard.jsx";
-import InterviewPractice from "./components/InterviewPractice.jsx";
-import Practice from "./components/Practice.jsx";
-import Simulation from "./components/Simulation.jsx";
 import { achievements, getSelectionContext, loadProgress, recordInterviewAnswer, recordPracticeSession, recordSimulationSession, STORAGE_KEY } from "./engine/progress.js";
-import { loadSimulationCheckpoint, SIMULATION_STORAGE_KEY } from "./engine/simulation.js";
+import { loadSimulationCheckpoint, SIMULATION_STORAGE_KEY } from "./engine/checkpoint.js";
 import "./graduate-assessment.css";
 
 const VALID_VIEWS = ["dashboard", "practice", "simulation", "interview", "analytics"];
+const VIEW_LABELS = { dashboard: "Dashboard", practice: "Practice setup", simulation: "Assessment simulation", interview: "Interview practice", analytics: "Analytics" };
+const Analytics = lazy(() => import("./components/Analytics.jsx"));
+const InterviewPractice = lazy(() => import("./components/InterviewPractice.jsx"));
+const Practice = lazy(() => import("./components/Practice.jsx"));
+const Simulation = lazy(() => import("./components/Simulation.jsx"));
+
+function ViewLoading() {
+  return <main className="ga-main ga-view-loading" aria-busy="true" aria-live="polite"><span>PREPARING WORKSPACE</span><strong>Loading your local practice view…</strong><i /></main>;
+}
 
 function AchievementToast({ achievement, onClose }) {
   if (!achievement) return null;
@@ -25,7 +30,7 @@ function AchievementToast({ achievement, onClose }) {
 export default function GraduateAssessmentLab({ navigate }) {
   const initialHash = window.location.hash.replace("#", "");
   const [view, setView] = useState(VALID_VIEWS.includes(initialHash) ? initialHash : "dashboard");
-  const [practiceCategory, setPracticeCategory] = useState("numerical");
+  const [practiceConfig, setPracticeConfig] = useState({ category: "numerical", nonce: 0 });
   const [progress, setProgress] = useState(() => {
     try { return loadProgress(window.localStorage.getItem(STORAGE_KEY)); } catch { return loadProgress(null); }
   });
@@ -87,13 +92,19 @@ export default function GraduateAssessmentLab({ navigate }) {
     window.scrollTo({ top: 0, behavior: "instant" });
   };
 
-  const startPractice = (category) => {
-    if (category === "interview") {
+  const startPractice = (intent = "numerical") => {
+    const next = typeof intent === "string" ? { category: intent } : intent;
+    if (next.category === "interview") {
       navigateView("interview");
       return;
     }
-    setPracticeCategory(category || "numerical");
+    setPracticeConfig({ ...next, category: next.category || "numerical", nonce: Date.now() });
     navigateView("practice");
+  };
+
+  const navigateFromHeader = (nextView) => {
+    if (nextView === "practice") startPractice("numerical");
+    else navigateView(nextView);
   };
 
   const completePractice = (session) => {
@@ -120,13 +131,16 @@ export default function GraduateAssessmentLab({ navigate }) {
     <div className="ga-app">
       <a className="ga-skip-link" href="#ga-content" onClick={(event) => { event.preventDefault(); document.getElementById("ga-content")?.focus(); }}>Skip to content</a>
       <div className="ga-grid" aria-hidden="true" />
-      <AssessmentHeader view={view} onNavigate={navigateView} navigate={navigate} />
+      <AssessmentHeader view={view} onNavigate={navigateFromHeader} navigate={navigate} />
+      <p className="ga-sr-only" aria-live="polite">{VIEW_LABELS[view]} loaded</p>
       <div id="ga-content" tabIndex={-1}>
         {view === "dashboard" && <Dashboard progress={progress} hasSimulationCheckpoint={Boolean(simulationCheckpoint)} onStart={startPractice} onSimulation={() => navigateView("simulation")} />}
-        {view === "practice" && <Practice initialCategory={practiceCategory} selectionContext={selectionContext} onComplete={completePractice} onExit={() => navigateView("dashboard")} />}
-        {view === "simulation" && <Simulation checkpoint={simulationCheckpoint} selectionContext={selectionContext} onCheckpoint={saveSimulationCheckpoint} onComplete={completeSimulation} onExit={() => navigateView("dashboard")} />}
-        {view === "interview" && <InterviewPractice recentQuestionIds={selectionContext.recentQuestionIds} onComplete={completeInterview} onExit={() => navigateView("dashboard")} />}
-        {view === "analytics" && <Analytics progress={progress} onStart={startPractice} />}
+        {view !== "dashboard" && <Suspense fallback={<ViewLoading />}>
+          {view === "practice" && <Practice key={practiceConfig.nonce} initialConfig={practiceConfig} selectionContext={selectionContext} onComplete={completePractice} onExit={() => navigateView("dashboard")} />}
+          {view === "simulation" && <Simulation checkpoint={simulationCheckpoint} selectionContext={selectionContext} onCheckpoint={saveSimulationCheckpoint} onComplete={completeSimulation} onExit={() => navigateView("dashboard")} onPractice={startPractice} />}
+          {view === "interview" && <InterviewPractice recentQuestionIds={selectionContext.recentQuestionIds} onComplete={completeInterview} onExit={() => navigateView("dashboard")} />}
+          {view === "analytics" && <Analytics progress={progress} onStart={startPractice} />}
+        </Suspense>}
       </div>
       <footer className="ga-footer"><span>GRADUATE ASSESSMENT LAB</span><p>Original educational content · Local progress · No provider affiliation</p><button type="button" onClick={() => navigate("/lab")}>Return to Priit Lab ↑</button></footer>
       <AchievementToast achievement={achievementQueue[0]} onClose={() => setAchievementQueue((current) => current.slice(1))} />

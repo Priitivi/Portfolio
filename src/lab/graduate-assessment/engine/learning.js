@@ -56,6 +56,41 @@ export function learningSignal(question, answer, timingProfile = "standard") {
   };
 }
 
+export function answerReview(question, selected) {
+  const answer = Number(question?.answer);
+  const choice = Number(selected);
+  const correct = choice === answer;
+  const model = question?.category === "situational"
+    ? question?.optionDetails?.[answer]?.rationale || question?.explanation
+    : question?.explanation;
+  if (correct) return { model, selected: null };
+  if (choice < 0) return { model, selected: "No option was recorded before the time limit. Rebuild the method untimed, then repeat with pace." };
+  if (question?.category === "situational") {
+    return { model, selected: question?.optionDetails?.[choice]?.rationale || "This response creates a weaker balance of impact, ownership and proportionality." };
+  }
+  if (question?.category === "verbal") {
+    const labels = ["True", "False", "Cannot say"];
+    if (labels[answer] === "Cannot say") return { model, selected: "This choice goes beyond the passage. The missing evidence means neither True nor False is justified." };
+    if (labels[choice] === "Cannot say") return { model, selected: "The passage contains enough direct evidence to decide. Locate the exact sentence or comparison before classifying it." };
+    return { model, selected: "This choice reverses what the passage establishes. Match the statement to the exact evidence rather than its general topic." };
+  }
+  if (question?.category === "logical") return { model, selected: "The selected tile breaks at least one independent rule. Check count, rotation, fill and marker position separately before combining them." };
+  if (question?.category === "numerical") {
+    const misconceptionByTopic = {
+      percentages: "Check which value is the base, then distinguish a percentage change from a percentage-point difference.",
+      ratios: "Convert the whole into total ratio parts before finding one part or scaling a side.",
+      currency: "Write the units on both sides of the exchange rate so the direction of multiplication or division is explicit.",
+      tables: "Trace the requested row and column labels, then combine only the cells named in the question.",
+      charts: "Read the axis and series first, then calculate from the requested values rather than the nearest visual estimate.",
+      "profit-loss": "Separate revenue, variable cost and fixed cost, then use the denominator named in the question.",
+      averages: "Add the complete set and divide by its number of values; do not average partial averages without their weights.",
+      probability: "Define the favourable outcomes and the total outcomes, and use the complement only when it simplifies the event.",
+    };
+    return { model, selected: misconceptionByTopic[question?.topic] || "Recheck the units and operation order before comparing your result with the answer choices." };
+  }
+  return { model, selected: "This choice does not follow the evidence rule used by the model answer." };
+}
+
 export function sessionLearningSummary(questions, answers, timingProfile = "standard") {
   const paired = answers.map((answer, index) => ({ answer, question: questions[index] })).filter((item) => item.question);
   const timedOut = paired.filter(({ answer }) => Number(answer.selected) < 0).length;

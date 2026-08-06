@@ -1,4 +1,4 @@
-import { assessmentCategories, numericalTopics } from "../data/packs.js";
+import { assessmentCategories, numericalTopics } from "../data/catalog.js";
 import { adjustedSeconds } from "./timing.js";
 
 export const STORAGE_KEY = "priit-lab:graduate-assessment:v1";
@@ -6,6 +6,7 @@ export const PROGRESS_VERSION = 3;
 // Progress is only recorded after a runner or interview completes. One completed
 // session is therefore the first meaningful evidence boundary across every mode.
 export const MIN_READINESS_SESSIONS = 1;
+export const DAILY_PRACTICE_TARGET = 10;
 const SESSION_ID_LIMIT = 200;
 const RECENT_TOPIC_LIMIT = 20;
 const QUESTION_EXPOSURE_LIMIT = 160;
@@ -217,6 +218,46 @@ export function categoryPerformance(stats, category) {
 
 export function responseTime(stats) {
   return stats?.attempted ? Math.round(safeNumber(stats.totalTime) / safeNumber(stats.attempted)) : 0;
+}
+
+export function evidenceStrength(progress) {
+  const attempted = safeInteger(progress?.totals?.attempted) + safeInteger(progress?.interviewAnswers) * 3;
+  const sessions = safeInteger(progress?.totals?.sessions);
+  const breadth = assessmentCategories.filter((category) => safeInteger(progress?.byCategory?.[category.id]?.attempted) > 0).length;
+  if (!hasReadinessEvidence(progress)) return { label: "No evidence", level: "none", attempted, sessions, breadth };
+  if (attempted < 20 || sessions < 3 || breadth < 2) return { label: "Early evidence", level: "early", attempted, sessions, breadth };
+  if (attempted < 60 || sessions < 6 || breadth < 4) return { label: "Developing evidence", level: "developing", attempted, sessions, breadth };
+  return { label: "Broad evidence", level: "broad", attempted, sessions, breadth };
+}
+
+export function dailyPracticeGoal(progress, now = new Date(), target = DAILY_PRACTICE_TARGET) {
+  const safeTarget = Math.max(1, safeInteger(target, 100) || DAILY_PRACTICE_TARGET);
+  const completed = safeInteger(progress?.practiceDates?.[dateKey(now)], 10_000);
+  return {
+    target: safeTarget,
+    completed,
+    remaining: Math.max(0, safeTarget - completed),
+    percent: Math.min(100, Math.round(completed / safeTarget * 100)),
+    complete: completed >= safeTarget,
+  };
+}
+
+export function nextAchievementProgress(progress, now = new Date()) {
+  const activeCategories = assessmentCategories.filter((category) => safeInteger(progress?.byCategory?.[category.id]?.attempted) > 0).length;
+  const candidates = [
+    { id: "first-rep", current: Math.min(1, (progress?.recentSessions || []).some((item) => item.type !== "interview") ? 1 : 0), target: 1 },
+    { id: "century", current: Math.min(100, safeInteger(progress?.totals?.attempted)), target: 100 },
+    { id: "five-day", current: Math.min(5, dailyStreak(progress?.practiceDates || {}, now)), target: 5 },
+    { id: "all-rounder", current: Math.min(5, activeCategories), target: 5 },
+    { id: "camera-ready", current: Math.min(3, safeInteger(progress?.interviewAnswers)), target: 3 },
+    { id: "sharp-eye", current: Math.min(10, safeInteger(progress?.byCategory?.logical?.correct)), target: 10 },
+  ];
+  const next = candidates
+    .filter((candidate) => !progress?.unlocked?.includes(candidate.id))
+    .sort((left, right) => right.current / right.target - left.current / left.target)[0];
+  if (!next) return null;
+  const achievement = achievements.find((item) => item.id === next.id);
+  return { ...achievement, ...next, percent: Math.round(next.current / next.target * 100) };
 }
 
 function achievementIds(progress, referenceDate = new Date()) {
@@ -458,7 +499,11 @@ export function topicMastery(progress) {
       if (later > earlier) trend = "improving";
       if (later < earlier) trend = "declining";
     }
-    return { id, ...stats, accuracy: accuracy(stats), recentAccuracy: Math.round(recentAccuracy), averageTime: Math.round(averageSeconds), mastery, confidence: Math.round(confidence * 100), trend };
+    const targetTime = averageTarget === null ? null : Math.round(averageTarget);
+    const opportunity = recentAccuracy >= 70
+      ? averageTarget === null || averageSeconds <= averageTarget ? "accurate and fluent" : "accurate; build speed"
+      : averageTarget !== null && averageSeconds <= averageTarget ? "fast; verify the rule" : "rebuild the method";
+    return { id, ...stats, accuracy: accuracy(stats), recentAccuracy: Math.round(recentAccuracy), averageTime: Math.round(averageSeconds), targetTime, mastery, confidence: Math.round(confidence * 100), trend, opportunity };
   }).sort((left, right) => left.mastery - right.mastery || right.attempted - left.attempted);
 }
 
@@ -539,10 +584,10 @@ export function getRecommendations(progress, now = new Date()) {
   const unattempted = reasoning.filter((category) => !progress.byCategory[category.id]?.attempted);
   if (unattempted.length) {
     return [
-      { category: unattempted[0].id, title: `Set a ${unattempted[0].label.toLowerCase()} baseline`, reason: hasReadinessEvidence(progress) ? "This category has no evidence yet. Start with a short Foundation set." : "Complete a practice session to generate your readiness estimate." },
+      { category: unattempted[0].id, difficulty: "foundation", timingProfile: "untimed", questionCount: 4, title: `Set a ${unattempted[0].label.toLowerCase()} baseline`, reason: hasReadinessEvidence(progress) ? "This category has no evidence yet. Start with a short Foundation set." : "Complete a practice session to generate your readiness estimate. Start with a short untimed Foundation set." },
       progress.interviewAnswers < 1
         ? { category: "interview", title: "Add one interview rep", reason: "A transcript-based practice answer broadens the estimate beyond multiple-choice work." }
-        : { category: unattempted[1]?.id || reasoning[0].id, title: "Broaden the evidence", reason: "An unpractised category currently limits the practice readiness estimate." },
+        : { category: unattempted[1]?.id || reasoning[0].id, difficulty: "foundation", timingProfile: "untimed", questionCount: 4, title: "Broaden the evidence", reason: "An unpractised category currently limits the practice readiness estimate." },
     ];
   }
   const mastery = topicMastery(progress);
@@ -555,16 +600,24 @@ export function getRecommendations(progress, now = new Date()) {
   return [
     dueReview ? {
       category: dueReview.id.split(":")[0],
+      difficulty: dueReview.mastery >= 60 ? "standard" : "foundation",
+      timingProfile: dueReview.mastery >= 70 ? "standard" : "untimed",
+      questionCount: 4,
+      focusTopic: dueReview.id.split(":").slice(1).join(":"),
       title: `Review ${dueReview.id.split(":").slice(1).join(":").replaceAll("-", " ")}`,
       reason: `This topic is due after ${dueReview.daysSince} day${dueReview.daysSince === 1 ? "" : "s"}. A short retrieval set now is more useful than waiting for it to feel unfamiliar.`,
     } : {
       category: weakestCategory,
+      difficulty: limitedEvidence || accuracy(stats) < 60 ? "foundation" : "standard",
+      timingProfile: accuracy(stats) < 70 ? "untimed" : "standard",
+      questionCount: 4,
+      focusTopic: weakestTopic?.id.split(":").slice(1).join(":") || null,
       title: limitedEvidence ? "Gather more evidence" : `Revisit ${weakestCategory}`,
       reason: limitedEvidence ? "A single result is too fragile for a strong recommendation. Add a short set." : slow && accuracy(stats) >= 70 ? `Accuracy is ${accuracy(stats)}%, but average response time is ${responseTime(stats)}s. Practise the same rules with a measured pace target.` : `Current accuracy is ${accuracy(stats)}%. Use Foundation mode to isolate the rule before adding time pressure.`,
     },
     progress.interviewAnswers < 2
       ? { category: "interview", title: "Add a structured answer", reason: "Interview evidence is still limited; one more rep will make the practice profile broader." }
-      : { category: mastery[1]?.id.split(":")[0] || "verbal", title: "Protect breadth", reason: "Keep a second topic active instead of concentrating all practice in one area." },
+      : { category: mastery[1]?.id.split(":")[0] || "verbal", difficulty: "standard", timingProfile: "untimed", questionCount: 4, focusTopic: mastery[1]?.id.split(":").slice(1).join(":") || null, title: "Protect breadth", reason: "Keep a second topic active instead of concentrating all practice in one area." },
   ];
 }
 

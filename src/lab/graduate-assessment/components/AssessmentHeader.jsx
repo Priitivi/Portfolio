@@ -15,7 +15,7 @@ export default function AssessmentHeader({ view, onNavigate, navigate }) {
       </button>
       <nav aria-label="Assessment Lab navigation">
         {navItems.map((item) => (
-          <button key={item.id} type="button" className={view === item.id ? "is-active" : ""} onClick={() => onNavigate(item.id)}>
+          <button key={item.id} type="button" className={view === item.id ? "is-active" : ""} aria-current={view === item.id ? "page" : undefined} onClick={() => onNavigate(item.id)}>
             {item.label}
           </button>
         ))}

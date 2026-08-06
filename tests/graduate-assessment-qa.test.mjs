@@ -26,17 +26,21 @@ import {
   accuracy,
   categoryPerformance,
   createInitialProgress,
+  dailyPracticeGoal,
   dailyStreak,
+  evidenceStrength,
   estimatedReadiness,
   getRecommendations,
   hasReadinessEvidence,
   loadProgress,
+  nextAchievementProgress,
   recordInterviewAnswer,
   recordPracticeSession,
   responseTime,
   spacedReviewQueue,
   topicMastery,
 } from "../src/lab/graduate-assessment/engine/progress.js";
+import { answerReview } from "../src/lab/graduate-assessment/engine/learning.js";
 
 const difficulties = Object.keys(difficultySettings);
 
@@ -317,4 +321,50 @@ test("readiness requires a completed session and resists limited-evidence overco
   assert.ok(estimatedReadiness(broad) > estimatedReadiness(onePerfect));
   assert.ok(estimatedReadiness(broad) <= 99);
   assert.equal(accuracy(broad.totals), 100);
+});
+
+test("daily objectives, evidence labels and milestone progress remain derived from schema-v3 data", () => {
+  const now = new Date("2026-08-06T12:00:00.000Z");
+  const empty = createInitialProgress();
+  assert.deepEqual(dailyPracticeGoal(empty, now), { target: 10, completed: 0, remaining: 10, percent: 0, complete: false });
+  assert.equal(evidenceStrength(empty).label, "No evidence");
+  assert.equal(nextAchievementProgress(empty, now).id, "first-rep");
+
+  const recorded = recordPracticeSession(empty, practiceSession("daily-derived", Array.from({ length: 6 }, () => ({ correct: true, seconds: 30 })), "2026-08-06T10:00:00.000Z")).progress;
+  assert.deepEqual(dailyPracticeGoal(recorded, now), { target: 10, completed: 6, remaining: 4, percent: 60, complete: false });
+  assert.equal(evidenceStrength(recorded).level, "early");
+  assert.equal(nextAchievementProgress(recorded, now).id, "five-day");
+  assert.equal(recorded.version, PROGRESS_VERSION);
+});
+
+test("adaptive recommendations prescribe the practice setup they describe", () => {
+  const freshRecommendation = getRecommendations(createInitialProgress())[0];
+  assert.deepEqual(
+    { category: freshRecommendation.category, difficulty: freshRecommendation.difficulty, timingProfile: freshRecommendation.timingProfile, questionCount: freshRecommendation.questionCount },
+    { category: "numerical", difficulty: "foundation", timingProfile: "untimed", questionCount: 4 },
+  );
+
+  const completedAt = "2026-08-01T12:00:00.000Z";
+  let broad = createInitialProgress();
+  for (const [index, category] of ["numerical", "verbal", "logical", "situational"].entries()) {
+    broad = recordPracticeSession(broad, practiceSession(`intent-${index}`, Array.from({ length: 6 }, () => ({ correct: false, seconds: 30 })), completedAt, category)).progress;
+  }
+  const due = getRecommendations(broad, new Date("2026-08-04T12:00:00.000Z"))[0];
+  assert.equal(due.questionCount, 4);
+  assert.equal(due.focusTopic, "ratios");
+  assert.ok(["foundation", "standard"].includes(due.difficulty));
+  assert.ok(["untimed", "standard"].includes(due.timingProfile));
+});
+
+test("answer review separates model reasoning from the selected-answer misconception", () => {
+  const verbal = createPracticeSession({ category: "verbal", difficulty: "foundation", count: 2, seed: 4 })[0];
+  const wrongVerbal = verbal.answer === 2 ? 0 : 2;
+  const verbalReview = answerReview(verbal, wrongVerbal);
+  assert.ok(verbalReview.model.length > 30);
+  assert.match(verbalReview.selected, /passage|evidence/i);
+
+  const numerical = createNumericalQuestion({ topic: "ratios", difficulty: "standard", seed: 7 });
+  const numericalReview = answerReview(numerical, (numerical.answer + 1) % 4);
+  assert.match(numericalReview.selected, /ratio parts/);
+  assert.equal(answerReview(numerical, numerical.answer).selected, null);
 });

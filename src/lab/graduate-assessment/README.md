@@ -18,18 +18,23 @@ graduate-assessment/
 |   |-- Practice.jsx                # Setup, adjustable-pace practice, feedback, review
 |   |-- Simulation.jsx              # Multi-section assessments, checkpointing, end review
 |   |-- InterviewPractice.jsx       # Prep/answer timers, capture, transcript review
+|   |-- AnswerExplanation.jsx       # Model reasoning and selected-answer misconception
+|   |-- ReviewNavigator.jsx         # Accessible correct/review/timeout answer map
 |   |-- QuestionContent.jsx         # Shared tables, charts, passages, and SVG patterns
-|   `-- Analytics.jsx               # Category, mode, difficulty, topic, and exposure views
+|   `-- Analytics.jsx               # Evidence, mastery, trends, and practice history
 |-- data/
+|   |-- catalog.js                  # Lightweight category and numerical-topic metadata
 |   |-- packs.js                    # Core pack registry and original base content
 |   `-- content-expansion.js        # Expanded authored verbal, logical, SJT, interview content
 |-- engine/
 |   |-- questions.js                # Seeded assembly, selection, base numerical factories
 |   |-- numerical-expansion.js      # Second numerical template family
-|   |-- simulation.js               # Format definitions, assembly, checkpoint, result engine
+|   |-- simulation.js               # Format definitions, assembly, answer, and result engine
+|   |-- checkpoint.js               # Lightweight transient simulation validation and recovery
 |   |-- content-validation.js       # Pack inventory and authored-content contracts
 |   |-- learning.js                 # Formative topic, method, and pace feedback
 |   |-- progress.js                 # Schema migration, analytics, adaptivity, exposure memory
+|   |-- presentation.js             # Shared session labels and relative-date copy
 |   |-- timing.js                   # Shared standard, +50%, and untimed pace profiles
 |   |-- interview.js                # Transparent transcript-feedback heuristic
 |   `-- speech.js                   # Browser speech-recognition controller
@@ -45,7 +50,20 @@ The boundaries are deliberate:
 4. Runners report neutral completion records; the shell owns persistence.
 5. Content validation is separate from runtime selection, so new packs can be audited before use.
 
-Top-level views use URL hashes (`#dashboard`, `#practice`, `#simulation`, `#interview`, `#analytics`). Browser Back and Forward therefore restore the visible section without introducing a second router.
+Top-level views use URL hashes (`#dashboard`, `#practice`, `#simulation`, `#interview`, `#analytics`). Browser Back and Forward therefore restore the visible section without introducing a second router. Dashboard code loads with the route; Practice, Simulation, Interview, and Analytics are separate lazy chunks. The lightweight catalog keeps dashboard and progress calculations independent from the full authored question bank.
+
+## Product design principles
+
+The interface applies a small set of learning-product patterns without copying another product's layout, language, points economy, or visual system:
+
+- one achievable daily objective makes the next action concrete without punishing a missed day;
+- skill evidence and milestones show progress while keeping low-evidence estimates honest;
+- recommendations launch the exact topic, difficulty, pace, and session length they describe;
+- immediate feedback is reserved for formative practice, while simulations preserve end-only review;
+- review separates the model method from the learner's selected misconception;
+- retrieval prompts revisit evidenced topics on a transparent cadence instead of claiming calibrated memory prediction.
+
+Daily objectives, evidence labels, next milestones, and recommendations are derived from the existing local progress record. They introduce no new persistence fields or reward currency.
 
 ## Content inventory
 
@@ -69,11 +87,12 @@ The authored datasets are original. Verbal passages are self-contained; logical 
 
 Focused numerical selection:
 
-1. prioritises unanswered numerical topics;
-2. then prioritises topics with weaker mastery;
-3. avoids recently exposed operation template IDs where alternatives exist;
-4. avoids duplicate templates within the current session where possible;
-5. falls back deterministically when the requested pool is exhausted.
+1. honours an explicit recommendation topic when the learner accepts one;
+2. prioritises unanswered numerical topics;
+3. then prioritises topics with weaker mastery;
+4. avoids recently exposed operation template IDs where alternatives exist;
+5. avoids duplicate templates within the current session where possible;
+6. falls back deterministically when the requested pool is exhausted.
 
 Authored selection ranks stable items using the seed and then favours unseen question and passage IDs, weak topics, and unanswered topics. Verbal sessions avoid repeated passages. The strategy is freshness-aware, not random-only: local exposure memory guides the next session while deterministic tie-breaking keeps it testable.
 
@@ -89,7 +108,7 @@ setup -> question -> immediate rationale and learning signal -> results -> revie
 
 Foundation, Standard, and Advanced use distinct item pools and standard pace targets. Difficulty controls content complexity; it does not silently control whether the learner receives a time accommodation. The separate pace profile offers Assessment pace, +50% Extended pace, and Untimed learning. This lets a learner rehearse a method before introducing speed without changing the question pool or interpreting untimed work as on-pace performance.
 
-`availableQuestionCounts()` exposes only valid lengths. Practice records stable IDs, topics, choices, correctness, elapsed seconds, the optional pace profile, and relevant passage/template IDs; it never persists question or passage text. After each answer, `learningSignal()` pairs the authored rationale with a topic-specific strategy, an honest pace comparison when applicable, and one next action. These are formative prompts, not ability classifications.
+`availableQuestionCounts()` exposes only valid lengths. Practice records stable IDs, topics, choices, correctness, elapsed seconds, the optional pace profile, and relevant passage/template IDs; it never persists question or passage text. After each answer, `learningSignal()` pairs the authored rationale with a topic-specific strategy, an honest pace comparison when applicable, and one next action. `answerReview()` adds category-specific guidance about why the learner's selected option missed the model answer. These are formative prompts, not ability classifications. Results and review expose the same numbered status map, with text labels for correct, review, and timeout states.
 
 Situational practice identifies the strongest authored model response but explains every option. Copy deliberately describes trade-offs and model alignment rather than universal workplace truth.
 
@@ -125,7 +144,7 @@ Interview practice follows:
 setup -> preparation notes -> transcript capture -> transparent feedback
 ```
 
-Preparation notes and the answer transcript are separate. Only the transcript is analysed. Recently exposed prompt IDs are excluded where possible.
+Preparation notes and the answer transcript are separate. Only the transcript is analysed. The review places the private preparation plan beside the submitted transcript so the learner can compare intention with execution. Recently exposed prompt IDs are excluded where possible.
 
 Preparation and answer windows are adjustable, and an Untimed rehearsal option advances each phase manually. Typing is always available. If `SpeechRecognition` or `webkitSpeechRecognition` exists, the browser can append final recognition results. Unsupported browsers, permission denial, missing microphones, network errors, and recognition stops retain the typed fallback. The Lab neither records audio nor uploads transcripts.
 
@@ -156,7 +175,7 @@ Retained exposure is intentionally bounded to 160 question IDs, 80 passage IDs, 
 
 ## Analytics, mastery, and readiness
 
-Analytics report category accuracy/model alignment, average response time, topic mastery, mode performance, difficulty exposure, recent-session trend, and bounded exposure memory.
+Analytics report category accuracy/model alignment, average response time, topic mastery, evidence strength, mode performance, difficulty exposure, supported strengths, weakest opportunities, recent-session trend, and local practice history. Internal exposure memory continues to improve question selection but is not presented as a learner-facing performance measure.
 
 Topic mastery combines:
 
@@ -167,9 +186,13 @@ Topic mastery combines:
 
 Mastery begins at a neutral 50 and moves toward observed performance as evidence grows. Recommendations first fill missing category baselines, then use due retrieval checks, weak or limited-evidence topics, pace, and breadth.
 
+Each recommendation is an executable practice intent containing category, exact difficulty, pace profile, question count, and an optional topic focus. The Practice view displays that focus and passes it into the deterministic selector. Changing category manually clears an incompatible focus rather than silently applying it elsewhere.
+
+Evidence strength is a descriptive label based on completed sessions, reasoning/interview samples, and category breadth. Supported strengths require at least three attempts in a topic. Opportunity labels distinguish accuracy from pace, so an accurate learner is not told to relearn a method solely because responses are slow. The dashboard's ten-item daily objective and next-achievement progress are presentation-time derivations and never modify the saved schema.
+
 `spacedReviewQueue()` uses a deliberately simple educational cadence: topics below 60 mastery return after two days, topics from 60-74 after four days, and topics at 75 or above after seven days. It uses the same locally stored topic timestamps and does not add background jobs or notifications. The intervals are retrieval prompts, not a calibrated forgetting-curve or memory prediction.
 
-Readiness remains `Not assessed yet` until one completed reasoning, simulation, or interview session has produced meaningful category evidence. The existing minimum readiness floor applies only after this explicit threshold. Once assessed, the estimate combines evidence volume, category breadth, and observed quality. It is an educational practice estimate, not a scientifically validated prediction.
+Readiness remains `Not assessed yet` until one completed reasoning, simulation, or interview session has produced meaningful category evidence. `MIN_READINESS_SESSIONS = 1` documents this explicit threshold: completion is the first point at which a runner has produced reviewable evidence, whereas merely opening or abandoning a session is not evidence. The existing minimum readiness floor applies only after the threshold. Once assessed, the estimate combines evidence volume, category breadth, and observed quality. It is an educational practice estimate, not a scientifically validated prediction.
 
 ## Authored content and validation contracts
 
@@ -266,17 +289,17 @@ For a new numerical operation, calculate the raw key before display formatting, 
 
 ## Accessibility and performance
 
-The UI is keyboard-operable and mobile-first. It uses native controls, labels, text areas, tables, accessible inline SVG, `aria-pressed` for option groups, and named progress bars. Interactive targets are at least 44 CSS pixels. Focus has a visible yellow outline, and question transitions move focus to the new question card. Timers announce only meaningful 60-second, 15-second, and expiry thresholds; untimed modes provide a textual pace status instead of a fake clock. Colour is reinforced with text, symbols, and borders.
+The UI is keyboard-operable and mobile-first. It uses native controls, labelled answer groups, text areas, tables, accessible inline SVG, `aria-pressed` for option groups, `aria-current` for Lab navigation, a polite route announcement, and named progress bars. Interactive targets are at least 44 CSS pixels. Focus has a visible yellow outline; question, review, preparation, response, and interview-review transitions hand focus to the new task context. Timers announce only meaningful 60-second, 15-second, and expiry thresholds; untimed modes provide a textual pace status instead of a fake clock. Review status never relies on colour alone.
 
-Narrow analytics rows become labelled cards; visual sequences use a contained horizontal scroller. `prefers-reduced-motion` reduces animations and transitions. There are no external fonts, images, scoring APIs, or analytics dependencies, and the route remains lazy-loaded.
+Narrow analytics rows become labelled cards; visual sequences and review maps use contained horizontal scrollers. `prefers-reduced-motion` reduces animations, transitions, and loading indicators. There are no external fonts, images, scoring APIs, or analytics dependencies. The route and its secondary views are lazy-loaded, while shared metadata lives in the small catalog module so opening the dashboard does not evaluate the full content bank.
 
 ## Tests and release validation
 
 The feature suites are:
 
 - `tests/graduate-assessment.test.mjs`: route isolation, pack contracts, deterministic sessions, persistence, achievements, adaptivity, responsive hooks, and reduced motion.
-- `tests/graduate-assessment-qa.test.mjs`: 4,800 independently recalculated numerical generations, duplicate checks, exact difficulty pools, content integrity, speech fallbacks, timer helpers, migration sanitisation, idempotency, streaks, mastery trends, spacing, timing-profile persistence, and readiness confidence.
-- `tests/graduate-assessment-simulation.test.mjs`: expanded inventory/balance, multi-seed deterministic simulation assembly, duplicate protection, checkpoint recovery across every pace profile, formative learning signals, result aggregation, v1/v2/v3 migration, exposure-aware selection, and UI accessibility contracts.
+- `tests/graduate-assessment-qa.test.mjs`: 4,800 independently recalculated numerical generations, duplicate checks, exact difficulty pools, content integrity, speech fallbacks, timer helpers, migration sanitisation, idempotency, streaks, mastery trends, spacing, timing-profile persistence, readiness confidence, derived daily/milestone states, recommendation intents, and answer-review misconceptions.
+- `tests/graduate-assessment-simulation.test.mjs`: expanded inventory/balance, multi-seed deterministic simulation assembly, duplicate protection, checkpoint recovery across every pace profile, formative learning signals, result aggregation, v1/v2/v3 migration, exposure-aware and explicit-focus selection, and UI accessibility/lazy-loading contracts.
 
 Run targeted suites with:
 

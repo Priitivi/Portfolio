@@ -168,6 +168,26 @@ test("selection context favours unseen questions, passages and templates with gr
   assert.ok(context.recentQuestionIds.length > 0);
 });
 
+test("explicit adaptive focus outranks general weak and unanswered topic hints", () => {
+  const numerical = createPracticeSession({
+    category: "numerical",
+    difficulty: "standard",
+    count: 4,
+    seed: 82,
+    selectionContext: { focusTopics: ["probability"], unansweredTopics: ["ratios", "charts"], weakTopics: ["averages"] },
+  });
+  assert.equal(numerical[0].topic, "probability");
+
+  const verbal = createPracticeSession({
+    category: "verbal",
+    difficulty: "standard",
+    count: 4,
+    seed: 82,
+    selectionContext: { focusTopics: ["causation"], unansweredTopics: ["scope"] },
+  });
+  assert.equal(verbal[0].topic, "causation");
+});
+
 test("simulation UI contracts keep feedback delayed and preserve accessible timing", async () => {
   const source = await readFile(new URL("../src/lab/graduate-assessment/components/Simulation.jsx", import.meta.url), "utf8");
   const practiceSource = await readFile(new URL("../src/lab/graduate-assessment/components/Practice.jsx", import.meta.url), "utf8");
@@ -184,16 +204,23 @@ test("simulation UI contracts keep feedback delayed and preserve accessible timi
   assert.match(source, /role="progressbar"/);
   assert.match(source, /Untimed rehearsal/);
   assert.match(source, /question\.optionDetails\.map/);
+  assert.match(source, /ReviewNavigator/);
+  assert.match(source, /AnswerExplanation/);
   assert.match(source, /Save & exit/);
   assert.match(source, /not an employer pass prediction or validated percentile/);
   assert.match(practiceSource, /Practice pace/);
   assert.match(practiceSource, /role="progressbar"/);
+  assert.match(practiceSource, /ADAPTIVE FOCUS/);
+  assert.match(practiceSource, /aria-label=\{`Answer choices/);
   assert.match(interviewSource, /Untimed rehearsal/);
   assert.match(interviewSource, /Heuristic transcript score/);
+  assert.match(interviewSource, /Your preparation plan/);
   assert.match(analyticsSource, /Spacing-aware review/);
   assert.match(analyticsSource, /not a calibrated memory prediction/);
   assert.match(shellSource, /id="ga-content" tabIndex=\{-1\}/);
   assert.match(shellSource, /event\.preventDefault\(\); document\.getElementById\("ga-content"\)\?\.focus\(\)/);
+  assert.match(shellSource, /lazy\(\(\) => import/);
+  assert.match(shellSource, /aria-live="polite"/);
   assert.match(css, /\.ga-simulation-format-grid/);
   assert.match(css, /\.ga-review-queue/);
   assert.match(css, /min-height:4\.5rem/);

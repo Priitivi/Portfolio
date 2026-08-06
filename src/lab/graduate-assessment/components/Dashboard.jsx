@@ -1,28 +1,16 @@
-import { assessmentCategories } from "../data/packs.js";
+import { assessmentCategories } from "../data/catalog.js";
 import {
   accuracy,
   achievements,
   categoryPerformance,
+  dailyPracticeGoal,
   dailyStreak,
   estimatedReadiness,
   getRecommendations,
   heatmapDays,
+  nextAchievementProgress,
 } from "../engine/progress.js";
-
-function formatRelativeDate(value) {
-  const date = new Date(value);
-  const delta = Math.max(0, Math.round((Date.now() - date.getTime()) / 86400000));
-  if (delta === 0) return "Today";
-  if (delta === 1) return "Yesterday";
-  return `${delta} days ago`;
-}
-
-function formatSessionCondition(session) {
-  const context = session.type === "simulation" ? session.formatId : session.difficulty;
-  if (!session.timingProfile) return context;
-  const pace = session.timingProfile === "extended" ? "+50% time" : session.timingProfile === "untimed" ? "untimed" : "standard pace";
-  return `${context} · ${pace}`;
-}
+import { formatRelativeDate, formatSessionCondition, sessionPresentation } from "../engine/presentation.js";
 
 export default function Dashboard({ progress, hasSimulationCheckpoint = false, onStart, onSimulation }) {
   const readiness = estimatedReadiness(progress);
@@ -30,6 +18,8 @@ export default function Dashboard({ progress, hasSimulationCheckpoint = false, o
   const recommendations = getRecommendations(progress);
   const heatmap = heatmapDays(progress.practiceDates);
   const streak = dailyStreak(progress.practiceDates);
+  const dailyGoal = dailyPracticeGoal(progress);
+  const nextMilestone = nextAchievementProgress(progress);
   const totalAccuracy = accuracy(progress.totals);
 
   return (
@@ -40,9 +30,14 @@ export default function Dashboard({ progress, hasSimulationCheckpoint = false, o
           <h1>Build evidence.<br /><em>Beat instinct.</em></h1>
           <p>Original, focused practice for the reasoning and interview skills graduate employers measure.</p>
           <div className="ga-hero-actions">
-            <button type="button" className="ga-button ga-button-primary" onClick={() => onStart(recommendations[0].category)}>Start recommended practice <span aria-hidden="true">→</span></button>
+            <button type="button" className="ga-button ga-button-primary" onClick={() => onStart(recommendations[0])}>Start recommended practice <span aria-hidden="true">→</span></button>
             <button type="button" className="ga-button ga-button-ghost" onClick={() => onStart("numerical")}>Quick numerical set</button>
             <button type="button" className="ga-button ga-button-ghost" onClick={onSimulation}>{hasSimulationCheckpoint ? "Resume saved simulation" : "Run a simulation"}</button>
+          </div>
+          <div className={`ga-daily-objective${dailyGoal.complete ? " is-complete" : ""}`}>
+            <div><span>{dailyGoal.complete ? "TODAY COMPLETE" : "DAILY OBJECTIVE"}</span><strong>{dailyGoal.complete ? "Practice signal secured" : `${dailyGoal.remaining} item${dailyGoal.remaining === 1 ? "" : "s"} to go`}</strong></div>
+            <div className="ga-daily-progress" role="progressbar" aria-label="Daily practice objective" aria-valuemin="0" aria-valuemax={dailyGoal.target} aria-valuenow={Math.min(dailyGoal.completed, dailyGoal.target)} aria-valuetext={`${dailyGoal.completed} of ${dailyGoal.target} practice items completed today`}><i style={{ width: `${dailyGoal.percent}%` }} /></div>
+            <small>{dailyGoal.completed} / {dailyGoal.target} practice items</small>
           </div>
         </div>
         <div className={`ga-readiness${isReadinessAssessed ? "" : " is-empty"}`} aria-label={isReadinessAssessed ? `Practice readiness estimate ${readiness} percent` : "Practice readiness not assessed yet"}>
@@ -80,7 +75,7 @@ export default function Dashboard({ progress, hasSimulationCheckpoint = false, o
         <section className="ga-panel ga-recommendations">
           <div className="ga-panel-heading"><div><span>ADAPTIVE COACH</span><h2>Practice next</h2></div><i className="ga-live-dot" /></div>
           {recommendations.map((item, index) => (
-            <button type="button" key={item.title} onClick={() => onStart(item.category)}>
+            <button type="button" key={item.title} onClick={() => onStart(item)}>
               <span>{String(index + 1).padStart(2, "0")}</span>
               <span><strong>{item.title}</strong><small>{item.reason}</small></span>
               <b aria-hidden="true">↗</b>
@@ -103,8 +98,8 @@ export default function Dashboard({ progress, hasSimulationCheckpoint = false, o
           {progress.recentSessions.length ? (
             <ul>
               {progress.recentSessions.slice(0, 5).map((session) => {
-                const category = assessmentCategories.find((item) => item.id === session.category);
-                return <li key={session.id}><span className="ga-category-icon">{category?.icon || "Σ"}</span><span><strong>{session.type === "simulation" ? "Mixed simulation" : category?.label || session.category}</strong><small>{formatRelativeDate(session.completedAt)} · {formatSessionCondition(session)}</small></span><b>{session.accuracy}%</b></li>;
+                const presentation = sessionPresentation(session);
+                return <li key={session.id}><span className="ga-category-icon">{presentation.icon}</span><span><strong>{presentation.title}</strong><small>{formatRelativeDate(session.completedAt)} · {formatSessionCondition(session)}</small></span><b>{session.accuracy}%</b></li>;
               })}
             </ul>
           ) : <div className="ga-empty"><strong>No sessions yet.</strong><p>Your practice history will appear here after the first set.</p></div>}
@@ -118,6 +113,7 @@ export default function Dashboard({ progress, hasSimulationCheckpoint = false, o
               return <div key={item.id} className={unlocked ? "is-unlocked" : ""} title={item.description}><span>{item.icon}</span><strong>{item.title}</strong></div>;
             })}
           </div>
+          {nextMilestone && <div className="ga-next-milestone"><span><strong>Next: {nextMilestone.title}</strong><small>{nextMilestone.description}</small></span><b>{nextMilestone.current}/{nextMilestone.target}</b><div role="progressbar" aria-label={`${nextMilestone.title} achievement progress`} aria-valuemin="0" aria-valuemax={nextMilestone.target} aria-valuenow={nextMilestone.current}><i style={{ width: `${nextMilestone.percent}%` }} /></div></div>}
         </section>
       </div>
     </main>

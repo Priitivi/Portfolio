@@ -12,9 +12,11 @@ function ScoreRing({ score }) {
   return <div className="ga-score-ring" role="img" aria-label={`Heuristic transcript score ${score} out of 100`} style={{ "--score": `${score * 3.6}deg` }}><span aria-hidden="true"><strong>{score}</strong><small>/100</small></span></div>;
 }
 
-function InterviewReview({ question, transcript, analysis, seconds, onAgain, onExit }) {
+function InterviewReview({ question, prepNotes, transcript, analysis, seconds, onAgain, onExit }) {
+  const reviewRef = useRef(null);
+  useEffect(() => { reviewRef.current?.focus(); }, []);
   return (
-    <main className="ga-main ga-interview-review">
+    <main className="ga-main ga-interview-review" ref={reviewRef} tabIndex={-1}>
       <section className="ga-interview-score">
         <div><p className="ga-kicker">TRANSCRIPT ANALYSIS</p><h1>{analysis.total >= 75 ? "A clear evidence trail." : analysis.total >= 50 ? "Good material. Sharpen the shape." : "Build the evidence trail."}</h1><p>This text heuristic looks for visible structure and specificity. It is not a validated assessment and cannot evaluate delivery.</p></div>
         <ScoreRing score={analysis.total} />
@@ -26,6 +28,7 @@ function InterviewReview({ question, transcript, analysis, seconds, onAgain, onE
         <section className="ga-panel ga-transcript-panel">
           <div className="ga-panel-heading"><div><span>TRANSCRIPT REVIEW</span><h2>Your answer</h2></div><small>{analysis.wordCount} WORDS · {seconds}S</small></div>
           <blockquote>{question.question}</blockquote>
+          {prepNotes.trim() && <aside className="ga-preparation-review"><strong>Your preparation plan</strong><p>{prepNotes}</p></aside>}
           <p>{transcript || "No answer was captured. Use the next attempt to speak or type a complete response."}</p>
         </section>
         <section className="ga-panel ga-feedback-panel">
@@ -59,6 +62,8 @@ function InterviewRoom({ question, difficulty, prepSeconds, answerSeconds, untim
   const answerStartedAtRef = useRef(0);
   const beginRef = useRef(null);
   const finishRef = useRef(null);
+  const prepNotesRef = useRef(null);
+  const transcriptRef = useRef(null);
   const speech = useSpeechInput({ value: transcript, onChange: setTranscript });
 
   const beginAnswer = () => {
@@ -109,7 +114,12 @@ function InterviewRoom({ question, difficulty, prepSeconds, answerSeconds, untim
     return () => window.clearInterval(timer);
   }, [phase, untimed]);
 
-  if (phase === "review") return <InterviewReview question={question} transcript={transcript} analysis={analysis} seconds={elapsedSeconds} onAgain={onAgain} onExit={onExit} />;
+  useEffect(() => {
+    if (phase === "prepare") prepNotesRef.current?.focus();
+    if (phase === "answer") transcriptRef.current?.focus();
+  }, [phase]);
+
+  if (phase === "review") return <InterviewReview question={question} prepNotes={prepNotes} transcript={transcript} analysis={analysis} seconds={elapsedSeconds} onAgain={onAgain} onExit={onExit} />;
 
   return (
     <main className="ga-main ga-interview-room">
@@ -127,11 +137,11 @@ function InterviewRoom({ question, difficulty, prepSeconds, answerSeconds, untim
         </div>
       </section>
       {phase === "prepare" ? (
-        <section className="ga-prep-note"><span>PREPARATION SPACE</span><textarea value={prepNotes} onChange={(event) => setPrepNotes(event.target.value)} placeholder="Jot down Situation · Task · Action · Result prompts. Preparation notes are not included in the scored transcript." aria-label="Interview preparation notes" /><button type="button" className="ga-button ga-button-primary" onClick={beginAnswer}>Start answer now →</button></section>
+        <section className="ga-prep-note"><span>PREPARATION SPACE</span><textarea ref={prepNotesRef} value={prepNotes} onChange={(event) => setPrepNotes(event.target.value)} placeholder="Jot down Situation · Task · Action · Result prompts. Preparation notes are not included in the scored transcript." aria-label="Interview preparation notes" /><button type="button" className="ga-button ga-button-primary" onClick={beginAnswer}>Start answer now →</button></section>
       ) : (
         <section className="ga-answer-capture">
           <div className="ga-capture-toolbar"><span><i className={speech.listening ? "is-live" : ""} />{speech.listening ? "Listening…" : "Transcript"}</span>{speech.supported ? <button type="button" onClick={speech.listening ? speech.stop : speech.start}>{speech.listening ? "Stop microphone" : "Use microphone"}</button> : <small>Speech input is unavailable—typing works fully.</small>}</div>
-          <textarea value={transcript} onChange={(event) => setTranscript(event.target.value)} placeholder="Speak or type your answer here…" aria-label="Interview answer transcript" />
+          <textarea ref={transcriptRef} value={transcript} onChange={(event) => setTranscript(event.target.value)} placeholder="Speak or type your answer here…" aria-label="Interview answer transcript" />
           {speech.interim && <p className="ga-interim" aria-live="polite">{speech.interim}</p>}
           {speech.error && <p className="ga-speech-error" role="status">{speech.error}</p>}
           <footer><small>Your transcript stays on this device.</small><button type="button" className="ga-button ga-button-primary" onClick={finishAnswer}>Finish & analyse →</button></footer>

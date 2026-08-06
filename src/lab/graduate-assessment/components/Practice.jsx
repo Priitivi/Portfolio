@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { assessmentCategories } from "../data/packs.js";
+import { assessmentCategories } from "../data/catalog.js";
 import {
   answerLabels,
   availableQuestionCounts,
   createPracticeSession,
   difficultySettings,
   isCorrectAnswer,
-  questionRationale,
 } from "../engine/questions.js";
 import { learningSignal, sessionLearningSummary } from "../engine/learning.js";
 import { adjustedSeconds, timingDescription, timingProfiles } from "../engine/timing.js";
+import AnswerExplanation from "./AnswerExplanation.jsx";
 import { PatternGlyph, QuestionBody } from "./QuestionContent.jsx";
+import ReviewNavigator from "./ReviewNavigator.jsx";
 
 function formatClock(seconds) {
   const safe = Math.max(0, seconds);
@@ -30,9 +31,9 @@ function AnswerOption({ question, option, index, selected, answered, onSelect })
   );
 }
 
-function PracticeRunner({ category, difficulty, questionCount, timingProfileId, selectionContext, onComplete, onExit, onRestart }) {
+function PracticeRunner({ category, difficulty, questionCount, timingProfileId, focusTopic, selectionContext, onComplete, onExit, onRestart }) {
   const allocatedSeconds = adjustedSeconds(difficultySettings[difficulty].seconds, timingProfileId);
-  const [questions] = useState(() => createPracticeSession({ category, difficulty, count: questionCount, selectionContext }));
+  const [questions] = useState(() => createPracticeSession({ category, difficulty, count: questionCount, selectionContext: { ...selectionContext, focusTopics: focusTopic ? [focusTopic] : [] } }));
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState(null);
   const [answered, setAnswered] = useState(false);
@@ -43,6 +44,7 @@ function PracticeRunner({ category, difficulty, questionCount, timingProfileId, 
   const completedRef = useRef(false);
   const timeoutRef = useRef(null);
   const questionCardRef = useRef(null);
+  const reviewPanelRef = useRef(null);
   const questionStartedAtRef = useRef(Date.now());
   const question = questions[index];
   const currentAnswer = answers[index];
@@ -50,7 +52,8 @@ function PracticeRunner({ category, difficulty, questionCount, timingProfileId, 
 
   useEffect(() => {
     if (phase === "questions") questionCardRef.current?.focus();
-  }, [index, phase]);
+    if (phase === "results") reviewPanelRef.current?.focus();
+  }, [index, phase, reviewIndex]);
 
   const answerQuestion = (optionIndex, timedOut = false) => {
     if (answered) return;
@@ -128,10 +131,11 @@ function PracticeRunner({ category, difficulty, questionCount, timingProfileId, 
           {learningSummary.timedOut > 0 && <p className="ga-result-note">{learningSummary.timedOut} question{learningSummary.timedOut === 1 ? "" : "s"} reached the time limit. Rehearse the method untimed before restoring pace.</p>}
           <div className="ga-result-actions"><button type="button" className="ga-button ga-button-primary" onClick={onExit}>Return to dashboard</button><button type="button" className="ga-button ga-button-ghost" onClick={onRestart}>Run another set</button></div>
         </section>
-        <section className="ga-review-panel">
-          <div className="ga-panel-heading"><div><span>REVIEW MODE</span><h2>Question {reviewIndex + 1} of {questions.length}</h2></div><div className="ga-review-nav"><button type="button" aria-label="Previous review question" onClick={() => setReviewIndex((current) => Math.max(0, current - 1))} disabled={reviewIndex === 0}>←</button><button type="button" aria-label="Next review question" onClick={() => setReviewIndex((current) => Math.min(questions.length - 1, current + 1))} disabled={reviewIndex === questions.length - 1}>→</button></div></div>
+        <section className="ga-review-panel" ref={reviewPanelRef} tabIndex={-1} aria-labelledby="ga-practice-review-title">
+          <div className="ga-panel-heading"><div><span>REVIEW MODE</span><h2 id="ga-practice-review-title">Question {reviewIndex + 1} of {questions.length}</h2></div><div className="ga-review-nav"><button type="button" aria-label="Previous review question" onClick={() => setReviewIndex((current) => Math.max(0, current - 1))} disabled={reviewIndex === 0}>←</button><button type="button" aria-label="Next review question" onClick={() => setReviewIndex((current) => Math.min(questions.length - 1, current + 1))} disabled={reviewIndex === questions.length - 1}>→</button></div></div>
+          <ReviewNavigator answers={answers} current={reviewIndex} onSelect={setReviewIndex} />
           <QuestionBody question={reviewQuestion} />
-          <div className="ga-review-answer"><span className={reviewAnswer.correct ? "is-correct" : "is-wrong"}>{reviewAnswer.correct ? (category === "situational" ? "STRONGEST MODELLED RESPONSE" : "CORRECT") : "REVIEW"}</span><p>{questionRationale(reviewQuestion, reviewAnswer.selected)}</p><div className="ga-learning-signal"><strong>{reviewLearning.headline}</strong><p>{reviewLearning.strategy}</p><small>{reviewLearning.pace} {reviewLearning.nextStep}</small></div><small>{category === "situational" ? "Strongest modelled response" : "Correct answer"}: {answerLabels[reviewQuestion.answer]} · Your answer: {reviewAnswer.selected >= 0 ? answerLabels[reviewAnswer.selected] : "Timed out"}</small></div>
+          <div className="ga-review-answer"><span className={reviewAnswer.correct ? "is-correct" : "is-wrong"}>{reviewAnswer.correct ? (category === "situational" ? "STRONGEST MODELLED RESPONSE" : "CORRECT") : "REVIEW"}</span><AnswerExplanation question={reviewQuestion} selected={reviewAnswer.selected} />{category === "situational" && <ul>{reviewQuestion.optionDetails.map((option, optionIndex) => <li key={option.text}><strong>{answerLabels[optionIndex]}</strong><span>{option.rationale}</span></li>)}</ul>}<div className="ga-learning-signal"><strong>{reviewLearning.headline}</strong><p>{reviewLearning.strategy}</p><small>{reviewLearning.pace} {reviewLearning.nextStep}</small></div><small>{category === "situational" ? "Strongest modelled response" : "Correct answer"}: {answerLabels[reviewQuestion.answer]} · Your answer: {reviewAnswer.selected >= 0 ? answerLabels[reviewAnswer.selected] : "Timed out"}</small></div>
         </section>
       </main>
     );
@@ -145,17 +149,17 @@ function PracticeRunner({ category, difficulty, questionCount, timingProfileId, 
         {secondsLeft === null ? <div className="ga-timer is-untimed" aria-label="Untimed learning mode"><span>PACE</span><strong>UNTIMED</strong></div> : <div className={`ga-timer ${secondsLeft <= 15 ? "is-urgent" : ""}`} role="timer" aria-label={`${secondsLeft} seconds remaining`}><span>TIME</span><strong>{formatClock(secondsLeft)}</strong><span className="ga-sr-only" aria-live="polite">{secondsLeft === 15 ? "Fifteen seconds remaining" : secondsLeft === 0 ? "Time expired" : ""}</span></div>}
       </section>
       <div className="ga-progress-track" role="progressbar" aria-label="Practice session progress" aria-valuemin="0" aria-valuemax={questions.length} aria-valuenow={index + (answered ? 1 : 0)} aria-valuetext={`Question ${index + 1} of ${questions.length}`}><i style={{ width: `${((index + (answered ? 1 : 0)) / questions.length) * 100}%` }} /></div>
-      <section className="ga-question-card" ref={questionCardRef} tabIndex={-1}>
+      <section className="ga-question-card" ref={questionCardRef} tabIndex={-1} aria-labelledby="ga-practice-question">
         <div className="ga-question-meta"><span>QUESTION {String(index + 1).padStart(2, "0")}</span><small>{question.topic?.replace("-", " ")}</small></div>
-        <QuestionBody question={question} />
-        <div className={`ga-answer-grid ${question.category === "logical" ? "is-pattern" : ""}`}>
+        <div id="ga-practice-question"><QuestionBody question={question} /></div>
+        <div className={`ga-answer-grid ${question.category === "logical" ? "is-pattern" : ""}`} role="group" aria-label={`Answer choices for question ${index + 1}`}>
           {question.options.map((option, optionIndex) => <AnswerOption key={answerLabels[optionIndex]} question={question} option={option} index={optionIndex} selected={selected === optionIndex} answered={answered} onSelect={answerQuestion} />)}
         </div>
         {answered && (
           <div className={`ga-inline-feedback ${isCorrectAnswer(question, selected) ? "is-correct" : "is-review"}`} role="status">
             <span>{isCorrectAnswer(question, selected) ? (question.category === "situational" ? "STRONGEST MODELLED RESPONSE" : "CORRECT") : selected === -1 ? "TIME" : (question.category === "situational" ? "COMPARE THE TRADE-OFFS" : "REVIEW THE RULE")}</span>
             <div>
-              <p>{questionRationale(question, selected)}</p>
+              <AnswerExplanation question={question} selected={selected} />
               {question.category === "situational" && <ul>{question.optionDetails.map((option, optionIndex) => <li key={option.text}><strong>{answerLabels[optionIndex]}</strong>{option.rationale}</li>)}</ul>}
               {currentLearning && <div className="ga-learning-signal"><strong>{currentLearning.headline}</strong><p>{currentLearning.strategy}</p><small>{currentLearning.pace} {currentLearning.nextStep}</small></div>}
             </div>
@@ -167,18 +171,24 @@ function PracticeRunner({ category, difficulty, questionCount, timingProfileId, 
   );
 }
 
-export default function Practice({ initialCategory = "numerical", selectionContext, onComplete, onExit }) {
+export default function Practice({ initialConfig = { category: "numerical" }, selectionContext, onComplete, onExit }) {
   const available = assessmentCategories.filter((item) => item.id !== "interview");
-  const safeInitial = available.some((item) => item.id === initialCategory) ? initialCategory : "numerical";
+  const safeInitial = available.some((item) => item.id === initialConfig.category) ? initialConfig.category : "numerical";
+  const safeDifficulty = difficultySettings[initialConfig.difficulty] ? initialConfig.difficulty : "standard";
+  const safeTiming = timingProfiles.some((profile) => profile.id === initialConfig.timingProfile) ? initialConfig.timingProfile : "standard";
+  const initialCounts = availableQuestionCounts(safeInitial, safeDifficulty);
+  const safeCount = initialCounts.includes(initialConfig.questionCount) ? initialConfig.questionCount : initialCounts.at(-1) || 2;
   const [category, setCategory] = useState(safeInitial);
-  const [difficulty, setDifficulty] = useState("standard");
-  const [timingProfileId, setTimingProfileId] = useState("standard");
-  const [questionCount, setQuestionCount] = useState(() => availableQuestionCounts(safeInitial, "standard").at(-1) || 2);
+  const [difficulty, setDifficulty] = useState(safeDifficulty);
+  const [timingProfileId, setTimingProfileId] = useState(safeTiming);
+  const [questionCount, setQuestionCount] = useState(safeCount);
+  const [focusTopic, setFocusTopic] = useState(initialConfig.focusTopic || null);
   const [running, setRunning] = useState(false);
   const countOptions = availableQuestionCounts(category, difficulty);
 
   const chooseCategory = (nextCategory) => {
     setCategory(nextCategory);
+    if (nextCategory !== category) setFocusTopic(null);
     setQuestionCount(availableQuestionCounts(nextCategory, difficulty).at(-1) || 2);
   };
 
@@ -187,11 +197,12 @@ export default function Practice({ initialCategory = "numerical", selectionConte
     setQuestionCount(availableQuestionCounts(category, nextDifficulty).at(-1) || 2);
   };
 
-  if (running) return <PracticeRunner category={category} difficulty={difficulty} questionCount={questionCount} timingProfileId={timingProfileId} selectionContext={selectionContext} onComplete={onComplete} onExit={onExit} onRestart={() => setRunning(false)} />;
+  if (running) return <PracticeRunner category={category} difficulty={difficulty} questionCount={questionCount} timingProfileId={timingProfileId} focusTopic={focusTopic} selectionContext={selectionContext} onComplete={onComplete} onExit={onExit} onRestart={() => setRunning(false)} />;
 
   return (
     <main className="ga-main ga-practice-setup">
       <section className="ga-page-title"><p className="ga-kicker">PRACTICE ENGINE</p><h1>Choose your training signal.</h1><p>Each session uses original questions and a clear evidence trail. Accuracy matters; understanding the rule matters more.</p></section>
+      {focusTopic && <section className="ga-adaptive-brief" aria-label="Adaptive practice focus"><span>ADAPTIVE FOCUS</span><div><strong>{focusTopic.replaceAll("-", " ")}</strong><p>This short set prioritises the topic identified by your local practice evidence. You can change any setting before launch.</p></div><button type="button" onClick={() => setFocusTopic(null)}>Clear focus</button></section>}
       <section className="ga-setup-block">
         <div className="ga-setup-label"><span>01</span><div><h2>Assessment category</h2><p>Select one skill for focused practice.</p></div></div>
         <div className="ga-mode-grid">
