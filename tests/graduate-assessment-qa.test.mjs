@@ -34,17 +34,19 @@ import {
   recordInterviewAnswer,
   recordPracticeSession,
   responseTime,
+  spacedReviewQueue,
   topicMastery,
 } from "../src/lab/graduate-assessment/engine/progress.js";
 
 const difficulties = Object.keys(difficultySettings);
 
-test("2,400 deterministic numerical generations satisfy arithmetic and display invariants", () => {
+test("4,800 deterministic numerical generations satisfy arithmetic and display invariants", () => {
   let generated = 0;
   for (const topic of numericalTopics) {
     const kinds = new Set();
     for (const difficulty of difficulties) {
-      for (let seed = 1; seed <= 100; seed += 1) {
+      const difficultyKinds = new Set();
+      for (let seed = 1; seed <= 200; seed += 1) {
         const question = createNumericalQuestion({ topic, difficulty, seed });
         const validation = validateNumericalQuestion(question);
         assert.equal(validation.valid, true, `${topic}/${difficulty}/${seed}: ${validation.issues.join(", ")}`);
@@ -56,12 +58,14 @@ test("2,400 deterministic numerical generations satisfy arithmetic and display i
         if (question.audit.kind.includes("probability")) assert.ok(question.audit.optionValues.every((value) => value >= 0 && value <= 100));
         if (!["GBP"].includes(question.audit.unit)) assert.ok(question.audit.correctValue >= 0, `${topic}/${difficulty}/${seed} produced an inappropriate negative answer`);
         kinds.add(question.audit.kind);
+        difficultyKinds.add(question.audit.kind);
         generated += 1;
       }
+      assert.equal(difficultyKinds.size, 2, `${topic}/${difficulty} does not expose two distinct templates`);
     }
-    assert.equal(kinds.size, 3, `${topic} does not change its operation meaningfully by difficulty`);
+    assert.equal(kinds.size, 6, `${topic} does not provide six difficulty-specific operations`);
   }
-  assert.equal(generated, 2400);
+  assert.equal(generated, 4800);
 });
 
 test("numerical sessions remain deterministic and avoid duplicate IDs and formatted answers", () => {
@@ -77,9 +81,9 @@ test("numerical sessions remain deterministic and avoid duplicate IDs and format
 test("authored practice sets keep exact difficulty, unique questions and non-repeating passages", () => {
   for (const category of ["verbal", "logical", "situational"]) {
     for (const difficulty of difficulties) {
-      assert.deepEqual(availableQuestionCounts(category, difficulty), [2, 4]);
+      assert.deepEqual(availableQuestionCounts(category, difficulty), [2, 4, 6, 8]);
       const items = createPracticeSession({ category, difficulty, count: 8, seed: 72 });
-      assert.equal(items.length, 4);
+      assert.equal(items.length, 8);
       assert.ok(items.every((item) => item.difficulty === difficulty));
       assert.equal(new Set(items.map((item) => item.id)).size, items.length);
       if (category === "verbal") assert.equal(new Set(items.map((item) => item.passage)).size, items.length);
@@ -89,7 +93,7 @@ test("authored practice sets keep exact difficulty, unique questions and non-rep
 
 test("verbal classifications are complete, passage-bound and explain Cannot Say decisions", () => {
   const items = graduateCorePack.categories.verbal.items;
-  assert.equal(items.length, 12);
+  assert.equal(items.length, 42);
   assert.ok(items.every((item) => [0, 1, 2].includes(item.answer)));
   assert.ok(items.every((item) => item.passage.length > 150 && item.statement.length > 20 && item.explanation.length > 55));
   assert.ok(items.filter((item) => item.answer === 2).every((item) => /cannot|not (?:measured|define|establish)|did not|has not|may not/i.test(item.explanation)));
@@ -98,7 +102,7 @@ test("verbal classifications are complete, passage-bound and explain Cannot Say 
 
 test("logical patterns have valid unique options and deterministic accessible descriptions", () => {
   const items = graduateCorePack.categories.logical.items;
-  assert.equal(items.length, 12);
+  assert.equal(items.length, 30);
   for (const item of items) {
     assert.ok(item.sequence.length >= 4);
     assert.equal(item.options.length, 4);
@@ -117,7 +121,7 @@ test("logical patterns have valid unique options and deterministic accessible de
 
 test("situational scenarios have one strongest response and acknowledge realistic trade-offs", () => {
   const items = graduateCorePack.categories.situational.items;
-  assert.equal(items.length, 12);
+  assert.equal(items.length, 30);
   for (const item of items) {
     assert.equal(item.options.length, 4);
     const scores = item.options.map((option) => option.score);
@@ -246,6 +250,45 @@ test("response time, mastery and recommendations retain evidence quality", () =>
   const improvingAnswers = [false, false, false, true, true, true].map((correct) => ({ correct, seconds: 40 }));
   const improving = recordPracticeSession(createInitialProgress(), practiceSession("trend", improvingAnswers)).progress;
   assert.equal(topicMastery(improving)[0].trend, "improving");
+});
+
+test("spacing-aware review is deterministic and legacy topic timestamps remain honest", () => {
+  const completedAt = "2026-08-01T12:00:00.000Z";
+  const weak = recordPracticeSession(createInitialProgress(), practiceSession("spaced", Array.from({ length: 10 }, () => ({ correct: false, seconds: 25 })), completedAt)).progress;
+  const reference = new Date("2026-08-03T12:00:00.000Z");
+  const [due] = spacedReviewQueue(weak, reference);
+  assert.equal(due.intervalDays, 2);
+  assert.equal(due.daysSince, 2);
+  assert.equal(due.due, true);
+  let broad = weak;
+  for (const [index, category] of ["verbal", "logical", "situational"].entries()) {
+    broad = recordPracticeSession(broad, practiceSession(`spaced-${category}-${index}`, [{ correct: false, seconds: 25 }], completedAt, category)).progress;
+  }
+  assert.match(getRecommendations(broad, reference)[0].title, /Review ratios/);
+
+  const legacy = structuredClone(weak);
+  for (const item of legacy.byTopic["numerical:ratios"].recent) delete item.completedAt;
+  const migrated = loadProgress(JSON.stringify(legacy));
+  assert.equal(migrated.byTopic["numerical:ratios"].recent[0].completedAt, null);
+  assert.equal(spacedReviewQueue(migrated, reference)[0].due, true, "the session timestamp should provide the legacy fallback");
+});
+
+test("optional timing profiles persist without changing the progress schema", () => {
+  const recorded = recordPracticeSession(createInitialProgress(), {
+    ...practiceSession("extended", [{ correct: true, seconds: 50 }]),
+    timingProfile: "extended",
+  }).progress;
+  assert.equal(recorded.version, PROGRESS_VERSION);
+  assert.equal(recorded.recentSessions[0].timingProfile, "extended");
+  assert.equal(recorded.byTopic["numerical:ratios"].recent[0].targetSeconds, 113);
+  assert.equal(loadProgress(JSON.stringify(recorded)).recentSessions[0].timingProfile, "extended");
+
+  const untimed = recordPracticeSession(createInitialProgress(), {
+    ...practiceSession("untimed", Array.from({ length: 10 }, () => ({ correct: true, seconds: 600 }))),
+    timingProfile: "untimed",
+  }).progress;
+  assert.equal(untimed.byTopic["numerical:ratios"].recent[0].targetSeconds, null);
+  assert.equal(topicMastery(untimed)[0].mastery, 100, "untimed method work must not receive a pace penalty");
 });
 
 test("readiness requires a completed session and resists limited-evidence overconfidence", () => {

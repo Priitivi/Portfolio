@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import { experiments } from "../src/lab/experiments.js";
 import { graduateCorePack, interviewQuestions, numericalTopics } from "../src/lab/graduate-assessment/data/packs.js";
 import { analyseInterviewAnswer } from "../src/lab/graduate-assessment/engine/interview.js";
+import { validateContentPack } from "../src/lab/graduate-assessment/engine/content-validation.js";
 import { createPracticeSession, isCorrectAnswer, verbalOptions } from "../src/lab/graduate-assessment/engine/questions.js";
 import {
   MIN_READINESS_SESSIONS,
@@ -28,14 +29,15 @@ test("Graduate Assessment Lab is registered and lazy loaded behind the shared La
   assert.ok(source.indexOf('authState !== "unlocked"') < source.indexOf('pathname === "/lab/graduate-assessment"'));
 });
 
-test("the core pack contains substantial original coverage in every requested mode", () => {
+test("the core pack meets the expanded original-content contracts", () => {
   assert.deepEqual(graduateCorePack.categories.numerical.topics, numericalTopics);
   assert.deepEqual(numericalTopics.sort(), ["averages", "charts", "currency", "percentages", "probability", "profit-loss", "ratios", "tables"].sort());
-  assert.ok(graduateCorePack.categories.verbal.items.length >= 12);
-  assert.ok(graduateCorePack.categories.logical.items.length >= 6);
-  assert.ok(graduateCorePack.categories.situational.items.length >= 8);
-  assert.ok(interviewQuestions.length >= 30);
+  assert.equal(graduateCorePack.categories.verbal.items.length, 42);
+  assert.equal(graduateCorePack.categories.logical.items.length, 30);
+  assert.equal(graduateCorePack.categories.situational.items.length, 30);
+  assert.equal(interviewQuestions.length, 75);
   assert.ok(graduateCorePack.categories.situational.items.every((item) => item.options.every((option) => option.rationale.length > 30)));
+  assert.equal(validateContentPack(graduateCorePack).valid, true);
 });
 
 test("numerical generation is deterministic, balanced and produces valid answer keys", () => {
@@ -123,6 +125,7 @@ test("responsive and reduced-motion safeguards are present", async () => {
   const app = await readFile(new URL("../src/lab/graduate-assessment/GraduateAssessmentLab.jsx", import.meta.url), "utf8");
   const dashboard = await readFile(new URL("../src/lab/graduate-assessment/components/Dashboard.jsx", import.meta.url), "utf8");
   const analytics = await readFile(new URL("../src/lab/graduate-assessment/components/Analytics.jsx", import.meta.url), "utf8");
+  const simulation = await readFile(new URL("../src/lab/graduate-assessment/components/Simulation.jsx", import.meta.url), "utf8");
   assert.match(css, /@media \(max-width:420px\)/);
   assert.match(css, /@media \(prefers-reduced-motion:reduce\)/);
   assert.match(css, /:focus-visible/);
@@ -133,4 +136,7 @@ test("responsive and reduced-motion safeguards are present", async () => {
   assert.match(dashboard, /isReadinessAssessed && <div className="ga-readiness-ring"/);
   assert.match(analytics, /Practice readiness not assessed yet/);
   assert.match(analytics, /isReadinessAssessed && <><div className="ga-readiness-scale"/);
+  assert.match(simulation, /aria-live="polite"/);
+  assert.match(simulation, /REVIEW LOCKED/);
+  assert.match(simulation, /Save & exit/);
 });

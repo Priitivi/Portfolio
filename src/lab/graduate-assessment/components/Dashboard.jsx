@@ -17,7 +17,14 @@ function formatRelativeDate(value) {
   return `${delta} days ago`;
 }
 
-export default function Dashboard({ progress, onStart }) {
+function formatSessionCondition(session) {
+  const context = session.type === "simulation" ? session.formatId : session.difficulty;
+  if (!session.timingProfile) return context;
+  const pace = session.timingProfile === "extended" ? "+50% time" : session.timingProfile === "untimed" ? "untimed" : "standard pace";
+  return `${context} · ${pace}`;
+}
+
+export default function Dashboard({ progress, hasSimulationCheckpoint = false, onStart, onSimulation }) {
   const readiness = estimatedReadiness(progress);
   const isReadinessAssessed = readiness !== null;
   const recommendations = getRecommendations(progress);
@@ -35,6 +42,7 @@ export default function Dashboard({ progress, onStart }) {
           <div className="ga-hero-actions">
             <button type="button" className="ga-button ga-button-primary" onClick={() => onStart(recommendations[0].category)}>Start recommended practice <span aria-hidden="true">→</span></button>
             <button type="button" className="ga-button ga-button-ghost" onClick={() => onStart("numerical")}>Quick numerical set</button>
+            <button type="button" className="ga-button ga-button-ghost" onClick={onSimulation}>{hasSimulationCheckpoint ? "Resume saved simulation" : "Run a simulation"}</button>
           </div>
         </div>
         <div className={`ga-readiness${isReadinessAssessed ? "" : " is-empty"}`} aria-label={isReadinessAssessed ? `Practice readiness estimate ${readiness} percent` : "Practice readiness not assessed yet"}>
@@ -96,7 +104,7 @@ export default function Dashboard({ progress, onStart }) {
             <ul>
               {progress.recentSessions.slice(0, 5).map((session) => {
                 const category = assessmentCategories.find((item) => item.id === session.category);
-                return <li key={session.id}><span className="ga-category-icon">{category?.icon}</span><span><strong>{category?.label || session.category}</strong><small>{formatRelativeDate(session.completedAt)} · {session.difficulty}</small></span><b>{session.accuracy}%</b></li>;
+                return <li key={session.id}><span className="ga-category-icon">{category?.icon || "Σ"}</span><span><strong>{session.type === "simulation" ? "Mixed simulation" : category?.label || session.category}</strong><small>{formatRelativeDate(session.completedAt)} · {formatSessionCondition(session)}</small></span><b>{session.accuracy}%</b></li>;
               })}
             </ul>
           ) : <div className="ga-empty"><strong>No sessions yet.</strong><p>Your practice history will appear here after the first set.</p></div>}

@@ -1,4 +1,5 @@
 import { graduateCorePack, numericalTopics } from "../data/packs.js";
+import { alternateNumericalFactories } from "./numerical-expansion.js";
 
 export const answerLabels = ["A", "B", "C", "D"];
 export const verbalOptions = ["True", "False", "Cannot say"];
@@ -301,7 +302,7 @@ function probabilityQuestion(random, difficulty) {
   return withAudit({ prompt: `A sample contains ${red} red, ${yellow} yellow and ${black} black markers. Two are selected without replacement. What is the probability both are yellow?`, explanation: `The first-yellow probability is ${yellow}/${total}. Without replacement, the second is ${yellow - 1}/${total - 1}. Multiply: ${yellow}/${total} × ${yellow - 1}/${total - 1} × 100 = ${formatNumber(result)}%.` }, "without-replacement", { red, yellow, black }, result, optionResult, "percent");
 }
 
-const numericalFactories = {
+const baseNumericalFactories = {
   percentages: percentageQuestion,
   ratios: ratioQuestion,
   currency: currencyQuestion,
@@ -312,38 +313,78 @@ const numericalFactories = {
   probability: probabilityQuestion,
 };
 
+const numericalFactories = Object.fromEntries(numericalTopics.map((topic) => [
+  topic,
+  (random, difficulty) => (random() < 0.5 ? baseNumericalFactories[topic] : alternateNumericalFactories[topic])(random, difficulty),
+]));
+
 export function recalculateNumericalAnswer(audit) {
   const input = audit.inputs;
   switch (audit.kind) {
+    case "percentage-of-total": return round(input.total * input.rate / 100);
+    case "discount-then-charge": return round(input.listPrice * (1 - input.discount / 100) * (1 + input.serviceRate / 100));
+    case "reverse-percentage": return round(input.finalValue / (1 + input.growthRate / 100));
     case "percentage-increase": return round(input.base * (1 + input.firstRate / 100));
     case "percentage-decrease": return round(input.base * (1 - input.firstRate / 100));
     case "successive-percentages": return round(input.base * (1 + input.firstRate / 100) * (1 - input.secondRate / 100));
     case "ratio-share": return round(input.right * input.groups);
     case "three-part-ratio": return round(input.third * input.groups);
     case "ratio-after-change": return round((input.right * input.groups + input.added) / ((input.left + input.right) * input.groups + input.added) * 100);
+    case "ratio-scale-known-part": return round(input.knownLeft / input.left * input.right);
+    case "ratio-allocation-gap": return round((Math.max(input.left, input.right, input.third) - Math.min(input.left, input.right, input.third)) * input.groups);
+    case "blended-ratios": return round((input.right * input.groupsOne + input.rightTwo * input.groupsTwo) / ((input.left + input.right) * input.groupsOne + (input.leftTwo + input.rightTwo) * input.groupsTwo) * 100);
     case "currency-conversion":
     case "currency-with-fee": return round(input.pounds * input.rate * (1 - input.fee / 100));
     case "currency-budget": return round(input.pounds * input.rate * (1 - input.fee / 100) - input.euroExpense);
+    case "currency-reverse": return round(input.euros / input.rate);
+    case "currency-reverse-with-fee": return round(input.euros / input.rate * (1 - input.fee / 100));
+    case "currency-two-stage": return round(input.pounds * input.rate * (1 - input.euroFee / 100) * input.usdRate * (1 - input.usdFee / 100));
     case "table-difference": return round(input.rows[input.rowIndex].q2 - input.rows[input.rowIndex].q1);
     case "table-percentage-change": return round((input.rows[input.rowIndex].q2 - input.rows[input.rowIndex].q1) / input.rows[input.rowIndex].q1 * 100);
     case "table-combined-share": return round((input.rows[0].q2 + input.rows[2].q2) / input.rows.reduce((sum, item) => sum + item.q2, 0) * 100);
+    case "table-column-total": return round(input.rows.reduce((sum, row) => sum + row[input.column], 0));
+    case "table-total-percentage": {
+      const planned = input.rows.reduce((sum, row) => sum + row.planned, 0);
+      const actual = input.rows.reduce((sum, row) => sum + row.actual, 0);
+      return round((actual - planned) / planned * 100);
+    }
+    case "table-missing-target": return round(input.targetTotal - input.rows.reduce((sum, row, index) => index === input.hiddenIndex ? sum : sum + row.actual, 0));
     case "chart-range": return round(Math.max(...input.values.map((item) => item.value)) - Math.min(...input.values.map((item) => item.value)));
     case "chart-mean": return round(input.values.reduce((sum, item) => sum + item.value, 0) / input.values.length);
     case "chart-percentage-change": return round((input.values[3].value - input.values[0].value) / input.values[0].value * 100);
+    case "chart-pair-total": return round(input.values[input.firstIndex].value + input.values[input.secondIndex].value);
+    case "chart-share-of-total": return round(input.values[input.selectedIndex].value / input.values.reduce((sum, item) => sum + item.value, 0) * 100);
+    case "chart-required-average": return round(input.targetAverage * 5 - input.values.reduce((sum, item) => sum + item.value, 0));
     case "profit": return round(input.units * (input.price - input.variable) - input.fixed);
     case "profit-margin": {
       const profit = input.units * (input.price - input.variable) - input.fixed;
       return round(profit / (input.units * input.price) * 100);
     }
     case "profit-after-returns": return round(input.units * (1 - input.returnRate / 100) * input.price - input.units * input.variable - input.fixed);
+    case "break-even-units": return round(input.fixed / (input.price - input.variable));
+    case "profit-after-discount": return round(input.units * (input.listPrice * (1 - input.discount / 100) - input.variable) - input.fixed);
+    case "blended-product-profit": return round(input.unitsA * (input.priceA - input.variableA) + input.unitsB * (input.priceB - input.variableB) - input.fixed);
     case "mean": return round(input.values.reduce((sum, value) => sum + value, 0) / input.values.length);
     case "weighted-mean": return round((input.firstCount * input.firstMean + input.secondCount * input.secondMean) / (input.firstCount + input.secondCount));
     case "missing-value-mean": return round(input.target * 5 - input.known.reduce((sum, value) => sum + value, 0));
+    case "total-from-mean": return round(input.count * input.mean);
+    case "mean-after-removal": return round((input.count * input.originalMean - input.removed) / (input.count - 1));
+    case "required-group-mean": return round((input.targetMean * (input.firstCount + input.secondCount) - input.firstCount * input.firstMean) / input.secondCount);
     case "single-probability": return round(input.yellow / (input.red + input.yellow + input.black) * 100);
     case "complement-probability": return round((input.red + input.yellow) / (input.red + input.yellow + input.black) * 100);
     case "without-replacement": {
       const total = input.red + input.yellow + input.black;
       return round(input.yellow / total * (input.yellow - 1) / (total - 1) * 100);
+    }
+    case "not-red-probability": return round((input.yellow + input.black) / (input.red + input.yellow + input.black) * 100);
+    case "with-replacement-probability": {
+      const total = input.red + input.yellow + input.black;
+      return round(input.yellow / total * input.yellow / total * 100);
+    }
+    case "at-least-one-probability": {
+      const total = input.red + input.yellow + input.black;
+      const nonYellow = total - input.yellow;
+      return round((1 - nonYellow / total * (nonYellow - 1) / (total - 1)) * 100);
     }
     default: return Number.NaN;
   }
@@ -366,21 +407,82 @@ export function createNumericalQuestion({ topic, difficulty = "standard", seed =
   if (!numericalFactories[topic]) throw new Error(`Unknown numerical topic: ${topic}`);
   if (!difficultySettings[difficulty]) throw new Error(`Unknown difficulty: ${difficulty}`);
   const random = seededRandom(seed);
-  return { id: `num-${topic}-${seed}`, category: "numerical", difficulty, topic, ...numericalFactories[topic](random, difficulty) };
+  const generated = numericalFactories[topic](random, difficulty);
+  return { id: `num-${topic}-${seed}`, category: "numerical", difficulty, topic, templateId: generated.audit.kind, ...generated };
 }
 
-function createNumericalQuestions({ count, difficulty, random }) {
-  const topics = shuffle(numericalTopics, random);
+function normaliseSelectionContext(selectionContext = {}) {
+  return {
+    recentQuestionIds: new Set(Array.isArray(selectionContext.recentQuestionIds) ? selectionContext.recentQuestionIds : []),
+    recentPassageIds: new Set(Array.isArray(selectionContext.recentPassageIds) ? selectionContext.recentPassageIds : []),
+    recentTemplateIds: new Set(Array.isArray(selectionContext.recentTemplateIds) ? selectionContext.recentTemplateIds : []),
+    weakTopics: new Set(Array.isArray(selectionContext.weakTopics) ? selectionContext.weakTopics : []),
+    unansweredTopics: new Set(Array.isArray(selectionContext.unansweredTopics) ? selectionContext.unansweredTopics : []),
+  };
+}
+
+function topicPriority(topic, context) {
+  return (context.unansweredTopics.has(topic) ? 2 : 0) + (context.weakTopics.has(topic) ? 1 : 0);
+}
+
+function createNumericalQuestions({ count, difficulty, random, selectionContext }) {
+  const context = normaliseSelectionContext(selectionContext);
+  const topics = shuffle(numericalTopics, random).sort((left, right) => topicPriority(right, context) - topicPriority(left, context));
+  const selectedTemplates = new Set();
   return Array.from({ length: count }, (_, index) => {
     const topic = topics[index % topics.length];
-    return { id: `num-${topic}-${index}-${Math.round(random() * 100000)}`, category: "numerical", difficulty, topic, ...numericalFactories[topic](random, difficulty) };
+    let generated = null;
+    let fallback = null;
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const candidate = numericalFactories[topic](random, difficulty);
+      fallback ||= candidate;
+      if (!context.recentTemplateIds.has(candidate.audit.kind) && !selectedTemplates.has(candidate.audit.kind)) {
+        generated = candidate;
+        break;
+      }
+    }
+    generated ||= fallback;
+    selectedTemplates.add(generated.audit.kind);
+    return { id: `num-${topic}-${index}-${Math.round(random() * 100000)}`, category: "numerical", difficulty, topic, templateId: generated.audit.kind, ...generated };
   });
 }
 
 function normaliseStoredItem(item, category) {
   const options = category === "verbal" ? verbalOptions : category === "situational" ? item.options.map((option) => option.text) : item.options;
   const answer = category === "situational" ? item.options.reduce((best, option, index, list) => option.score > list[best].score ? index : best, 0) : item.answer;
-  return { ...item, category, options, answer, ...(category === "situational" ? { optionDetails: item.options } : {}) };
+  const passageId = category === "verbal" ? item.passageId || item.id.replace(/-\d+$/, "") : undefined;
+  return { ...item, category, options, answer, ...(passageId ? { passageId } : {}), ...(category === "situational" ? { optionDetails: item.options } : {}) };
+}
+
+function selectAuthoredItems(items, count, random, selectionContext) {
+  const context = normaliseSelectionContext(selectionContext);
+  const ranked = shuffle(items, random).sort((left, right) => {
+    const leftPassage = left.passageId || left.id.replace(/-\d+$/, "");
+    const rightPassage = right.passageId || right.id.replace(/-\d+$/, "");
+    const score = (item, passageId) =>
+      (context.recentQuestionIds.has(item.id) ? 0 : 100)
+      + (context.recentPassageIds.has(passageId) ? 0 : 35)
+      + (context.unansweredTopics.has(item.topic) ? 25 : 0)
+      + (context.weakTopics.has(item.topic) ? 15 : 0);
+    return score(right, rightPassage) - score(left, leftPassage);
+  });
+  const selected = [];
+  const passages = new Set();
+  for (const item of ranked) {
+    const passageId = item.passageId || item.id.replace(/-\d+$/, "");
+    if (item.passage && passages.has(passageId)) continue;
+    selected.push(item);
+    if (item.passage) passages.add(passageId);
+    if (selected.length === count) break;
+  }
+  if (selected.length < count) {
+    for (const item of ranked) {
+      if (selected.includes(item)) continue;
+      selected.push(item);
+      if (selected.length === count) break;
+    }
+  }
+  return selected;
 }
 
 export function availableQuestionCounts(category, difficulty = "standard", pack = graduateCorePack) {
@@ -389,17 +491,17 @@ export function availableQuestionCounts(category, difficulty = "standard", pack 
   return [2, 4, 6, 8].filter((count) => count <= available);
 }
 
-export function createPracticeSession({ category, difficulty = "standard", count = 6, seed = Date.now(), pack = graduateCorePack }) {
+export function createPracticeSession({ category, difficulty = "standard", count = 6, seed = Date.now(), pack = graduateCorePack, selectionContext = {} }) {
   if (!difficultySettings[difficulty]) throw new Error(`Unknown difficulty: ${difficulty}`);
   const random = seededRandom(seed);
   const requestedCount = Math.max(1, Math.min(Number(count) || 6, 12));
-  if (category === "numerical") return createNumericalQuestions({ count: requestedCount, difficulty, random });
+  if (category === "numerical") return createNumericalQuestions({ count: requestedCount, difficulty, random, selectionContext });
   const source = pack.categories[category]?.items;
   if (!source) throw new Error(`Unknown assessment category: ${category}`);
   const matching = source.filter((item) => item.difficulty === difficulty);
   if (!matching.length) throw new Error(`No ${difficulty} questions are available for ${category}`);
   const safeCount = Math.min(requestedCount, matching.length);
-  return shuffle(matching, random).slice(0, safeCount).map((item) => normaliseStoredItem(item, category));
+  return selectAuthoredItems(matching, safeCount, random, selectionContext).map((item) => normaliseStoredItem(item, category));
 }
 
 export function describePattern(pattern) {

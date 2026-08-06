@@ -1,16 +1,22 @@
-import { assessmentCategories } from "../data/packs.js";
+import { assessmentCategories, numericalTopics } from "../data/packs.js";
+import { adjustedSeconds } from "./timing.js";
 
 export const STORAGE_KEY = "priit-lab:graduate-assessment:v1";
-export const PROGRESS_VERSION = 2;
+export const PROGRESS_VERSION = 3;
 // Progress is only recorded after a runner or interview completes. One completed
 // session is therefore the first meaningful evidence boundary across every mode.
 export const MIN_READINESS_SESSIONS = 1;
 const SESSION_ID_LIMIT = 200;
 const RECENT_TOPIC_LIMIT = 20;
+const QUESTION_EXPOSURE_LIMIT = 160;
+const PASSAGE_EXPOSURE_LIMIT = 80;
+const TEMPLATE_EXPOSURE_LIMIT = 80;
+const difficulties = ["foundation", "standard", "advanced"];
+const modes = ["practice", "simulation", "interview"];
 const categoryIds = new Set(assessmentCategories.map((category) => category.id));
 
 export const achievements = [
-  { id: "first-rep", title: "First rep", description: "Complete your first reasoning practice session.", icon: "01" },
+  { id: "first-rep", title: "First rep", description: "Complete your first reasoning session.", icon: "01" },
   { id: "century", title: "Century", description: "Answer 100 assessment questions.", icon: "100" },
   { id: "clean-sheet", title: "Clean sheet", description: "Complete a reasoning session with 100% accuracy.", icon: "✓" },
   { id: "five-day", title: "Five-day signal", description: "Practise on five consecutive days.", icon: "5D" },
@@ -37,6 +43,11 @@ function safeDate(value, fallback = new Date().toISOString()) {
   return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : fallback;
 }
 
+function safeOptionalDate(value) {
+  const parsed = new Date(value);
+  return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : null;
+}
+
 function emptyCategory() {
   return { attempted: 0, correct: 0, totalTime: 0, sessions: 0, scoreTotal: 0 };
 }
@@ -57,24 +68,35 @@ function normaliseRecentTopic(items) {
   return items.slice(-RECENT_TOPIC_LIMIT).map((item) => ({
     correct: Boolean(item?.correct),
     seconds: Math.max(1, Math.min(3600, safeInteger(item?.seconds) || 1)),
-    targetSeconds: Math.max(1, Math.min(600, safeInteger(item?.targetSeconds) || 75)),
-    completedAt: safeDate(item?.completedAt),
+    targetSeconds: item?.targetSeconds === null ? null : Math.max(1, Math.min(600, safeInteger(item?.targetSeconds) || 75)),
+    // Older schema-v3 topic samples did not carry a timestamp. Preserve that
+    // absence so loading legacy data cannot make an old attempt appear new.
+    completedAt: safeOptionalDate(item?.completedAt),
   }));
 }
 
 function normaliseSummary(item) {
-  if (!item || typeof item.id !== "string" || !item.id.trim() || !categoryIds.has(item.category)) return null;
+  const type = item?.type === "interview" ? "interview" : item?.type === "simulation" ? "simulation" : "practice";
+  const category = type === "simulation" && item?.category === "mixed" ? "mixed" : item?.category;
+  if (!item || typeof item.id !== "string" || !item.id.trim() || !categoryIds.has(category) && category !== "mixed") return null;
   return {
     id: item.id.slice(0, 120),
-    type: item.type === "interview" ? "interview" : "practice",
-    category: item.category,
-    difficulty: ["foundation", "standard", "advanced"].includes(item.difficulty) ? item.difficulty : "standard",
+    type,
+    category,
+    difficulty: difficulties.includes(item.difficulty) ? item.difficulty : "standard",
     completedAt: safeDate(item.completedAt),
     accuracy: Math.max(0, Math.min(100, Math.round(safeNumber(item.accuracy, 100)))),
     attempted: Math.max(1, safeInteger(item.attempted) || 1),
     averageTime: safeInteger(item.averageTime, 3600),
     ...(typeof item.question === "string" ? { question: item.question.slice(0, 500) } : {}),
+    ...(typeof item.formatId === "string" ? { formatId: item.formatId.slice(0, 40) } : {}),
+    ...(["standard", "extended", "untimed"].includes(item.timingProfile) ? { timingProfile: item.timingProfile } : {}),
   };
+}
+
+function normaliseExposureList(items, limit) {
+  if (!Array.isArray(items)) return [];
+  return [...new Set(items.filter((item) => typeof item === "string" && item.trim()).map((item) => item.slice(0, 120)))].slice(-limit);
 }
 
 export function createInitialProgress() {
@@ -83,7 +105,10 @@ export function createInitialProgress() {
     createdAt: new Date().toISOString(),
     totals: { attempted: 0, correct: 0, totalTime: 0, sessions: 0, scoreTotal: 0 },
     byCategory: Object.fromEntries(assessmentCategories.map((category) => [category.id, emptyCategory()])),
+    byDifficulty: Object.fromEntries(difficulties.map((difficulty) => [difficulty, emptyCategory()])),
+    byMode: Object.fromEntries(modes.map((mode) => [mode, emptyCategory()])),
     byTopic: {},
+    exposure: { questionIds: [], passageIds: [], templateIds: [] },
     practiceDates: {},
     recentSessions: [],
     completedSessionIds: [],
@@ -111,6 +136,19 @@ function normaliseProgress(parsed) {
   if (!byCategory.interview.scoreTotal) {
     byCategory.interview.scoreTotal = recentSessions.filter((item) => item.type === "interview").reduce((sum, item) => sum + item.accuracy, 0);
   }
+  const byDifficulty = { ...initial.byDifficulty };
+  for (const difficulty of difficulties) byDifficulty[difficulty] = normaliseStats(parsed?.byDifficulty?.[difficulty]);
+  const byMode = { ...initial.byMode };
+  for (const mode of modes) byMode[mode] = normaliseStats(parsed?.byMode?.[mode]);
+  if (!parsed?.byMode) {
+    const reasoningTotals = normaliseStats(parsed?.totals);
+    const interviewStats = byCategory.interview;
+    byMode.practice = {
+      ...reasoningTotals,
+      sessions: Math.max(0, reasoningTotals.sessions - interviewStats.sessions),
+    };
+    byMode.interview = { ...interviewStats };
+  }
   const byTopic = {};
   if (parsed?.byTopic && typeof parsed.byTopic === "object") {
     for (const [key, value] of Object.entries(parsed.byTopic)) {
@@ -133,7 +171,14 @@ function normaliseProgress(parsed) {
     createdAt: safeDate(parsed?.createdAt, initial.createdAt),
     totals: normaliseStats(parsed?.totals),
     byCategory,
+    byDifficulty,
+    byMode,
     byTopic,
+    exposure: {
+      questionIds: normaliseExposureList(parsed?.exposure?.questionIds, QUESTION_EXPOSURE_LIMIT),
+      passageIds: normaliseExposureList(parsed?.exposure?.passageIds, PASSAGE_EXPOSURE_LIMIT),
+      templateIds: normaliseExposureList(parsed?.exposure?.templateIds, TEMPLATE_EXPOSURE_LIMIT),
+    },
     practiceDates,
     recentSessions,
     completedSessionIds,
@@ -147,7 +192,7 @@ export function loadProgress(raw) {
   if (!raw) return createInitialProgress();
   try {
     const parsed = JSON.parse(raw);
-    if (![1, PROGRESS_VERSION].includes(parsed?.version) || !parsed.totals || !parsed.byCategory) return createInitialProgress();
+    if (![1, 2, PROGRESS_VERSION].includes(parsed?.version) || !parsed.totals || !parsed.byCategory) return createInitialProgress();
     return normaliseProgress(parsed);
   } catch {
     return createInitialProgress();
@@ -178,9 +223,9 @@ function achievementIds(progress, referenceDate = new Date()) {
   const session = progress.recentSessions[0];
   const activeCategories = Object.values(progress.byCategory).filter((item) => item.attempted > 0).length;
   const unlocked = [];
-  if (progress.recentSessions.some((item) => item.type === "practice")) unlocked.push("first-rep");
+  if (progress.recentSessions.some((item) => item.type === "practice" || item.type === "simulation")) unlocked.push("first-rep");
   if (progress.totals.attempted >= 100) unlocked.push("century");
-  if (session?.accuracy === 100 && session?.attempted >= 2 && session?.type === "practice") unlocked.push("clean-sheet");
+  if (session?.accuracy === 100 && session?.attempted >= 2 && (session?.type === "practice" || session?.type === "simulation")) unlocked.push("clean-sheet");
   if (dailyStreak(progress.practiceDates, referenceDate) >= 5) unlocked.push("five-day");
   if (activeCategories >= 5) unlocked.push("all-rounder");
   if (session?.difficulty === "advanced" && session.accuracy >= 80) unlocked.push("under-pressure");
@@ -193,16 +238,38 @@ function unchangedResult(progress) {
   return { progress: normaliseProgress(progress), newlyUnlocked: [], ignored: true };
 }
 
+function addStats(stats, { attempted, correct, totalTime, sessions = 0, scoreTotal = 0 }) {
+  return {
+    ...stats,
+    attempted: stats.attempted + attempted,
+    correct: stats.correct + correct,
+    totalTime: stats.totalTime + totalTime,
+    sessions: stats.sessions + sessions,
+    scoreTotal: stats.scoreTotal + scoreTotal,
+  };
+}
+
+function recordExposure(progress, answers) {
+  progress.exposure = {
+    questionIds: normaliseExposureList([...progress.exposure.questionIds, ...answers.map((item) => item.questionId)], QUESTION_EXPOSURE_LIMIT),
+    passageIds: normaliseExposureList([...progress.exposure.passageIds, ...answers.map((item) => item.passageId).filter(Boolean)], PASSAGE_EXPOSURE_LIMIT),
+    templateIds: normaliseExposureList([...progress.exposure.templateIds, ...answers.map((item) => item.templateId).filter(Boolean)], TEMPLATE_EXPOSURE_LIMIT),
+  };
+}
+
 export function recordPracticeSession(progress, session) {
   if (!session?.id || !Array.isArray(session.answers) || !session.answers.length || !categoryIds.has(session.category) || session.category === "interview") return unchangedResult(progress);
   const next = normaliseProgress(progress);
   if (next.completedSessionIds.includes(session.id)) return { progress: next, newlyUnlocked: [], ignored: true };
+  const difficulty = difficulties.includes(session.difficulty) ? session.difficulty : "standard";
   const completedAt = safeDate(session.completedAt);
   const answers = session.answers.map((item) => ({
     questionId: String(item?.questionId || "unknown").slice(0, 120),
     topic: String(item?.topic || "general").slice(0, 80),
     correct: Boolean(item?.correct),
     seconds: Math.max(1, Math.min(3600, safeInteger(item?.seconds) || 1)),
+    ...(typeof item?.passageId === "string" ? { passageId: item.passageId.slice(0, 120) } : {}),
+    ...(typeof item?.templateId === "string" ? { templateId: item.templateId.slice(0, 120) } : {}),
   }));
   const attempted = answers.length;
   const correct = answers.filter((item) => item.correct).length;
@@ -211,7 +278,9 @@ export function recordPracticeSession(progress, session) {
   const categoryStats = next.byCategory[session.category] || emptyCategory();
   next.totals = { ...next.totals, attempted: next.totals.attempted + attempted, correct: next.totals.correct + correct, totalTime: next.totals.totalTime + totalTime, sessions: next.totals.sessions + 1 };
   next.byCategory[session.category] = { ...categoryStats, attempted: categoryStats.attempted + attempted, correct: categoryStats.correct + correct, totalTime: categoryStats.totalTime + totalTime, sessions: categoryStats.sessions + 1 };
-  const targetSeconds = { foundation: 105, standard: 75, advanced: 55 }[session.difficulty] || 75;
+  next.byDifficulty[difficulty] = addStats(next.byDifficulty[difficulty] || emptyCategory(), { attempted, correct, totalTime, sessions: 1 });
+  next.byMode.practice = addStats(next.byMode.practice, { attempted, correct, totalTime, sessions: 1 });
+  const targetSeconds = adjustedSeconds({ foundation: 105, standard: 75, advanced: 55 }[difficulty], session.timingProfile);
   answers.forEach((item) => {
     const key = `${session.category}:${item.topic}`;
     const topic = next.byTopic[key] || { ...emptyCategory(), recent: [] };
@@ -224,12 +293,98 @@ export function recordPracticeSession(progress, session) {
     };
   });
   next.practiceDates[currentDate] = (next.practiceDates[currentDate] || 0) + attempted;
-  const summary = { id: String(session.id).slice(0, 120), type: "practice", category: session.category, difficulty: session.difficulty, completedAt, accuracy: Math.round(correct / attempted * 100), attempted, averageTime: Math.round(totalTime / attempted) };
+  const summary = { id: String(session.id).slice(0, 120), type: "practice", category: session.category, difficulty, completedAt, accuracy: Math.round(correct / attempted * 100), attempted, averageTime: Math.round(totalTime / attempted), ...(["standard", "extended", "untimed"].includes(session.timingProfile) ? { timingProfile: session.timingProfile } : {}) };
   next.recentSessions = [summary, ...next.recentSessions].slice(0, 12);
   next.completedSessionIds = [...next.completedSessionIds, summary.id].slice(-SESSION_ID_LIMIT);
+  recordExposure(next, answers);
   let running = 0;
   let best = next.bestAnswerStreak;
   answers.forEach((item) => { running = item.correct ? running + 1 : 0; best = Math.max(best, running); });
+  next.bestAnswerStreak = best;
+  const before = new Set(next.unlocked);
+  next.unlocked = [...new Set([...next.unlocked, ...achievementIds(next, completedAt)])];
+  return { progress: next, newlyUnlocked: next.unlocked.filter((id) => !before.has(id)), ignored: false };
+}
+
+export function recordSimulationSession(progress, session) {
+  if (!session?.id || !Array.isArray(session.answers) || !session.answers.length) return unchangedResult(progress);
+  const next = normaliseProgress(progress);
+  if (next.completedSessionIds.includes(session.id)) return { progress: next, newlyUnlocked: [], ignored: true };
+  const completedAt = safeDate(session.completedAt);
+  const answers = session.answers
+    .filter((item) => categoryIds.has(item?.category) && item.category !== "interview")
+    .map((item) => ({
+      questionId: String(item.questionId || "unknown").slice(0, 120),
+      category: item.category,
+      difficulty: difficulties.includes(item.difficulty) ? item.difficulty : "standard",
+      topic: String(item.topic || "general").slice(0, 80),
+      correct: Boolean(item.correct),
+      seconds: Math.max(1, Math.min(3600, safeInteger(item.seconds) || 1)),
+      ...(typeof item.passageId === "string" ? { passageId: item.passageId.slice(0, 120) } : {}),
+      ...(typeof item.templateId === "string" ? { templateId: item.templateId.slice(0, 120) } : {}),
+    }));
+  if (!answers.length) return unchangedResult(progress);
+  const attempted = answers.length;
+  const correct = answers.filter((item) => item.correct).length;
+  const totalTime = answers.reduce((sum, item) => sum + item.seconds, 0);
+  next.totals = addStats(next.totals, { attempted, correct, totalTime, sessions: 1 });
+  next.byMode.simulation = addStats(next.byMode.simulation, { attempted, correct, totalTime, sessions: 1 });
+
+  for (const category of new Set(answers.map((item) => item.category))) {
+    const categoryAnswers = answers.filter((item) => item.category === category);
+    next.byCategory[category] = addStats(next.byCategory[category], {
+      attempted: categoryAnswers.length,
+      correct: categoryAnswers.filter((item) => item.correct).length,
+      totalTime: categoryAnswers.reduce((sum, item) => sum + item.seconds, 0),
+      sessions: 1,
+    });
+  }
+  for (const difficulty of new Set(answers.map((item) => item.difficulty))) {
+    const difficultyAnswers = answers.filter((item) => item.difficulty === difficulty);
+    next.byDifficulty[difficulty] = addStats(next.byDifficulty[difficulty], {
+      attempted: difficultyAnswers.length,
+      correct: difficultyAnswers.filter((item) => item.correct).length,
+      totalTime: difficultyAnswers.reduce((sum, item) => sum + item.seconds, 0),
+      sessions: 1,
+    });
+  }
+
+  for (const item of answers) {
+    const key = `${item.category}:${item.topic}`;
+    const topic = next.byTopic[key] || { ...emptyCategory(), recent: [] };
+    const targetSeconds = adjustedSeconds({ foundation: 105, standard: 75, advanced: 55 }[item.difficulty], session.timingProfile);
+    next.byTopic[key] = {
+      ...topic,
+      attempted: topic.attempted + 1,
+      correct: topic.correct + (item.correct ? 1 : 0),
+      totalTime: topic.totalTime + item.seconds,
+      recent: [...(topic.recent || []), { correct: item.correct, seconds: item.seconds, targetSeconds, completedAt }].slice(-RECENT_TOPIC_LIMIT),
+    };
+  }
+
+  const currentDate = dateKey(completedAt);
+  next.practiceDates[currentDate] = (next.practiceDates[currentDate] || 0) + attempted;
+  const summary = {
+    id: String(session.id).slice(0, 120),
+    type: "simulation",
+    category: "mixed",
+    difficulty: "standard",
+    formatId: String(session.formatId || "custom").slice(0, 40),
+    ...(["standard", "extended", "untimed"].includes(session.timingProfile) ? { timingProfile: session.timingProfile } : {}),
+    completedAt,
+    accuracy: Math.round(correct / attempted * 100),
+    attempted,
+    averageTime: Math.round(totalTime / attempted),
+  };
+  next.recentSessions = [summary, ...next.recentSessions].slice(0, 12);
+  next.completedSessionIds = [...next.completedSessionIds, summary.id].slice(-SESSION_ID_LIMIT);
+  recordExposure(next, answers);
+  let running = 0;
+  let best = next.bestAnswerStreak;
+  for (const item of answers) {
+    running = item.correct ? running + 1 : 0;
+    best = Math.max(best, running);
+  }
   next.bestAnswerStreak = best;
   const before = new Set(next.unlocked);
   next.unlocked = [...new Set([...next.unlocked, ...achievementIds(next, completedAt)])];
@@ -248,10 +403,13 @@ export function recordInterviewAnswer(progress, entry) {
   next.practiceDates[currentDate] = (next.practiceDates[currentDate] || 0) + 1;
   const current = next.byCategory.interview || emptyCategory();
   next.byCategory.interview = { ...current, attempted: current.attempted + 1, totalTime: current.totalTime + seconds, sessions: current.sessions + 1, scoreTotal: current.scoreTotal + score };
+  const difficulty = difficulties.includes(entry.difficulty) ? entry.difficulty : "standard";
+  next.byMode.interview = addStats(next.byMode.interview, { attempted: 1, correct: 0, totalTime: seconds, sessions: 1, scoreTotal: score });
   next.totals.sessions += 1;
-  const summary = { id: String(entry.id).slice(0, 120), type: "interview", category: "interview", difficulty: entry.difficulty, completedAt, accuracy: score, attempted: 1, averageTime: seconds, question: String(entry.question || "").slice(0, 500) };
+  const summary = { id: String(entry.id).slice(0, 120), type: "interview", category: "interview", difficulty, completedAt, accuracy: score, attempted: 1, averageTime: seconds, question: String(entry.question || "").slice(0, 500) };
   next.recentSessions = [summary, ...next.recentSessions].slice(0, 12);
   next.completedSessionIds = [...next.completedSessionIds, summary.id].slice(-SESSION_ID_LIMIT);
+  recordExposure(next, [{ questionId: String(entry.questionId || entry.id).slice(0, 120) }]);
   const before = new Set(next.unlocked);
   next.unlocked = [...new Set([...next.unlocked, ...achievementIds(next, completedAt)])];
   return { progress: next, newlyUnlocked: next.unlocked.filter((id) => !before.has(id)), ignored: false };
@@ -286,9 +444,10 @@ export function topicMastery(progress) {
     const recent = normaliseRecentTopic(stats.recent);
     const recentCorrect = recent.filter((item) => item.correct).length;
     const recentAccuracy = recent.length ? recentCorrect / recent.length * 100 : accuracy(stats);
-    const averageSeconds = recent.length ? recent.reduce((sum, item) => sum + item.seconds, 0) / recent.length : responseTime(stats);
-    const averageTarget = recent.length ? recent.reduce((sum, item) => sum + item.targetSeconds, 0) / recent.length : 75;
-    const slowPenalty = Math.min(12, Math.max(0, averageSeconds / averageTarget - 1) * 20);
+    const pacedRecent = recent.filter((item) => item.targetSeconds !== null);
+    const averageSeconds = pacedRecent.length ? pacedRecent.reduce((sum, item) => sum + item.seconds, 0) / pacedRecent.length : responseTime(stats);
+    const averageTarget = pacedRecent.length ? pacedRecent.reduce((sum, item) => sum + item.targetSeconds, 0) / pacedRecent.length : null;
+    const slowPenalty = averageTarget === null ? 0 : Math.min(12, Math.max(0, averageSeconds / averageTarget - 1) * 20);
     const performance = Math.max(0, recentAccuracy - slowPenalty);
     const confidence = Math.min(1, safeInteger(stats.attempted) / 10);
     const mastery = Math.round(50 + (performance - 50) * confidence);
@@ -303,7 +462,79 @@ export function topicMastery(progress) {
   }).sort((left, right) => left.mastery - right.mastery || right.attempted - left.attempted);
 }
 
-export function getRecommendations(progress) {
+export function spacedReviewQueue(progress, now = new Date()) {
+  const reference = new Date(now);
+  const referenceTime = Number.isFinite(reference.getTime()) ? reference.getTime() : Date.now();
+  return topicMastery(progress).map((topic) => {
+    const recent = normaliseRecentTopic(progress.byTopic?.[topic.id]?.recent);
+    const category = topic.id.split(":")[0];
+    const categorySession = (progress.recentSessions || []).find((session) => session.category === category || session.category === "mixed");
+    const lastCompletedAt = [...recent].reverse().find((item) => item.completedAt)?.completedAt
+      || safeOptionalDate(categorySession?.completedAt)
+      || safeOptionalDate(progress.createdAt);
+    const lastTime = lastCompletedAt ? new Date(lastCompletedAt).getTime() : referenceTime;
+    // These compact intervals intentionally support retrieval practice rather
+    // than claim a calibrated memory model: fragile topics return after two
+    // days, developing topics after four, and stronger topics after one week.
+    const intervalDays = topic.mastery >= 75 ? 7 : topic.mastery >= 60 ? 4 : 2;
+    const dueTime = lastTime + intervalDays * 86_400_000;
+    const daysSince = Math.max(0, Math.floor((referenceTime - lastTime) / 86_400_000));
+    const overdueDays = Math.max(0, Math.floor((referenceTime - dueTime) / 86_400_000));
+    return {
+      ...topic,
+      lastCompletedAt,
+      intervalDays,
+      dueAt: new Date(dueTime).toISOString(),
+      daysSince,
+      overdueDays,
+      due: dueTime <= referenceTime,
+    };
+  }).sort((left, right) => Number(right.due) - Number(left.due) || right.overdueDays - left.overdueDays || left.mastery - right.mastery);
+}
+
+export function performanceByMode(progress) {
+  return modes.map((mode) => {
+    const stats = progress.byMode?.[mode] || emptyCategory();
+    const performance = mode === "interview"
+      ? (stats.attempted ? Math.round(stats.scoreTotal / stats.attempted) : 0)
+      : accuracy(stats);
+    return { id: mode, ...stats, performance, averageTime: responseTime(stats) };
+  });
+}
+
+export function recentPerformanceTrend(progress) {
+  const sessions = (progress.recentSessions || []).filter((session) => session.type !== "interview").slice(0, 6);
+  if (sessions.length < 4) return { label: "Limited evidence", delta: null, sample: sessions.length };
+  const midpoint = Math.ceil(sessions.length / 2);
+  const recent = sessions.slice(0, midpoint);
+  const earlier = sessions.slice(midpoint);
+  const recentAverage = recent.reduce((sum, session) => sum + session.accuracy, 0) / recent.length;
+  const earlierAverage = earlier.reduce((sum, session) => sum + session.accuracy, 0) / earlier.length;
+  const delta = Math.round(recentAverage - earlierAverage);
+  return { label: delta >= 5 ? "Improving" : delta <= -5 ? "Cooling" : "Steady", delta, sample: sessions.length };
+}
+
+export function exposureMetrics(progress) {
+  return {
+    recentQuestions: progress.exposure?.questionIds?.length || 0,
+    recentPassages: progress.exposure?.passageIds?.length || 0,
+    recentTemplates: progress.exposure?.templateIds?.length || 0,
+  };
+}
+
+export function getSelectionContext(progress) {
+  const mastery = topicMastery(progress);
+  const dueTopics = spacedReviewQueue(progress).filter((topic) => topic.due).map((topic) => topic.id.split(":").slice(1).join(":"));
+  return {
+    recentQuestionIds: [...(progress.exposure?.questionIds || [])],
+    recentPassageIds: [...(progress.exposure?.passageIds || [])],
+    recentTemplateIds: [...(progress.exposure?.templateIds || [])],
+    weakTopics: [...new Set([...dueTopics, ...mastery.slice(0, 8).map((item) => item.id.split(":").slice(1).join(":"))])].slice(0, 8),
+    unansweredTopics: numericalTopics.filter((topic) => !progress.byTopic?.[`numerical:${topic}`]?.attempted),
+  };
+}
+
+export function getRecommendations(progress, now = new Date()) {
   const reasoning = assessmentCategories.filter((category) => category.id !== "interview");
   const unattempted = reasoning.filter((category) => !progress.byCategory[category.id]?.attempted);
   if (unattempted.length) {
@@ -315,13 +546,18 @@ export function getRecommendations(progress) {
     ];
   }
   const mastery = topicMastery(progress);
+  const dueReview = spacedReviewQueue(progress, now).find((topic) => topic.due);
   const weakestTopic = mastery[0];
   const weakestCategory = weakestTopic?.id.split(":")[0] || reasoning.sort((left, right) => accuracy(progress.byCategory[left.id]) - accuracy(progress.byCategory[right.id]))[0].id;
   const stats = progress.byCategory[weakestCategory];
   const limitedEvidence = stats.attempted < 4;
   const slow = responseTime(stats) > 85;
   return [
-    {
+    dueReview ? {
+      category: dueReview.id.split(":")[0],
+      title: `Review ${dueReview.id.split(":").slice(1).join(":").replaceAll("-", " ")}`,
+      reason: `This topic is due after ${dueReview.daysSince} day${dueReview.daysSince === 1 ? "" : "s"}. A short retrieval set now is more useful than waiting for it to feel unfamiliar.`,
+    } : {
       category: weakestCategory,
       title: limitedEvidence ? "Gather more evidence" : `Revisit ${weakestCategory}`,
       reason: limitedEvidence ? "A single result is too fragile for a strong recommendation. Add a short set." : slow && accuracy(stats) >= 70 ? `Accuracy is ${accuracy(stats)}%, but average response time is ${responseTime(stats)}s. Practise the same rules with a measured pace target.` : `Current accuracy is ${accuracy(stats)}%. Use Foundation mode to isolate the rule before adding time pressure.`,

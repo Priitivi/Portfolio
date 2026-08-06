@@ -1,3 +1,10 @@
+import {
+  expandedInterviewQuestions,
+  expandedLogicalItems,
+  expandedSituationalItems,
+  expandedVerbalItems,
+} from "./content-expansion.js";
+
 export const assessmentCategories = [
   { id: "numerical", label: "Numerical", short: "NUM", description: "Interpret business data and calculate with confidence.", icon: "↗", minutes: 10 },
   { id: "verbal", label: "Verbal", short: "VRB", description: "Separate evidence from assumption in concise passages.", icon: "Aa", minutes: 9 },
@@ -17,7 +24,7 @@ export const numericalTopics = [
   "probability",
 ];
 
-const verbalItems = [
+export const baseVerbalItems = [
   {
     id: "vrb-remote-1",
     difficulty: "foundation",
@@ -128,7 +135,7 @@ const verbalItems = [
   },
 ];
 
-const logicalItems = [
+export const baseLogicalItems = [
   {
     id: "log-rotate-fill",
     difficulty: "foundation",
@@ -377,7 +384,7 @@ const logicalItems = [
   },
 ];
 
-const situationalItems = [
+export const baseSituationalItems = [
   {
     id: "sjt-forecast",
     difficulty: "foundation",
@@ -548,7 +555,7 @@ const situationalItems = [
   },
 ];
 
-export const interviewQuestions = [
+export const baseInterviewQuestions = [
   { id: "int-01", competency: "Motivation", difficulty: "foundation", question: "Why does this kind of graduate role appeal to you, and what evidence suggests you would enjoy the day-to-day work?", probes: ["Connect motivation to real tasks", "Use evidence from your choices"] },
   { id: "int-02", competency: "Motivation", difficulty: "standard", question: "What have you learned about our industry that has changed your view of the role?", probes: ["Name a specific insight", "Explain why it matters"] },
   { id: "int-03", competency: "Self-awareness", difficulty: "foundation", question: "What is one piece of feedback that genuinely changed how you work?", probes: ["Describe the before and after", "Show deliberate action"] },
@@ -580,6 +587,34 @@ export const interviewQuestions = [
   { id: "int-29", competency: "Reflection", difficulty: "advanced", question: "Looking back at your strongest achievement, what would you now do differently?", probes: ["Protect the achievement's credibility", "Show mature hindsight"] },
   { id: "int-30", competency: "Readiness", difficulty: "standard", question: "What would your first 90 days in a graduate role need to include for you to call them successful?", probes: ["Cover learning and contribution", "Use observable outcomes"] },
 ];
+
+function enrichVerbalItem(item) {
+  if (item.passageId) return item;
+  const passageId = item.id === "vrb-training-1"
+    ? "vrb-training-completion"
+    : item.id === "vrb-training-2"
+      ? "vrb-training-forecast"
+      : item.id.replace(/-\d+$/, "");
+  return { ...item, passageId };
+}
+
+export const verbalItems = [...baseVerbalItems, ...expandedVerbalItems].map(enrichVerbalItem);
+export const logicalItems = [...baseLogicalItems, ...expandedLogicalItems];
+export const situationalItems = [...baseSituationalItems, ...expandedSituationalItems];
+
+function enrichInterviewQuestion(item) {
+  return {
+    ...item,
+    recommendedStructure: item.recommendedStructure || "Context, personal action, result and reflection",
+    preparationCue: item.preparationCue || item.probes[0],
+    followUps: item.followUps || [
+      `What made this example important for ${item.competency.toLowerCase()}?`,
+      "What would you do differently with hindsight?",
+    ],
+  };
+}
+
+export const interviewQuestions = [...baseInterviewQuestions, ...expandedInterviewQuestions].map(enrichInterviewQuestion);
 
 export const graduateCorePack = {
   id: "graduate-core",

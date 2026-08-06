@@ -9,7 +9,7 @@ function formatClock(seconds) {
 }
 
 function ScoreRing({ score }) {
-  return <div className="ga-score-ring" style={{ "--score": `${score * 3.6}deg` }}><span><strong>{score}</strong><small>/100</small></span></div>;
+  return <div className="ga-score-ring" role="img" aria-label={`Heuristic transcript score ${score} out of 100`} style={{ "--score": `${score * 3.6}deg` }}><span aria-hidden="true"><strong>{score}</strong><small>/100</small></span></div>;
 }
 
 function InterviewReview({ question, transcript, analysis, seconds, onAgain, onExit }) {
@@ -38,6 +38,7 @@ function InterviewReview({ question, transcript, analysis, seconds, onAgain, onE
             {Object.entries(analysis.star).map(([key, present]) => <span key={key} className={present ? "is-present" : ""}><i>{present ? "✓" : "·"}</i>{key}</span>)}
           </div>
           <div className="ga-limitations"><strong>Not available from text</strong><p>{analysis.limitations.join(" ")}</p></div>
+          <div className="ga-limitations"><strong>Optional follow-up prompts</strong><p>{question.followUps.join(" · ")}</p></div>
         </section>
       </div>
       <section className="ga-launch-bar"><div><span>KEEP THE LOOP TIGHT</span><strong>Repeat the answer or practise a new question while the feedback is fresh.</strong></div><div><button type="button" className="ga-button ga-button-ghost" onClick={onExit}>Dashboard</button><button type="button" className="ga-button ga-button-primary" onClick={onAgain}>New question →</button></div></section>
@@ -45,7 +46,7 @@ function InterviewReview({ question, transcript, analysis, seconds, onAgain, onE
   );
 }
 
-function InterviewRoom({ question, difficulty, prepSeconds, answerSeconds, onComplete, onExit, onAgain }) {
+function InterviewRoom({ question, difficulty, prepSeconds, answerSeconds, untimed, onComplete, onExit, onAgain }) {
   const [phase, setPhase] = useState("prepare");
   const [remaining, setRemaining] = useState(prepSeconds);
   const [prepNotes, setPrepNotes] = useState("");
@@ -65,8 +66,8 @@ function InterviewRoom({ question, difficulty, prepSeconds, answerSeconds, onCom
     speech.stop();
     phaseRef.current = "answer";
     answerStartedAtRef.current = Date.now();
-    deadlineRef.current = Date.now() + answerSeconds * 1000;
-    setRemaining(answerSeconds);
+    if (!untimed) deadlineRef.current = Date.now() + answerSeconds * 1000;
+    setRemaining(untimed ? 0 : answerSeconds);
     setPhase("answer");
   };
   beginRef.current = beginAnswer;
@@ -77,12 +78,14 @@ function InterviewRoom({ question, difficulty, prepSeconds, answerSeconds, onCom
     phaseRef.current = "review";
     speech.stop();
     const result = analyseInterviewAnswer(transcript);
-    const seconds = Math.min(answerSeconds, Math.max(1, Math.round((Date.now() - answerStartedAtRef.current) / 1000)));
+    const elapsed = Math.max(1, Math.round((Date.now() - answerStartedAtRef.current) / 1000));
+    const seconds = untimed ? elapsed : Math.min(answerSeconds, elapsed);
     setElapsedSeconds(seconds);
     setAnalysis(result);
     setPhase("review");
     onComplete({
       id: globalThis.crypto?.randomUUID?.() || `interview-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      questionId: question.id,
       difficulty,
       question: question.question,
       score: result.total,
@@ -93,7 +96,7 @@ function InterviewRoom({ question, difficulty, prepSeconds, answerSeconds, onCom
   finishRef.current = finishAnswer;
 
   useEffect(() => {
-    if (phase === "review") return undefined;
+    if (phase === "review" || untimed) return undefined;
     const timer = window.setInterval(() => {
       const next = remainingFromDeadline(deadlineRef.current);
       setRemaining(next);
@@ -104,7 +107,7 @@ function InterviewRoom({ question, difficulty, prepSeconds, answerSeconds, onCom
       }
     }, 250);
     return () => window.clearInterval(timer);
-  }, [phase]);
+  }, [phase, untimed]);
 
   if (phase === "review") return <InterviewReview question={question} transcript={transcript} analysis={analysis} seconds={elapsedSeconds} onAgain={onAgain} onExit={onExit} />;
 
@@ -113,14 +116,14 @@ function InterviewRoom({ question, difficulty, prepSeconds, answerSeconds, onCom
       <section className="ga-interview-room-top">
         <button type="button" onClick={onExit}>← Exit interview</button>
         <span className={phase === "answer" ? "is-recording" : ""}><i />{phase === "prepare" ? "PREPARATION" : "ANSWER IN PROGRESS"}</span>
-        <div role="timer" aria-label={`${remaining} seconds remaining`}><small>{phase === "prepare" ? "PREP" : "ANSWER"}</small><strong>{formatClock(remaining)}</strong><span className="ga-sr-only" aria-live="polite">{remaining === 15 ? "Fifteen seconds remaining" : remaining === 0 ? `${phase === "prepare" ? "Preparation" : "Answer"} time expired` : ""}</span></div>
+        {untimed ? <div aria-label="Untimed interview rehearsal"><small>PACE</small><strong>UNTIMED</strong></div> : <div role="timer" aria-label={`${remaining} seconds remaining`}><small>{phase === "prepare" ? "PREP" : "ANSWER"}</small><strong>{formatClock(remaining)}</strong><span className="ga-sr-only" aria-live="polite">{remaining === 15 ? "Fifteen seconds remaining" : remaining === 0 ? `${phase === "prepare" ? "Preparation" : "Answer"} time expired` : ""}</span></div>}
       </section>
       <section className="ga-interview-stage">
         <div className="ga-interviewer-tile" aria-hidden="true"><span>GA</span><i /><small>INTERVIEW SIMULATOR</small></div>
         <div className="ga-interview-question">
           <p className="ga-kicker">{question.competency.toUpperCase()} · {difficultySettings[difficulty].label.toUpperCase()}</p>
           <h1>{question.question}</h1>
-          <div className="ga-probes"><span>Consider</span>{question.probes.map((probe) => <small key={probe}>{probe}</small>)}</div>
+          <div className="ga-probes"><span>{question.recommendedStructure}</span><small>{question.preparationCue}</small>{question.probes.map((probe) => <small key={probe}>{probe}</small>)}</div>
         </div>
       </section>
       {phase === "prepare" ? (
@@ -138,14 +141,15 @@ function InterviewRoom({ question, difficulty, prepSeconds, answerSeconds, onCom
   );
 }
 
-export default function InterviewPractice({ onComplete, onExit }) {
+export default function InterviewPractice({ recentQuestionIds = [], onComplete, onExit }) {
   const [difficulty, setDifficulty] = useState("standard");
   const [prepSeconds, setPrepSeconds] = useState(30);
   const [answerSeconds, setAnswerSeconds] = useState(120);
+  const [untimed, setUntimed] = useState(false);
   const [runKey, setRunKey] = useState(0);
   const [running, setRunning] = useState(false);
   const [question, setQuestion] = useState(null);
-  const [usedQuestionIds, setUsedQuestionIds] = useState([]);
+  const [usedQuestionIds, setUsedQuestionIds] = useState(() => recentQuestionIds.slice(-30));
 
   const chooseQuestion = () => {
     const next = selectInterviewQuestion(interviewQuestions, difficulty, usedQuestionIds);
@@ -164,7 +168,7 @@ export default function InterviewPractice({ onComplete, onExit }) {
     setRunKey((current) => current + 1);
   };
 
-  if (running && question) return <InterviewRoom key={runKey} question={question} difficulty={difficulty} prepSeconds={prepSeconds} answerSeconds={answerSeconds} onComplete={onComplete} onExit={onExit} onAgain={anotherQuestion} />;
+  if (running && question) return <InterviewRoom key={runKey} question={question} difficulty={difficulty} prepSeconds={prepSeconds} answerSeconds={answerSeconds} untimed={untimed} onComplete={onComplete} onExit={onExit} onAgain={anotherQuestion} />;
 
   return (
     <main className="ga-main ga-interview-setup">
@@ -172,12 +176,13 @@ export default function InterviewPractice({ onComplete, onExit }) {
       <div className="ga-interview-setup-grid">
         <section className="ga-panel">
           <div className="ga-setup-label"><span>01</span><div><h2>Question depth</h2><p>Choose how much ambiguity the prompt contains.</p></div></div>
-          <div className="ga-choice-stack">{Object.entries(difficultySettings).map(([id, setting]) => <button type="button" key={id} className={difficulty === id ? "is-selected" : ""} onClick={() => setDifficulty(id)}><span><strong>{setting.label}</strong><small>{id === "foundation" ? "Direct competency prompt" : id === "standard" ? "Behaviour plus reflection" : "Ambiguity and trade-offs"}</small></span><i>{difficulty === id ? "✓" : ""}</i></button>)}</div>
+          <div className="ga-choice-stack">{Object.entries(difficultySettings).map(([id, setting]) => <button type="button" key={id} className={difficulty === id ? "is-selected" : ""} aria-pressed={difficulty === id} onClick={() => setDifficulty(id)}><span><strong>{setting.label}</strong><small>{id === "foundation" ? "Direct competency prompt" : id === "standard" ? "Behaviour plus reflection" : "Ambiguity and trade-offs"}</small></span><i>{difficulty === id ? "✓" : ""}</i></button>)}</div>
         </section>
         <section className="ga-panel">
           <div className="ga-setup-label"><span>02</span><div><h2>Timing</h2><p>Replicate the preparation and recording window you expect.</p></div></div>
-          <label className="ga-range-control"><span><strong>Preparation</strong><b>{prepSeconds}s</b></span><input type="range" min="15" max="60" step="15" value={prepSeconds} onChange={(event) => setPrepSeconds(Number(event.target.value))} /></label>
-          <label className="ga-range-control"><span><strong>Answer window</strong><b>{answerSeconds / 60} min</b></span><input type="range" min="60" max="180" step="30" value={answerSeconds} onChange={(event) => setAnswerSeconds(Number(event.target.value))} /></label>
+          <label className="ga-range-control"><span><strong>Preparation</strong><b>{untimed ? "Manual" : `${prepSeconds}s`}</b></span><input type="range" min="15" max="60" step="15" value={prepSeconds} disabled={untimed} onChange={(event) => setPrepSeconds(Number(event.target.value))} /></label>
+          <label className="ga-range-control"><span><strong>Answer window</strong><b>{untimed ? "Manual" : `${answerSeconds / 60} min`}</b></span><input type="range" min="60" max="180" step="30" value={answerSeconds} disabled={untimed} onChange={(event) => setAnswerSeconds(Number(event.target.value))} /></label>
+          <label className="ga-simulation-toggle ga-interview-untimed"><input type="checkbox" checked={untimed} onChange={(event) => setUntimed(event.target.checked)} /><span><strong>Untimed rehearsal</strong><small>Advance preparation and finish the answer manually. Use this while building structure before adding pressure.</small></span></label>
           <div className="ga-privacy-note"><span>LOCAL ONLY</span><p>Speech recognition is optional and browser-provided. No recording or transcript is uploaded by this Lab.</p></div>
         </section>
       </div>
