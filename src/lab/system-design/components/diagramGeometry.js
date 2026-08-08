@@ -26,9 +26,16 @@ export function connectionGeometry(connection, nodes, container) {
   let toAnchor = connection.toAnchor;
   if (!fromAnchor || !toAnchor) [fromAnchor, toAnchor] = anchorForDirection(fromBounds, toBounds);
 
-  const route = connection.route === "responsive-fanout"
-    ? (container.width < 600 ? "side-right" : "fanout-down")
-    : connection.route;
+  let route = connection.route;
+  if (route === "responsive-fanout") route = container.width < 600 ? "side-right" : "fanout-down";
+  if (route === "responsive-side-right") route = container.width < 600 ? "side-right" : connection.desktopRoute;
+  if (route === "responsive-stack") {
+    route = container.width < 600 ? undefined : connection.desktopRoute;
+    if (container.width < 600) {
+      fromAnchor = "bottom";
+      toAnchor = "top";
+    }
+  }
 
   if (route === "side-right") {
     fromAnchor = "right";

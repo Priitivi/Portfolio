@@ -80,9 +80,9 @@ export const experiments = [
     experimentNumber: "009",
     title: "System Design Lab",
     status: "Interactive",
-    description: "A live architecture playground where requests, events, failures and recovery move visibly through distributed systems.",
+    description: "A guided learning playground where constraints, decisions, traffic and failures visibly evolve one distributed architecture.",
     route: "/lab/system-design",
     preview: "system",
-    signals: ["4 live simulations", "Animated data paths", "Failure controls", "Design challenge"],
+    signals: ["Million-user scaling journey", "Deterministic capacity model", "4 focused simulations", "Design challenge"],
   },
 ];

@@ -5,7 +5,9 @@ import PubSubSimulation from "./simulations/PubSubSimulation";
 import KubernetesSimulation from "./simulations/KubernetesSimulation";
 import DesignChallenge from "./components/DesignChallenge";
 import HeroTopology from "./components/HeroTopology";
+import ScaleToMillionUsers from "./learning/ScaleToMillionUsers";
 import "./system-design.css";
+import "./scale-learning.css";
 
 const catalogue = [
   { id: "caching", number: "01", title: "Redis caching", lesson: "Make the fast path visible", signal: "18 ms" },
@@ -32,13 +34,14 @@ export default function SystemDesignLab({ navigate }) {
 
   return (
     <main className="system-design-lab">
-      <a className="sd-skip-link" href="#simulations">Skip to simulations</a>
+      <a className="sd-skip-link" href="#learn">Skip to guided learning</a>
       <div className="sd-grid-bg" aria-hidden="true" />
       <header className="sd-header">
         <a href="/lab" onClick={returnToLab} className="sd-wordmark" aria-label="Return to Priit Lab"><span>PL</span><strong>PRIIT LAB</strong><small>/ SYSTEM DESIGN</small></a>
         <nav aria-label="System Design Lab navigation">
-          <a href="#simulations">Simulations</a>
-          <a href="#challenge">Challenge</a>
+          <a href="#learn">Learn</a>
+          <a href="#simulations">Simulate</a>
+          <a href="#challenge">Design</a>
           <a href="/lab" onClick={returnToLab}>Exit chamber ↗</a>
         </nav>
       </header>
@@ -49,8 +52,8 @@ export default function SystemDesignLab({ navigate }) {
           <h1>System<br /><em>Design</em> Lab</h1>
           <p className="sd-hero-lede">Don&apos;t just read the architecture. <strong>Run it.</strong> Send requests, break infrastructure, and watch distributed systems respond in real time.</p>
           <div className="sd-hero-actions">
-            <a href="#simulations">RUN THE SYSTEMS <span>↓</span></a>
-            <span>4 simulations / 1 design challenge</span>
+            <a href="#learn">START THE FLAGSHIP LAB <span>↓</span></a>
+            <span>7 constraint stages / 4 concept simulations</span>
           </div>
         </div>
 
@@ -61,8 +64,10 @@ export default function SystemDesignLab({ navigate }) {
         </div>
       </section>
 
+      <ScaleToMillionUsers />
+
       <section className="sd-catalogue" aria-labelledby="catalogue-title">
-        <div><p className="sd-overline">SIMULATION CATALOGUE</p><h2 id="catalogue-title">Choose a system.<br />Change its state.</h2></div>
+        <div><p className="sd-overline">SIMULATE / CONCEPT WORKBENCH</p><h2 id="catalogue-title">Focus on one system.<br />Change its state.</h2></div>
         <div className="sd-catalogue-grid">
           {catalogue.map((item) => (
             <a href={`#${item.id}`} key={item.id}>

@@ -11,6 +11,9 @@ import {
 import { designChallenge } from "../src/lab/system-design/data/designChallenges.js";
 import { heroConnections, heroRequestSequence } from "../src/lab/system-design/data/heroTopology.js";
 import { anchorPoint, connectionGeometry, localBounds, pathData } from "../src/lab/system-design/components/diagramGeometry.js";
+import { scaleStages, recommendedDecision } from "../src/lab/system-design/learning/scaleStages.js";
+import { mergeArchitecture, simulateScale } from "../src/lab/system-design/learning/scalingModel.js";
+import { buildScaleConnections, buildScaleTraffic } from "../src/lab/system-design/learning/scaleTopology.js";
 
 test("cache simulation distinguishes cold, warm, and bypassed requests", () => {
   const cache = new Set();
@@ -99,4 +102,95 @@ test("hero topology request and response form one continuous route over visible 
     const next = heroRequestSequence[(index + 1) % heroRequestSequence.length];
     assert.equal(step.to, next.from, `step ${index + 1} joins step ${index + 2} without a jump`);
   });
+});
+
+test("the scaling model is deterministic for identical workload and architecture inputs", () => {
+  const stage = scaleStages[2];
+  const architecture = mergeArchitecture(stage.architecture);
+  assert.deepEqual(
+    simulateScale({ workload: stage.workload, architecture }),
+    simulateScale({ workload: stage.workload, architecture }),
+  );
+});
+
+test("capacity constraints move through API, database, distance, and synchronous work", () => {
+  const bottlenecks = scaleStages.map((stage) => simulateScale({
+    workload: stage.workload,
+    architecture: mergeArchitecture(stage.architecture),
+  }).bottleneck);
+
+  assert.deepEqual(bottlenecks, [
+    "HEALTHY",
+    "API TIER",
+    "DATABASE",
+    "DATABASE",
+    "DISTANCE / ORIGIN",
+    "SYNCHRONOUS WORK",
+    "HEALTHY",
+  ]);
+});
+
+test("fit-for-purpose decisions improve the metric tied to each active constraint", () => {
+  const comparisons = [
+    [1, "apiUtilization"],
+    [2, "databaseUtilization"],
+    [3, "databaseUtilization"],
+    [4, "originTraffic"],
+    [5, "p95"],
+  ];
+
+  comparisons.forEach(([stageIndex, metric]) => {
+    const stage = scaleStages[stageIndex];
+    const before = simulateScale({ workload: stage.workload, architecture: mergeArchitecture(stage.architecture) });
+    const after = simulateScale({ workload: stage.workload, architecture: mergeArchitecture(stage.architecture, recommendedDecision(stage).patch) });
+    assert.ok(after[metric] < before[metric], `${stage.id} lowers ${metric}`);
+  });
+});
+
+test("alternative decisions have consistent consequences instead of no-op feedback", () => {
+  const stage = scaleStages[2];
+  const baseline = mergeArchitecture(stage.architecture);
+  const moreApi = stage.decisions.find((decision) => decision.id === "more-api");
+  const cache = recommendedDecision(stage);
+  const before = simulateScale({ workload: stage.workload, architecture: baseline });
+  const apiResult = simulateScale({ workload: stage.workload, architecture: mergeArchitecture(stage.architecture, moreApi.patch) });
+  const cacheResult = simulateScale({ workload: stage.workload, architecture: mergeArchitecture(stage.architecture, cache.patch) });
+
+  assert.ok(apiResult.apiUtilization < before.apiUtilization);
+  assert.equal(apiResult.databaseUtilization, before.databaseUtilization);
+  assert.ok(cacheResult.databaseUtilization < before.databaseUtilization);
+});
+
+test("guided progression is ordered, complete, and offers one explicit best fit per decision stage", () => {
+  assert.equal(scaleStages.length, 7);
+  assert.deepEqual(scaleStages.map((stage) => stage.id), ["simple", "api-bottleneck", "database-bottleneck", "read-scaling", "global-static", "asynchronous-work", "failure"]);
+  assert.ok(scaleStages.every((stage, index) => index === 0 || stage.users >= scaleStages[index - 1].users));
+  assert.ok(scaleStages.filter((stage) => stage.decisions).every((stage) => stage.decisions.filter((decision) => decision.recommended).length === 1));
+});
+
+test("representative traffic traces only use visible edges and remain continuous within each trace", () => {
+  const architecture = mergeArchitecture(scaleStages.at(-1).architecture);
+  const connections = buildScaleConnections(architecture);
+  const byId = new Map(connections.map((connection) => [connection.id, connection]));
+  const traces = buildScaleTraffic(architecture);
+
+  traces.forEach((trace) => trace.steps.forEach((step, index) => {
+    const connection = byId.get(step.connectionId);
+    assert.ok(connection, `${step.connectionId} is visible`);
+    if (index === trace.steps.length - 1) return;
+    const destination = step.reverse ? connection.from : connection.to;
+    const next = trace.steps[index + 1];
+    const nextConnection = byId.get(next.connectionId);
+    const nextSource = next.reverse ? nextConnection.to : nextConnection.from;
+    assert.equal(destination, nextSource, `${trace.id} has no packet jump between segments`);
+  }));
+});
+
+test("one failed API instance raises utilisation while health-aware routing preserves service", () => {
+  const stage = scaleStages.at(-1);
+  const healthy = simulateScale({ workload: stage.workload, architecture: mergeArchitecture(stage.architecture) });
+  const degraded = simulateScale({ workload: stage.workload, architecture: mergeArchitecture(stage.architecture, { failedApiCount: 1 }) });
+  assert.ok(degraded.apiUtilization > healthy.apiUtilization);
+  assert.ok(degraded.errorRate < 0.2);
+  assert.ok(degraded.availability >= 99.99);
 });
