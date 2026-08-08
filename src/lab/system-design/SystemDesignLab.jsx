@@ -4,6 +4,7 @@ import LoadBalancerSimulation from "./simulations/LoadBalancerSimulation";
 import PubSubSimulation from "./simulations/PubSubSimulation";
 import KubernetesSimulation from "./simulations/KubernetesSimulation";
 import DesignChallenge from "./components/DesignChallenge";
+import HeroTopology from "./components/HeroTopology";
 import "./system-design.css";
 
 const catalogue = [
@@ -55,15 +56,7 @@ export default function SystemDesignLab({ navigate }) {
 
         <div className="sd-hero-visual" aria-label="Animated distributed system overview">
           <div className="sd-hero-topline"><span>LIVE TOPOLOGY</span><b>ALL SYSTEMS NOMINAL</b></div>
-          <div className="sd-topology" aria-hidden="true">
-            <div className="sd-topology-node n-client"><span>01</span>CLIENTS</div>
-            <div className="sd-topology-node n-api"><span>02</span>API GATEWAY</div>
-            <div className="sd-topology-node n-cache"><span>03</span>REDIS</div>
-            <div className="sd-topology-node n-db"><span>04</span>DATABASE</div>
-            <div className="sd-topology-node n-events"><span>05</span>EVENT BUS</div>
-            <i className="sd-topology-line l-1" /><i className="sd-topology-line l-2" /><i className="sd-topology-line l-3" /><i className="sd-topology-line l-4" />
-            <i className="sd-topology-pulse" />
-          </div>
+          <HeroTopology />
           <div className="sd-hero-readout"><span>REQUEST RATE <b>2.4K/s</b></span><span>P99 LATENCY <b>84ms</b></span><span>UPTIME <b>99.99%</b></span></div>
         </div>
       </section>

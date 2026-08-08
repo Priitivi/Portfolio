@@ -9,6 +9,7 @@ import {
   resolveCacheRequest,
 } from "../src/lab/system-design/simulationModel.js";
 import { designChallenge } from "../src/lab/system-design/data/designChallenges.js";
+import { heroConnections, heroRequestSequence } from "../src/lab/system-design/data/heroTopology.js";
 import { anchorPoint, connectionGeometry, localBounds, pathData } from "../src/lab/system-design/components/diagramGeometry.js";
 
 test("cache simulation distinguishes cold, warm, and bypassed requests", () => {
@@ -84,4 +85,18 @@ test("fan-out routes and packet routes share the same generated point list", () 
   assert.equal(mobile.start.x, nodes.broker.right);
   assert.equal(mobile.end.x, nodes.email.right);
   assert.ok(mobile.points.some((point) => point.x === 372));
+});
+
+test("hero topology request and response form one continuous route over visible edges", () => {
+  const connections = new Map(heroConnections.map((connection) => [connection.id, connection]));
+
+  heroRequestSequence.forEach((step, index) => {
+    const connection = connections.get(step.connectionId);
+    assert.ok(connection, `${step.connectionId} is a rendered connector`);
+    assert.equal(step.from, step.reverse ? connection.to : connection.from);
+    assert.equal(step.to, step.reverse ? connection.from : connection.to);
+
+    const next = heroRequestSequence[(index + 1) % heroRequestSequence.length];
+    assert.equal(step.to, next.from, `step ${index + 1} joins step ${index + 2} without a jump`);
+  });
 });

@@ -1,13 +1,13 @@
 import { useId } from "react";
 import { useDiagramGeometry } from "./useDiagramGeometry";
 
-export default function SystemDiagram({ className = "", connections, activeConnections = [], packets = [], children }) {
+export default function SystemDiagram({ className = "", connections, activeConnections = [], packets = [], children, ariaHidden = false }) {
   const markerId = useId().replaceAll(":", "");
   const { containerRef, registerNode, geometry } = useDiagramGeometry(connections);
   const activeSet = new Set(activeConnections);
 
   return (
-    <div ref={containerRef} className={`sd-diagram ${className}`}>
+    <div ref={containerRef} className={`sd-diagram ${className}`} aria-hidden={ariaHidden || undefined}>
       {geometry.width > 0 && (
         <svg className="sd-diagram-svg" viewBox={`0 0 ${geometry.width} ${geometry.height}`} aria-hidden="true">
           <defs>
