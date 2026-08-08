@@ -3,7 +3,7 @@ import { useSimulationScheduler } from "../hooks/useSimulationScheduler";
 import { scaleStages, recommendedDecision } from "./scaleStages";
 import { mergeArchitecture, simulateScale } from "./scalingModel";
 import ScaleArchitecture from "./ScaleArchitecture";
-import { DecisionCards, LearningCheckpoint, MetricBoard, TradeoffSummary } from "./LearningPrimitives";
+import { DecisionCards, LearningCheckpoint, LearningStageRail, MetricBoard, TradeoffSummary } from "./LearningPrimitives";
 
 const constraintAddition = (stage) => ({
   name: stage.id === "simple" ? "NO NEW INFRASTRUCTURE" : `CURRENT CONSTRAINT / ${stage.eyebrow.split(" / ").at(-1)}`,
@@ -98,11 +98,11 @@ export default function ScaleToMillionUsers() {
   };
 
   return (
-    <section className="sd-scale-lab" id="learn" aria-labelledby="scale-title">
+    <section className="sd-scale-lab" id="scaling-systems" aria-labelledby="scale-title">
       <header className="sd-scale-intro">
         <div>
           <p className="sd-overline">FLAGSHIP EXPERIENCE / GUIDED LEARNING</p>
-          <h2 id="scale-title">Scale to a<br /><em>million users.</em></h2>
+          <h2 id="scale-title" tabIndex="-1">Scale to a<br /><em>million users.</em></h2>
         </div>
         <div>
           <strong>ARCHITECTURE IS A RESPONSE TO CONSTRAINTS.</strong>
@@ -111,22 +111,7 @@ export default function ScaleToMillionUsers() {
         </div>
       </header>
 
-      <nav className="sd-scale-stage-rail" aria-label="Scaling journey stages">
-        {scaleStages.map((item, index) => (
-          <button
-            type="button"
-            key={item.id}
-            disabled={index > furthestStage}
-            className={index === stageIndex ? "is-current" : index < furthestStage ? "is-complete" : ""}
-            aria-current={index === stageIndex ? "step" : undefined}
-            onClick={() => goToStage(index)}
-          >
-            <span>{item.number}</span>
-            <strong>{item.trafficLabel}</strong>
-            <small>{item.title}</small>
-          </button>
-        ))}
-      </nav>
+      <LearningStageRail stages={scaleStages} currentIndex={stageIndex} furthestIndex={furthestStage} onSelect={goToStage} ariaLabel="Scaling journey stages" />
 
       <div className="sd-scale-console">
         <div className="sd-scale-console-bar">

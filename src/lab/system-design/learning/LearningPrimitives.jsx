@@ -1,12 +1,12 @@
-import { metricDisplay, metricTone } from "./scalingModel";
+import { metricDisplay as defaultMetricDisplay, metricTone as defaultMetricTone } from "./scalingModel";
 
-export function MetricBoard({ keys, metrics }) {
+export function MetricBoard({ keys, metrics, display = defaultMetricDisplay, tone = defaultMetricTone, ariaLabel = "Current system metrics" }) {
   return (
-    <div className="sd-scale-metrics" aria-label="Current system metrics" aria-live="polite">
+    <div className="sd-scale-metrics" aria-label={ariaLabel} aria-live="polite">
       {keys.map((key) => {
-        const [label, value] = metricDisplay(key, metrics);
+        const [label, value] = display(key, metrics);
         return (
-          <div className={`sd-scale-metric is-${metricTone(key, metrics)}`} key={key} data-metric={key}>
+          <div className={`sd-scale-metric is-${tone(key, metrics)}`} key={key} data-metric={key}>
             <span>{label}</span>
             <strong>{value}</strong>
           </div>
@@ -16,9 +16,9 @@ export function MetricBoard({ keys, metrics }) {
   );
 }
 
-export function DecisionCards({ decisions, selectedId, onSelect }) {
+export function DecisionCards({ decisions, selectedId, onSelect, ariaLabel = "Architecture decisions" }) {
   return (
-    <div className="sd-scale-decisions" aria-label="Architecture decisions">
+    <div className="sd-scale-decisions" aria-label={ariaLabel}>
       {decisions.map((decision) => (
         <button
           type="button"
@@ -33,6 +33,27 @@ export function DecisionCards({ decisions, selectedId, onSelect }) {
         </button>
       ))}
     </div>
+  );
+}
+
+export function LearningStageRail({ stages, currentIndex, furthestIndex, onSelect, ariaLabel }) {
+  return (
+    <nav className="sd-scale-stage-rail" aria-label={ariaLabel} style={{ "--stage-count": stages.length }}>
+      {stages.map((stage, index) => (
+        <button
+          type="button"
+          key={stage.id}
+          disabled={index > furthestIndex}
+          className={index === currentIndex ? "is-current" : index < furthestIndex ? "is-complete" : ""}
+          aria-current={index === currentIndex ? "step" : undefined}
+          onClick={() => onSelect(index)}
+        >
+          <span>{stage.number}</span>
+          <strong>{stage.trafficLabel}</strong>
+          <small>{stage.title}</small>
+        </button>
+      ))}
+    </nav>
   );
 }
 

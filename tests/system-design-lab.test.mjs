@@ -14,6 +14,9 @@ import { anchorPoint, connectionGeometry, localBounds, pathData } from "../src/l
 import { scaleStages, recommendedDecision } from "../src/lab/system-design/learning/scaleStages.js";
 import { mergeArchitecture, simulateScale } from "../src/lab/system-design/learning/scalingModel.js";
 import { buildScaleConnections, buildScaleTraffic } from "../src/lab/system-design/learning/scaleTopology.js";
+import { aiStages, recommendedAiDecision } from "../src/lab/system-design/learning/ai/aiStages.js";
+import { mergeAiArchitecture, mergeAiWorkload, simulateAiInference } from "../src/lab/system-design/learning/ai/aiInferenceModel.js";
+import { buildAiConnections, buildAiTraffic } from "../src/lab/system-design/learning/ai/aiTopology.js";
 
 test("cache simulation distinguishes cold, warm, and bypassed requests", () => {
   const cache = new Set();
@@ -193,4 +196,106 @@ test("one failed API instance raises utilisation while health-aware routing pres
   assert.ok(degraded.apiUtilization > healthy.apiUtilization);
   assert.ok(degraded.errorRate < 0.2);
   assert.ok(degraded.availability >= 99.99);
+});
+
+test("AI inference calculations are deterministic and expose an ordered eleven-stage journey", () => {
+  const stage = aiStages[5];
+  const input = { workload: mergeAiWorkload(stage.workload), architecture: mergeAiArchitecture(stage.architecture) };
+  assert.deepEqual(simulateAiInference(input), simulateAiInference(input));
+  assert.equal(aiStages.length, 11);
+  assert.deepEqual(aiStages.map((item) => item.id), ["one-worker", "traffic", "queue", "workers", "batching", "kv-cache", "streaming", "prefix-cache", "autoscaling", "routing", "failure"]);
+  assert.ok(aiStages.filter((item) => item.decisions).every((item) => item.decisions.filter((decision) => decision.recommended).length === 1));
+});
+
+test("arrival beyond inference capacity grows an explicit queue", () => {
+  const architecture = mergeAiArchitecture({ workers: 1, queue: true });
+  const low = simulateAiInference({ workload: mergeAiWorkload({ requestRate: 2, promptTokens: 512, outputTokens: 128 }), architecture });
+  const high = simulateAiInference({ workload: mergeAiWorkload({ requestRate: 14, concurrency: 24, promptTokens: 512, outputTokens: 128 }), architecture });
+  assert.equal(low.queueDepth, 0);
+  assert.ok(high.queueDepth > low.queueDepth);
+  assert.ok(high.queueWait > low.queueWait);
+});
+
+test("ready workers increase service capacity and recover a queued spike", () => {
+  const workload = mergeAiWorkload({ requestRate: 120, concurrency: 180, promptTokens: 512, outputTokens: 128, backlog: 180 });
+  const four = simulateAiInference({ workload, architecture: mergeAiArchitecture({ workers: 4, queue: true, scheduler: true, batching: "continuous", batchSize: 12 }) });
+  const ten = simulateAiInference({ workload: { ...workload, backlog: 0 }, architecture: mergeAiArchitecture({ workers: 10, queue: true, scheduler: true, batching: "continuous", batchSize: 12 }) });
+  assert.ok(ten.serviceCapacity > four.serviceCapacity);
+  assert.ok(ten.queueDepth < four.queueDepth);
+  assert.ok(ten.ttft < four.ttft);
+});
+
+test("longer prompts increase prefill work and time to first token", () => {
+  const architecture = mergeAiArchitecture({ workers: 4, queue: true, batching: "continuous", batchSize: 12 });
+  const shortPrompt = simulateAiInference({ workload: mergeAiWorkload({ requestRate: 4, concurrency: 8, promptTokens: 128 }), architecture });
+  const longPrompt = simulateAiInference({ workload: mergeAiWorkload({ requestRate: 4, concurrency: 8, promptTokens: 8192 }), architecture });
+  assert.ok(longPrompt.prefillMs > shortPrompt.prefillMs);
+  assert.ok(longPrompt.ttft > shortPrompt.ttft);
+});
+
+test("concurrent long sequences increase KV-cache and GPU-memory pressure", () => {
+  const architecture = mergeAiArchitecture({ workers: 4, batching: "continuous", batchSize: 16, kvCacheVisible: true });
+  const low = simulateAiInference({ workload: mergeAiWorkload({ requestRate: 4, concurrency: 4, promptTokens: 4096, outputTokens: 256 }), architecture });
+  const high = simulateAiInference({ workload: mergeAiWorkload({ requestRate: 4, concurrency: 64, promptTokens: 4096, outputTokens: 256 }), architecture });
+  assert.ok(high.kvCacheUtilization > low.kvCacheUtilization);
+  assert.ok(high.gpuMemoryUtilization > low.gpuMemoryUtilization);
+});
+
+test("continuous batching improves normalized capacity, occupancy, and useful throughput", () => {
+  const workload = mergeAiWorkload({ requestRate: 20, concurrency: 48, promptTokens: 512, outputTokens: 160, backlog: 24 });
+  const sequential = simulateAiInference({ workload, architecture: mergeAiArchitecture({ workers: 3, queue: true, scheduler: true, batching: "none", batchSize: 1 }) });
+  const continuous = simulateAiInference({ workload, architecture: mergeAiArchitecture({ workers: 3, queue: true, scheduler: true, batching: "continuous", batchSize: 12 }) });
+  assert.ok(continuous.serviceCapacity > sequential.serviceCapacity);
+  assert.ok(continuous.gpuUtilization > sequential.gpuUtilization);
+  assert.ok(continuous.throughput > sequential.throughput);
+});
+
+test("worker failure removes available capacity and fallback changes availability and quality", () => {
+  const stage = aiStages.at(-1);
+  const healthy = simulateAiInference({ workload: stage.workload, architecture: mergeAiArchitecture(stage.architecture) });
+  const failed = simulateAiInference({ workload: stage.workload, architecture: mergeAiArchitecture(stage.architecture, { failedWorkers: 1 }) });
+  const fallback = simulateAiInference({ workload: stage.workload, architecture: mergeAiArchitecture(stage.architecture, { failedWorkers: 1, fallbackEnabled: true }) });
+  assert.ok(failed.serviceCapacity < healthy.serviceCapacity);
+  assert.ok(failed.queueDepth > healthy.queueDepth);
+  assert.ok(fallback.availability > failed.availability);
+  assert.ok(fallback.queueDepth < failed.queueDepth);
+  assert.ok(fallback.ttft < failed.ttft);
+  assert.ok(fallback.costIndex < failed.costIndex);
+  assert.ok(fallback.qualityProxy < failed.qualityProxy);
+});
+
+test("routing policies trade normalized quality for latency and cost consistently", () => {
+  const stage = aiStages.find((item) => item.id === "routing");
+  const large = simulateAiInference({ workload: stage.workload, architecture: mergeAiArchitecture(stage.architecture, { routingStrategy: "always-large" }) });
+  const balanced = simulateAiInference({ workload: stage.workload, architecture: mergeAiArchitecture(stage.architecture, recommendedAiDecision(stage).patch) });
+  const fast = simulateAiInference({ workload: stage.workload, architecture: mergeAiArchitecture(stage.architecture, { routingStrategy: "always-fast" }) });
+  assert.ok(large.qualityProxy > balanced.qualityProxy && balanced.qualityProxy > fast.qualityProxy);
+  assert.ok(large.costIndex > balanced.costIndex && balanced.costIndex > fast.costIndex);
+  assert.ok(large.ttft > balanced.ttft && balanced.ttft > fast.ttft);
+});
+
+test("AI representative traffic stays on visible generated edges and joins continuously", () => {
+  const architecture = mergeAiArchitecture(aiStages.at(-1).architecture);
+  const connections = buildAiConnections(architecture);
+  const byId = new Map(connections.map((connection) => [connection.id, connection]));
+  buildAiTraffic(architecture).forEach((trace) => trace.steps.forEach((step, index) => {
+    const connection = byId.get(step.connectionId);
+    assert.ok(connection, `${step.connectionId} is visible`);
+    if (index === trace.steps.length - 1) return;
+    const destination = step.reverse ? connection.from : connection.to;
+    const next = trace.steps[index + 1];
+    const nextConnection = byId.get(next.connectionId);
+    const nextSource = next.reverse ? nextConnection.to : nextConnection.from;
+    assert.equal(destination, nextSource, `${trace.id} has no inter-segment packet jump`);
+  }));
+});
+
+test("AI routing traces follow the selected model policy", () => {
+  const stage = aiStages.find((item) => item.id === "routing");
+  const tracesFor = (routingStrategy) => buildAiTraffic(mergeAiArchitecture(stage.architecture, { routingStrategy }));
+
+  assert.deepEqual(tracesFor("always-fast").filter((trace) => trace.id.endsWith("request")).map((trace) => trace.id), ["fast-request"]);
+  assert.deepEqual(tracesFor("always-large").filter((trace) => trace.id.endsWith("request")).map((trace) => trace.id), ["capable-request"]);
+  assert.deepEqual(tracesFor("balanced").filter((trace) => trace.id.endsWith("request")).map((trace) => trace.id), ["fast-request", "capable-request"]);
+  assert.ok(tracesFor("always-fast").every((trace) => trace.steps.every((step) => !step.connectionId.includes("capable"))));
 });

@@ -5,9 +5,10 @@ import PubSubSimulation from "./simulations/PubSubSimulation";
 import KubernetesSimulation from "./simulations/KubernetesSimulation";
 import DesignChallenge from "./components/DesignChallenge";
 import HeroTopology from "./components/HeroTopology";
-import ScaleToMillionUsers from "./learning/ScaleToMillionUsers";
+import LearningTracks from "./learning/LearningTracks";
 import "./system-design.css";
 import "./scale-learning.css";
+import "./ai-learning.css";
 
 const catalogue = [
   { id: "caching", number: "01", title: "Redis caching", lesson: "Make the fast path visible", signal: "18 ms" },
@@ -53,7 +54,7 @@ export default function SystemDesignLab({ navigate }) {
           <p className="sd-hero-lede">Don&apos;t just read the architecture. <strong>Run it.</strong> Send requests, break infrastructure, and watch distributed systems respond in real time.</p>
           <div className="sd-hero-actions">
             <a href="#learn">START THE FLAGSHIP LAB <span>↓</span></a>
-            <span>7 constraint stages / 4 concept simulations</span>
+            <span>2 guided tracks / 4 concept simulations</span>
           </div>
         </div>
 
@@ -64,7 +65,7 @@ export default function SystemDesignLab({ navigate }) {
         </div>
       </section>
 
-      <ScaleToMillionUsers />
+      <LearningTracks />
 
       <section className="sd-catalogue" aria-labelledby="catalogue-title">
         <div><p className="sd-overline">SIMULATE / CONCEPT WORKBENCH</p><h2 id="catalogue-title">Focus on one system.<br />Change its state.</h2></div>
