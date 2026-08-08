@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import SimulationFrame, { Metric, Node } from "../components/SimulationFrame";
+import SystemDiagram from "../components/SystemDiagram";
 import { useSimulationScheduler } from "../hooks/useSimulationScheduler";
 import { chooseServer } from "../simulationModel";
 
@@ -10,11 +11,18 @@ export default function LoadBalancerSimulation() {
   const [servers, setServers] = useState(initialServers);
   const [busy, setBusy] = useState(false);
   const [pulse, setPulse] = useState(null);
+  const [activeConnections, setActiveConnections] = useState([]);
+  const [packets, setPackets] = useState([]);
   const [status, setStatus] = useState("All instances pass their health checks. Generate a traffic burst.");
   const [totals, setTotals] = useState({ routed: 0, dropped: 0 });
   const serversRef = useRef(servers);
   const cursor = useRef(0);
   const { schedule, clear } = useSimulationScheduler();
+  const packetKey = useRef(0);
+  const connections = useMemo(() => [
+    { id: "clients-balancer", from: "clients", to: "balancer", fromAnchor: "bottom", toAnchor: "top" },
+    ...[1, 2, 3].map((id) => ({ id: `balancer-server-${id}`, from: "balancer", to: `server-${id}`, fromAnchor: "bottom", toAnchor: "top", route: "fanout-down" })),
+  ], []);
   useEffect(() => { serversRef.current = servers; }, [servers]);
 
   const updateServers = (updater) => setServers((previous) => {
@@ -30,22 +38,39 @@ export default function LoadBalancerSimulation() {
     setStatus(`Routing six requests using ${strategy === "round-robin" ? "round robin" : "least connections"}.`);
     for (let index = 0; index < 6; index += 1) {
       schedule(() => {
+        packetKey.current += 1;
+        setPulse("clients");
+        setActiveConnections(["clients-balancer"]);
+        setPackets([{ connectionId: "clients-balancer", duration: 260, key: `request-in-${packetKey.current}` }]);
+        setStatus(`Request ${index + 1} enters the load balancer.`);
+      }, index * 760);
+      schedule(() => {
         const selected = chooseServer(serversRef.current, strategy, cursor.current);
         if (!selected) {
           setTotals((current) => ({ ...current, dropped: current.dropped + 1 }));
           setStatus("NO HEALTHY UPSTREAM — request rejected with 503.");
           setPulse("dropped");
+          setActiveConnections([]);
+          setPackets([]);
           return;
         }
         if (strategy === "round-robin") cursor.current += 1;
         setPulse(selected.id);
+        packetKey.current += 1;
+        setActiveConnections([`balancer-server-${selected.id}`]);
+        setPackets([{ connectionId: `balancer-server-${selected.id}`, duration: 380, key: `request-out-${packetKey.current}` }]);
         setStatus(`Request ${index + 1} → Server ${selected.id}. Unhealthy nodes are excluded.`);
         updateServers((current) => current.map((server) => server.id === selected.id ? { ...server, active: server.active + 1, handled: server.handled + 1 } : server));
         setTotals((current) => ({ ...current, routed: current.routed + 1 }));
-        schedule(() => updateServers((current) => current.map((server) => server.id === selected.id ? { ...server, active: Math.max(0, server.active - 1) } : server)), 720);
-      }, index * 350);
+        schedule(() => {
+          updateServers((current) => current.map((server) => server.id === selected.id ? { ...server, active: Math.max(0, server.active - 1) } : server));
+          setPulse(null);
+          setActiveConnections([]);
+          setPackets([]);
+        }, 410);
+      }, index * 760 + 300);
     }
-    schedule(() => { setBusy(false); setPulse(null); setStatus("Burst complete. Toggle a server and run it again to compare distribution."); }, 2800);
+    schedule(() => { setBusy(false); setPulse(null); setActiveConnections([]); setPackets([]); setStatus("Burst complete. Toggle a server and run it again to compare distribution."); }, 4580);
   };
 
   const toggleServer = (id) => {
@@ -71,18 +96,18 @@ export default function LoadBalancerSimulation() {
         <button className="sd-primary" type="button" onClick={sendTraffic} disabled={busy}>{busy ? "ROUTING…" : "GENERATE TRAFFIC ×6"}</button>
         <span className="sd-health"><i /> HEALTH CHECK / 2s</span>
       </div>
-      <div className={`sd-diagram sd-lb-diagram ${busy ? "is-routing" : ""}`}>
-        <div className="sd-route-line sd-lb-in" aria-hidden="true" />
-        <Node label="CLIENTS" detail="Traffic burst" state={busy ? "active" : "idle"} className="sd-lb-clients" />
-        <Node label="LOAD BALANCER" detail={strategy.replace("-", " ")} state={busy ? "active" : "healthy"} className="sd-lb-balancer" />
-        {servers.map((server) => (
-          <div className={`sd-server-wrap sd-server-${server.id}`} key={server.id}>
-            <Node label={`SERVER ${server.id}`} detail={`${server.active} active / ${server.handled} served`} state={!server.online ? "offline" : pulse === server.id ? "active" : "healthy"} />
-            <button type="button" onClick={() => toggleServer(server.id)} disabled={busy}>{server.online ? "TAKE OFFLINE" : "RESTORE"}</button>
-          </div>
-        ))}
-        {pulse && pulse !== "dropped" && <i key={`${pulse}-${totals.routed}`} className={`sd-packet sd-lb-packet to-${pulse}`} aria-hidden="true" />}
-      </div>
+      <SystemDiagram className="sd-lb-diagram" connections={connections} activeConnections={activeConnections} packets={packets}>
+        {(registerNode) => <>
+          <Node ref={registerNode("clients")} label="CLIENTS" detail="Traffic burst" state={pulse === "clients" ? "active" : "idle"} className="sd-lb-clients" />
+          <Node ref={registerNode("balancer")} label="LOAD BALANCER" detail={strategy.replace("-", " ")} state={busy ? "active" : "healthy"} className="sd-lb-balancer" />
+          {servers.map((server) => (
+            <div className={`sd-server-wrap sd-server-${server.id}`} key={server.id}>
+              <Node ref={registerNode(`server-${server.id}`)} label={`SERVER ${server.id}`} detail={`${server.active} active / ${server.handled} served`} state={!server.online ? "offline" : pulse === server.id ? "active" : "healthy"} />
+              <button type="button" onClick={() => toggleServer(server.id)} disabled={busy}>{server.online ? "TAKE OFFLINE" : "RESTORE"}</button>
+            </div>
+          ))}
+        </>}
+      </SystemDiagram>
       <p className="sd-status" role="status"><span>ROUTER</span>{status}</p>
     </SimulationFrame>
   );

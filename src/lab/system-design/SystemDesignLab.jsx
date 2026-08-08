@@ -17,7 +17,11 @@ export default function SystemDesignLab({ navigate }) {
   useEffect(() => {
     const previousTitle = document.title;
     document.title = "System Design Lab // Priit";
-    return () => { document.title = previousTitle; };
+    document.body.classList.add("sd-system-design-active");
+    return () => {
+      document.title = previousTitle;
+      document.body.classList.remove("sd-system-design-active");
+    };
   }, []);
 
   const returnToLab = (event) => {

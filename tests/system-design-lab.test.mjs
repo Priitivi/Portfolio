@@ -9,6 +9,7 @@ import {
   resolveCacheRequest,
 } from "../src/lab/system-design/simulationModel.js";
 import { designChallenge } from "../src/lab/system-design/data/designChallenges.js";
+import { anchorPoint, connectionGeometry, localBounds, pathData } from "../src/lab/system-design/components/diagramGeometry.js";
 
 test("cache simulation distinguishes cold, warm, and bypassed requests", () => {
   const cache = new Set();
@@ -47,4 +48,40 @@ test("the Lab catalogue exposes experiment 009 and challenge choices are complet
   assert.equal(experiment.experimentNumber, "009");
   assert.equal(designChallenge.stages.length, 3);
   assert.ok(designChallenge.stages.every((stage) => stage.options.length >= 3 && stage.options.some((option) => option.recommended)));
+});
+
+test("diagram bounds convert viewport rectangles into one local coordinate space", () => {
+  const bounds = localBounds({ left: 310, top: 225, width: 120, height: 60 }, { left: 250, top: 175 });
+  assert.deepEqual(bounds, { left: 60, top: 50, right: 180, bottom: 110, width: 120, height: 60, cx: 120, cy: 80 });
+  assert.deepEqual(anchorPoint(bounds, "right"), { x: 180, y: 80 });
+});
+
+test("connector endpoints are the exact borders of their source and destination nodes", () => {
+  const nodes = {
+    client: { left: 100, top: 20, right: 220, bottom: 80, cx: 160, cy: 50 },
+    api: { left: 100, top: 150, right: 220, bottom: 210, cx: 160, cy: 180 },
+  };
+  const geometry = connectionGeometry({ id: "client-api", from: "client", to: "api", fromAnchor: "bottom", toAnchor: "top" }, nodes, { width: 320, height: 240 });
+  assert.deepEqual(geometry.start, { x: 160, y: 80 });
+  assert.deepEqual(geometry.end, { x: 160, y: 150 });
+  assert.equal(geometry.d, "M160.00 80.00 L160.00 150.00");
+  assert.equal(geometry.reverseD, "M160.00 150.00 L160.00 80.00");
+});
+
+test("fan-out routes and packet routes share the same generated point list", () => {
+  const nodes = {
+    broker: { left: 240, top: 50, right: 360, bottom: 110, cx: 300, cy: 80 },
+    email: { left: 40, top: 240, right: 160, bottom: 300, cx: 100, cy: 270 },
+  };
+  const connection = { id: "broker-email", from: "broker", to: "email", route: "responsive-fanout", fromAnchor: "bottom", toAnchor: "top" };
+  const desktop = connectionGeometry(connection, nodes, { width: 600, height: 340 });
+  assert.equal(desktop.points[0].y, nodes.broker.bottom);
+  assert.equal(desktop.points.at(-1).y, nodes.email.top);
+  assert.equal(desktop.d, pathData(desktop.points));
+  assert.equal(desktop.reverseD, pathData([...desktop.points].reverse()));
+
+  const mobile = connectionGeometry(connection, nodes, { width: 390, height: 340 });
+  assert.equal(mobile.start.x, nodes.broker.right);
+  assert.equal(mobile.end.x, nodes.email.right);
+  assert.ok(mobile.points.some((point) => point.x === 372));
 });

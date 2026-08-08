@@ -2,16 +2,18 @@ export function Metric({ label, value, tone = "" }) {
   return <div className={`sd-metric ${tone}`}><span>{label}</span><strong>{value}</strong></div>;
 }
 
-export function Node({ label, detail, state = "idle", className = "", children }) {
+import { forwardRef } from "react";
+
+export const Node = forwardRef(function Node({ label, detail, state = "idle", className = "", children }, ref) {
   return (
-    <div className={`sd-node ${className} is-${state}`} data-state={state}>
+    <div ref={ref} className={`sd-node ${className} is-${state}`} data-state={state}>
       <span className="sd-node-state">{state}</span>
       <strong>{label}</strong>
       <small>{detail}</small>
       {children}
     </div>
   );
-}
+});
 
 export default function SimulationFrame({
   id,
