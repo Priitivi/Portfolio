@@ -60,6 +60,8 @@ export default function LabHome({ navigate, onLogout, isAuthenticated = false })
                 <div className="lab-card-preview lab-card-preview-trial" aria-hidden="true"><div className="lab-trial-moon" /><div className="lab-trial-hills"><i /><i /><i /></div><div className="lab-trial-ground"><i /><i /><i /><i /><i /></div><div className="lab-trial-player"><i /><b /></div><div className="lab-trial-door" /><span>RULE 05 / DO NOT TRUST THIS PREVIEW</span></div>
               ) : experiment.preview === "cosy" ? (
                 <div className="lab-card-preview lab-card-preview-cosy" aria-hidden="true"><div className="lab-cosy-book"><i>✿</i><strong>SIM’S<br />COSY<br />CORNER</strong></div><div className="lab-cosy-note">tiny joys<br />live here ♡</div><div className="lab-cosy-swatches"><i /><i /><i /><i /></div><span>LAVENDER DAYDREAM / LOCAL FIRST</span></div>
+              ) : experiment.preview === "system" ? (
+                <div className="lab-card-preview lab-card-preview-system" aria-hidden="true"><div className="lab-system-node n1">CLIENT</div><div className="lab-system-node n2">API</div><div className="lab-system-node n3">REDIS</div><div className="lab-system-node n4">DB</div><i className="lab-system-path p1" /><i className="lab-system-path p2" /><i className="lab-system-path p3" /><b className="lab-system-packet" /><span>REQUEST TRACE / 18 MS</span></div>
               ) : (
                 <div className="lab-card-signal" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /></div>
               )}

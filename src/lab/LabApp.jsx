@@ -13,6 +13,7 @@ const DeceptiveTrial = lazy(() => import("./deceptive-trial/DeceptiveTrial"));
 const InterviewCoach = lazy(() => import("./interview-coach/InterviewCoach"));
 const SimCosyCorner = lazy(() => import("./sim-cosy-corner/SimCosyCorner"));
 const GraduateAssessmentLab = lazy(() => import("./graduate-assessment/GraduateAssessmentLab"));
+const SystemDesignLab = lazy(() => import("./system-design/SystemDesignLab"));
 const chamberRoutes = new Set(experiments.map((experiment) => experiment.route));
 
 function normalizePath(pathname) {
@@ -162,6 +163,14 @@ export default function LabApp() {
     return (
       <Suspense fallback={<main className="lab-boot" role="status"><div className="lab-scanlines" aria-hidden="true" /><span>EXPERIMENT 008</span><strong>CALIBRATING ASSESSMENT ENGINE…</strong><i /></main>}>
         <GraduateAssessmentLab navigate={navigate} />
+      </Suspense>
+    );
+  }
+
+  if (pathname === "/lab/system-design") {
+    return (
+      <Suspense fallback={<main className="lab-boot" role="status"><div className="lab-scanlines" aria-hidden="true" /><span>EXPERIMENT 009</span><strong>BOOTING DISTRIBUTED SYSTEMS…</strong><i /></main>}>
+        <SystemDesignLab navigate={navigate} />
       </Suspense>
     );
   }

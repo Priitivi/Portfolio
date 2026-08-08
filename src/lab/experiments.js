@@ -75,4 +75,14 @@ export const experiments = [
     route: "/lab/graduate-assessment",
     signals: ["5 practice modes", "Adaptive recommendations", "Local analytics", "Original content only"],
   },
+  {
+    id: "system-design",
+    experimentNumber: "009",
+    title: "System Design Lab",
+    status: "Interactive",
+    description: "A live architecture playground where requests, events, failures and recovery move visibly through distributed systems.",
+    route: "/lab/system-design",
+    preview: "system",
+    signals: ["4 live simulations", "Animated data paths", "Failure controls", "Design challenge"],
+  },
 ];
